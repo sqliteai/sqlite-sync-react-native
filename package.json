@@ -43,7 +43,10 @@
   "keywords": [
     "react-native",
     "ios",
-    "android"
+    "android",
+    "sqlite-sync",
+    "sqlite",
+    "offline-first"
   ],
   "repository": {
     "type": "git",
