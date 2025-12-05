@@ -3159,13 +3159,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@op-engineering/op-sqlite@npm:^12.0.1":
-  version: 12.0.3
-  resolution: "@op-engineering/op-sqlite@npm:12.0.3"
+"@op-engineering/op-sqlite@npm:^15.1.6":
+  version: 15.1.6
+  resolution: "@op-engineering/op-sqlite@npm:15.1.6"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10c0/507765fbe6bdd49130249837fb277727373e6e5722a43b78db4f24dab8089a18d7eed2cdd881a5713c96eb1a9183d77f761c12292462c0fef5b24798464ce4b3
+  checksum: 10c0/ab4e663912dd62a2a96c2f27b80b2aa727a622a8711d75a515b29638918516840ae113dbacd36ead2e00e13eb1429c839af3ad44c128783f918e4d43106b9499
   languageName: node
   linkType: hard
 
@@ -3553,14 +3553,34 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sqliteai/sqlite-sync-react-native-example@workspace:example":
+"@sqliteai/sqlite-sync-react-native-example-new-arch@workspace:examples/new-arch":
   version: 0.0.0-use.local
-  resolution: "@sqliteai/sqlite-sync-react-native-example@workspace:example"
+  resolution: "@sqliteai/sqlite-sync-react-native-example-new-arch@workspace:examples/new-arch"
   dependencies:
     "@expo/metro-runtime": "npm:~6.1.2"
-    "@op-engineering/op-sqlite": "npm:^12.0.1"
+    "@op-engineering/op-sqlite": "npm:^15.1.6"
     "@sqliteai/sqlite-sync-react-native": "npm:*"
     expo: "npm:~54.0.25"
+    expo-build-properties: "npm:~1.0.0"
+    expo-status-bar: "npm:~3.0.8"
+    react: "npm:19.1.0"
+    react-dom: "npm:19.1.0"
+    react-native: "npm:0.81.5"
+    react-native-builder-bob: "npm:^0.40.16"
+    react-native-monorepo-config: "npm:^0.1.9"
+    react-native-web: "npm:~0.21.0"
+  languageName: unknown
+  linkType: soft
+
+"@sqliteai/sqlite-sync-react-native-example-old-arch@workspace:examples/old-arch":
+  version: 0.0.0-use.local
+  resolution: "@sqliteai/sqlite-sync-react-native-example-old-arch@workspace:examples/old-arch"
+  dependencies:
+    "@expo/metro-runtime": "npm:~6.1.2"
+    "@op-engineering/op-sqlite": "npm:^15.1.6"
+    "@sqliteai/sqlite-sync-react-native": "npm:*"
+    expo: "npm:~54.0.25"
+    expo-build-properties: "npm:~1.0.0"
     expo-status-bar: "npm:~3.0.8"
     react: "npm:19.1.0"
     react-dom: "npm:19.1.0"
@@ -3579,7 +3599,7 @@ __metadata:
     "@eslint/compat": "npm:^1.3.2"
     "@eslint/eslintrc": "npm:^3.3.1"
     "@eslint/js": "npm:^9.35.0"
-    "@op-engineering/op-sqlite": "npm:^12.0.1"
+    "@op-engineering/op-sqlite": "npm:^15.1.6"
     "@react-native/babel-preset": "npm:0.81.1"
     "@react-native/eslint-config": "npm:^0.81.1"
     "@release-it/conventional-changelog": "npm:^10.0.1"
@@ -3599,7 +3619,7 @@ __metadata:
     release-it: "npm:^19.0.4"
     typescript: "npm:^5.9.2"
   peerDependencies:
-    "@op-engineering/op-sqlite": "*"
+    "@op-engineering/op-sqlite": ^15.0.0
     react: "*"
     react-native: "*"
   languageName: unknown
@@ -6506,6 +6526,18 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/516b382ded9c4bc517f9e9b7b43770aa9aa56f223356c71c39cd3374408897e8088b9790ffebc3dbf3b9d114893616b207716c5c7b51974c83fbeda86a98a8f1
+  languageName: node
+  linkType: hard
+
+"expo-build-properties@npm:~1.0.0":
+  version: 1.0.10
+  resolution: "expo-build-properties@npm:1.0.10"
+  dependencies:
+    ajv: "npm:^8.11.0"
+    semver: "npm:^7.6.0"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/6f3df301031a93cb808d4791add574608a5f0cef42555068ad4026bef7094401d7947758a06ccccc9f2c546627932bfde9cf8dbee07167af35df40af89e0a6fe
   languageName: node
   linkType: hard
 
