@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { open, getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import { SQLiteSyncContext } from './SQLiteSyncContext';
-import type { SQLiteSyncProviderProps, SQLiteSyncContextValue } from './types';
+import type { SQLiteSyncProviderProps } from './types/SQLiteSyncProviderProps';
+import type { SQLiteSyncContextValue } from './types/SQLiteSyncContextValue';
 
 /**
  * SQLiteSyncProvider - A React context provider that enables real-time SQLite database synchronization

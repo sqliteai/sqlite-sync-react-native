@@ -1,18 +1,4 @@
-/**
- * Table configuration for sync
- */
-export interface TableConfig {
-  /**
-   * Table name
-   */
-  name: string;
-
-  /**
-   * CREATE TABLE SQL statement (including IF NOT EXISTS)
-   * Example: "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT)"
-   */
-  schema: string;
-}
+import type { TableConfig } from './TableConfig';
 
 interface BaseSQLiteSyncProviderProps {
   /**
@@ -72,35 +58,3 @@ interface SQLiteSyncProviderPropsWithAccessToken
 export type SQLiteSyncProviderProps =
   | SQLiteSyncProviderPropsWithApiKey
   | SQLiteSyncProviderPropsWithAccessToken;
-
-export interface SQLiteSyncContextValue {
-  /**
-   * Whether the provider is initialized
-   */
-  isInitialized: boolean;
-
-  /**
-   * Whether sync is currently in progress
-   */
-  isSyncing: boolean;
-
-  /**
-   * Last sync timestamp
-   */
-  lastSyncTime: number | null;
-
-  /**
-   * Number of changes synced in the last sync operation
-   */
-  lastSyncChanges: number;
-
-  /**
-   * Error if any occurred during initialization or sync
-   */
-  error: Error | null;
-
-  /**
-   * Database instance for manual operations
-   */
-  db: any | null;
-}
