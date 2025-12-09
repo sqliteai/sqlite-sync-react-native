@@ -15,6 +15,7 @@ export function SQLiteSyncProvider({
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  const [lastSyncChanges, setLastSyncChanges] = useState(0);
   const [error, setError] = useState<Error | null>(null);
   const dbRef = useRef<DB | null>(null);
 
@@ -196,6 +197,7 @@ export function SQLiteSyncProvider({
 
         console.log(`✅ Sync completed: ${changes} changes synced`);
 
+        setLastSyncChanges(changes);
         setLastSyncTime(Date.now());
       } catch (err) {
         console.error('❌ Sync failed:', err);
@@ -222,10 +224,11 @@ export function SQLiteSyncProvider({
       isInitialized,
       isSyncing,
       lastSyncTime,
+      lastSyncChanges,
       error,
       db: dbRef.current,
     }),
-    [isInitialized, isSyncing, lastSyncTime, error]
+    [isInitialized, isSyncing, lastSyncTime, lastSyncChanges, error]
   );
 
   return (

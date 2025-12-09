@@ -90,6 +90,11 @@ export interface SQLiteSyncContextValue {
   lastSyncTime: number | null;
 
   /**
+   * Number of changes synced in the last sync operation
+   */
+  lastSyncChanges: number;
+
+  /**
    * Error if any occurred during initialization or sync
    */
   error: Error | null;

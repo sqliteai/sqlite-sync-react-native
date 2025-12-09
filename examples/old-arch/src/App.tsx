@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useCallback } from 'react';
 import {
   Text,
   View,
@@ -10,6 +10,8 @@ import {
 import {
   SQLiteSyncProvider,
   SQLiteSyncContext,
+  useSyncChanges,
+  useTriggerSync,
 } from '@sqliteai/sqlite-sync-react-native';
 
 function TestApp() {
@@ -17,6 +19,18 @@ function TestApp() {
     useContext(SQLiteSyncContext);
   const [text, setText] = useState('');
   const [rows, setRows] = useState<any[]>([]);
+  const { triggerSync } = useTriggerSync();
+
+  const loadRows = useCallback(async () => {
+    if (!db) return;
+
+    try {
+      const result = await db.execute('SELECT * FROM test5;');
+      setRows(result.rows || []);
+    } catch (err) {
+      console.error('Failed to load rows:', err);
+    }
+  }, [db]);
 
   const addRow = async () => {
     if (!db || !text.trim()) return;
@@ -24,7 +38,7 @@ function TestApp() {
     try {
       const id = Date.now().toString();
       await db.execute(
-        `INSERT INTO test (id, value) VALUES ('${id}', '${text}');`
+        `INSERT INTO test5 (id, value) VALUES ('${id}', '${text}');`
       );
       console.log('✅ Row inserted:', id, text);
       setText('');
@@ -34,16 +48,11 @@ function TestApp() {
     }
   };
 
-  const loadRows = async () => {
-    if (!db) return;
-
-    try {
-      const result = await db.execute('SELECT * FROM test;');
-      setRows(result.rows || []);
-    } catch (err) {
-      console.error('Failed to load rows:', err);
-    }
-  };
+  // Auto-reload rows when sync has changes
+  useSyncChanges(() => {
+    console.log('📊 Changes detected, reloading rows...');
+    loadRows();
+  });
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -67,8 +76,8 @@ function TestApp() {
           value={text}
           onChangeText={setText}
         />
-        <Button title="Add Row" onPress={addRow} disabled={!isInitialized} />
-        <Button title="Refresh" onPress={loadRows} disabled={!isInitialized} />
+        <Button title="Add Row" onPress={addRow} />
+        <Button title="Refresh" onPress={triggerSync} />
       </View>
 
       <Text style={styles.rowCount}>Rows: {rows.length}</Text>
@@ -84,13 +93,13 @@ function TestApp() {
 export default function App() {
   return (
     <SQLiteSyncProvider
-      connectionString="sqlitecloud://cvuzesvcnk.global2.ryujaz.sqlite.cloud:8860/test-database"
-      databaseName="test-database.db"
+      connectionString="sqlitecloud://cvuzesvcnk.global2.ryujaz.sqlite.cloud:8860/test-database-2"
+      databaseName="test-database-2.db"
       tablesToBeSynced={[
         {
-          name: 'test',
+          name: 'test5',
           schema: `
-            CREATE TABLE IF NOT EXISTS test (
+            CREATE TABLE IF NOT EXISTS test5 (
               id TEXT PRIMARY KEY NOT NULL,
               value TEXT,
               created_at TEXT DEFAULT CURRENT_TIMESTAMP
