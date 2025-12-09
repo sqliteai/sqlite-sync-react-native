@@ -1,3 +1,19 @@
+/**
+ * Table configuration for sync
+ */
+export interface TableConfig {
+  /**
+   * Table name
+   */
+  name: string;
+
+  /**
+   * CREATE TABLE SQL statement (including IF NOT EXISTS)
+   * Example: "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT)"
+   */
+  schema: string;
+}
+
 interface BaseSQLiteSyncProviderProps {
   /**
    * SQLite Cloud connection string
@@ -10,9 +26,10 @@ interface BaseSQLiteSyncProviderProps {
   databaseName: string;
 
   /**
-   * Array of table names to be synced with SQLite Cloud
+   * Array of tables to be synced with SQLite Cloud
+   * Each table must include its schema for initial creation
    */
-  tablesToBeSynced: string[];
+  tablesToBeSynced: TableConfig[];
 
   /**
    * Sync interval in milliseconds
@@ -76,4 +93,9 @@ export interface SQLiteSyncContextValue {
    * Error if any occurred during initialization or sync
    */
   error: Error | null;
+
+  /**
+   * Database instance for manual operations
+   */
+  db: any | null;
 }
