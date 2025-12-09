@@ -4,6 +4,33 @@ import { open, getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import { SQLiteSyncContext } from './SQLiteSyncContext';
 import type { SQLiteSyncProviderProps, SQLiteSyncContextValue } from './types';
 
+/**
+ * SQLiteSyncProvider - A React context provider that enables real-time SQLite database synchronization
+ * with SQLite Cloud using the CloudSync extension.
+ *
+ * This provider handles:
+ * - Database initialization and table creation
+ * - Loading and configuring the CloudSync extension
+ * - Automatic periodic synchronization with the cloud
+ * - Authentication (API key or access token)
+ * - Sync state management (initialized, syncing, last sync time, changes count)
+ *
+ * @param {SQLiteSyncProviderProps} props - Configuration props for the provider
+ * @param {string} props.connectionString - SQLite Cloud connection string
+ * @param {string} props.databaseName - Local database file name *
+ * @param {Array<{name: string, schema: string}>} props.tablesToBeSynced - Array of tables to sync
+ *   Each table requires:
+ *   - `name`: Table name (must match remote table name)
+ *   - `schema`: SQL CREATE TABLE statement
+ * @param {number} props.syncInterval - Sync interval in milliseconds
+ * @param {string} [props.apiKey] - SQLite Cloud API key for authentication
+ *   Use either `apiKey` OR `accessToken`, not both
+ * @param {string} [props.accessToken] - SQLite Cloud access token for authentication
+ *   Use either `apiKey` OR `accessToken`, not both
+ * @param {React.ReactNode} props.children - Child components that will have access to the sync context
+ *
+ * @returns {JSX.Element} Provider component wrapping children with SQLiteSyncContext
+ */
 export function SQLiteSyncProvider({
   connectionString,
   databaseName,
@@ -19,7 +46,7 @@ export function SQLiteSyncProvider({
   const [error, setError] = useState<Error | null>(null);
   const dbRef = useRef<DB | null>(null);
 
-  // Extract auth credentials
+  /** EXTRACT AUTH CREDENTIALS **/
   const apiKey = 'apiKey' in authProps ? authProps.apiKey : undefined;
   const accessToken =
     'accessToken' in authProps ? authProps.accessToken : undefined;
@@ -32,9 +59,9 @@ export function SQLiteSyncProvider({
         const db = open({ name: databaseName });
         dbRef.current = db;
 
-        console.log('📦 Database opened:', databaseName);
+        console.log('[SQLiteSync] 📦 Database opened:', databaseName);
 
-        // Load CloudSync extension
+        /** LOAD CLOUDSYNC EXTENSION **/
         try {
           let extensionPath: string;
 
@@ -46,15 +73,21 @@ export function SQLiteSyncProvider({
 
           db.loadExtension(extensionPath);
 
-          console.log('✅ CloudSync extension loaded from:', extensionPath);
+          console.log(
+            '[SQLiteSync] ✅ CloudSync extension loaded from:',
+            extensionPath
+          );
         } catch (loadErr) {
-          console.error('Failed to load cloudsync extension:', loadErr);
+          console.error(
+            '[SQLiteSync] ❌ Failed to load CloudSync extension:',
+            loadErr
+          );
           throw new Error(
             'Failed to load CloudSync extension. Make sure the native module is properly linked.'
           );
         }
 
-        // Verify CloudSync extension is loaded
+        /** VERIFY CLOUDSYNC EXTENSION IS LOADED **/
         try {
           const versionResult = await db.execute('SELECT cloudsync_version();');
           const version = versionResult.rows?.[0]?.[
@@ -65,43 +98,48 @@ export function SQLiteSyncProvider({
             throw new Error('CloudSync extension not loaded properly');
           }
 
-          console.log('✅ CloudSync version:', version);
+          console.log('[SQLiteSync] ✅ CloudSync version:', version);
         } catch (versionErr) {
-          console.error('CloudSync version check failed:', versionErr);
+          console.error(
+            '[SQLiteSync] ❌ CloudSync version check failed:',
+            versionErr
+          );
           throw versionErr;
         }
 
-        // Create tables if they don't exist and initialize CloudSync
+        /** CREATE TABLES AND INITIALIZE CLOUDSYNC **/
         for (const table of tablesToBeSynced) {
           try {
-            console.log(`📋 Creating table: ${table.name}...`);
+            console.log(`[SQLiteSync] 📋 Creating table: ${table.name}...`);
             await db.execute(table.schema);
-            console.log(`✅ Table created: ${table.name}`);
+            console.log(`[SQLiteSync] ✅ Table created: ${table.name}`);
           } catch (createErr) {
-            console.error(`Failed to create table ${table.name}:`, createErr);
+            console.error(
+              `[SQLiteSync] ❌ Failed to create table ${table.name}:`,
+              createErr
+            );
             throw new Error(`Failed to create table: ${table.name}`);
           }
 
           try {
             console.log(
-              `🔄 Initializing CloudSync for table: ${table.name}...`
+              `[SQLiteSync] 🔄 Initializing CloudSync for table: ${table.name}...`
             );
             const initResult = await db.execute(
               `SELECT cloudsync_init('${table.name}');`
             );
 
-            // Accept both null and hex string (site_id) as success
             const firstRow = initResult.rows?.[0];
             const result = firstRow ? Object.values(firstRow)[0] : undefined;
 
             console.log(
-              `✅ CloudSync initialized for table: ${table.name}${
+              `[SQLiteSync] ✅ CloudSync initialized for table: ${table.name}${
                 result ? ` (site_id: ${result})` : ''
               }`
             );
           } catch (initErr) {
             console.error(
-              `Failed to initialize CloudSync for table ${table.name}:`,
+              `[SQLiteSync] ❌ Failed to initialize CloudSync for table ${table.name}:`,
               initErr
             );
             throw new Error(
@@ -110,37 +148,48 @@ export function SQLiteSyncProvider({
           }
         }
 
-        // Initialize network connection
+        /** INITIALIZE NETWORK CONNECTION **/
         try {
-          console.log('🌐 Initializing network with:', connectionString);
+          console.log(
+            '[SQLiteSync] 🌐 Initializing network with:',
+            connectionString
+          );
           await db.execute(
             `SELECT cloudsync_network_init('${connectionString}');`
           );
-          console.log('✅ Network initialized');
+          console.log('[SQLiteSync] ✅ Network initialized');
         } catch (networkErr) {
-          console.error('Network initialization failed:', networkErr);
+          console.error(
+            '[SQLiteSync] ❌ Network initialization failed:',
+            networkErr
+          );
           throw new Error('Failed to initialize network connection');
         }
 
-        // Set authentication
+        /** SET AUTHENTICATION **/
         try {
           if (apiKey) {
-            console.log('🔑 Setting API key...');
+            console.log('[SQLiteSync] 🔑 Setting API key...');
             await db.execute(
               `SELECT cloudsync_network_set_apikey('${apiKey}');`
             );
-            console.log('✅ API key set');
+            console.log('[SQLiteSync] ✅ API key set');
           } else if (accessToken) {
-            console.log('🔑 Setting access token...');
+            console.log('[SQLiteSync] 🔑 Setting access token...');
             await db.execute(
               `SELECT cloudsync_network_set_token('${accessToken}');`
             );
-            console.log('✅ Access token set');
+            console.log('[SQLiteSync] ✅ Access token set');
           } else {
-            console.warn('⚠️ No authentication credentials provided');
+            console.warn(
+              '[SQLiteSync] ⚠️ No authentication credentials provided'
+            );
           }
         } catch (authErr) {
-          console.error('Authentication setup failed:', authErr);
+          console.error(
+            '[SQLiteSync] ❌ Authentication setup failed:',
+            authErr
+          );
           throw new Error('Failed to set authentication credentials');
         }
 
@@ -148,7 +197,7 @@ export function SQLiteSyncProvider({
           setIsInitialized(true);
         }
       } catch (err) {
-        console.error('❌ Initialization failed:', err);
+        console.error('[SQLiteSync] ❌ Initialization failed:', err);
         if (isMounted) {
           setError(
             err instanceof Error ? err : new Error('Initialization failed')
@@ -161,18 +210,19 @@ export function SQLiteSyncProvider({
 
     return () => {
       isMounted = false;
-      // Cleanup - close database
+
+      /** CLEANUP - CLOSE DATABASE **/
       if (dbRef.current) {
         try {
           dbRef.current.close();
         } catch (err) {
-          console.error('Error closing database:', err);
+          console.error('[SQLiteSync] ❌ Error closing database:', err);
         }
       }
     };
   }, [connectionString, databaseName, tablesToBeSynced, apiKey, accessToken]);
 
-  // Sync on interval
+  /** SYNC ON INTERVAL **/
   useEffect(() => {
     if (!isInitialized || !dbRef.current) {
       return;
@@ -195,22 +245,22 @@ export function SQLiteSyncProvider({
 
         const changes = typeof result === 'number' ? result : 0;
 
-        console.log(`✅ Sync completed: ${changes} changes synced`);
+        console.log(
+          `[SQLiteSync] ✅ Sync completed: ${changes} changes synced`
+        );
 
         setLastSyncChanges(changes);
         setLastSyncTime(Date.now());
       } catch (err) {
-        console.error('❌ Sync failed:', err);
+        console.error('[SQLiteSync] ❌ Sync failed:', err);
         setError(err instanceof Error ? err : new Error('Sync failed'));
       } finally {
         setIsSyncing(false);
       }
     };
 
-    // Run initial sync
     performSync();
 
-    // Set up interval
     const intervalId = setInterval(performSync, syncInterval);
 
     return () => {
