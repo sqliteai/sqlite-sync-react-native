@@ -1,8 +1,8 @@
 export { SQLiteSyncProvider } from './SQLiteSyncProvider';
 export { SQLiteSyncContext } from './SQLiteSyncContext';
-export { useTriggerSync } from './hooks/useTriggerSync';
-export { useSyncChanges } from './hooks/useSyncChanges';
-export { useSyncedQuery } from './hooks/useSyncedQuery';
+export { useTriggerSqliteSync } from './hooks/useTriggerSqliteSync';
+export { useOnSqliteSync } from './hooks/useOnSqliteSync';
+export { useSqliteSyncQuery } from './hooks/useSqliteSyncQuery';
 export type {
   SQLiteSyncProviderProps,
   SQLiteSyncContextValue,

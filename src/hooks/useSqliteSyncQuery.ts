@@ -8,7 +8,7 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  *
  * @returns Query result data and loading state
  */
-export function useSyncedQuery<T = any>(sql: string) {
+export function useSqliteSyncQuery<T = any>(sql: string) {
   const { db, lastSyncTime, lastSyncChanges, isInitialized } =
     useContext(SQLiteSyncContext);
   const [data, setData] = useState<T[] | null>(null);

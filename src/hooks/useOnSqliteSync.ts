@@ -6,7 +6,7 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  *
  * @param callback - Function to call when sync completes with changes
  */
-export function useSyncChanges(callback: () => void) {
+export function useOnSqliteSync(callback: () => void) {
   const { lastSyncTime, lastSyncChanges, isInitialized } =
     useContext(SQLiteSyncContext);
 

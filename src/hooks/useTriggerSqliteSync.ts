@@ -6,7 +6,7 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  *
  * @returns A function to trigger sync and the current syncing state
  */
-export function useTriggerSync() {
+export function useTriggerSqliteSync() {
   const { db, isSyncing } = useContext(SQLiteSyncContext);
 
   const triggerSync = useCallback(async () => {

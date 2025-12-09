@@ -10,8 +10,8 @@ import {
 import {
   SQLiteSyncProvider,
   SQLiteSyncContext,
-  useSyncChanges,
-  useTriggerSync,
+  useOnSqliteSync,
+  useTriggerSqliteSync,
 } from '@sqliteai/sqlite-sync-react-native';
 
 function TestApp() {
@@ -19,7 +19,7 @@ function TestApp() {
     useContext(SQLiteSyncContext);
   const [text, setText] = useState('');
   const [rows, setRows] = useState<any[]>([]);
-  const { triggerSync } = useTriggerSync();
+  const { triggerSync } = useTriggerSqliteSync();
 
   const loadRows = useCallback(async () => {
     if (!db) return;
@@ -49,7 +49,7 @@ function TestApp() {
   };
 
   // Auto-reload rows when sync has changes
-  useSyncChanges(() => {
+  useOnSqliteSync(() => {
     console.log('📊 Changes detected, reloading rows...');
     loadRows();
   });
