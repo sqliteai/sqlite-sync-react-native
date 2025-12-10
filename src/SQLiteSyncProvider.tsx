@@ -131,6 +131,11 @@ export function SQLiteSyncProvider({
       try {
         logger.info('🔄 Starting sync initialization...');
 
+        /** ENSURE DATABASE IS AVAILABLE **/
+        if (!db) {
+          throw new Error('Database not available for sync initialization');
+        }
+
         /** CHECK SYNC CONFIGURATION **/
         if (!connectionString || (!apiKey && !accessToken)) {
           throw new Error(
@@ -146,11 +151,11 @@ export function SQLiteSyncProvider({
           extensionPath = 'cloudsync';
         }
 
-        db!.loadExtension(extensionPath);
+        db.loadExtension(extensionPath);
         logger.info('✅ CloudSync extension loaded');
 
         /** VERIFY CLOUDSYNC EXTENSION **/
-        const versionResult = await db!.execute('SELECT cloudsync_version();');
+        const versionResult = await db.execute('SELECT cloudsync_version();');
         const version = versionResult.rows?.[0]?.[
           'cloudsync_version()'
         ] as string;
@@ -162,7 +167,7 @@ export function SQLiteSyncProvider({
 
         /** INITIALIZE CLOUDSYNC FOR TABLES **/
         for (const table of tablesToBeSynced) {
-          const initResult = await db!.execute(
+          const initResult = await db.execute(
             `SELECT cloudsync_init('${table.name}');`
           );
 
@@ -177,19 +182,17 @@ export function SQLiteSyncProvider({
         }
 
         /** INITIALIZE NETWORK CONNECTION **/
-        await db!.execute(
+        await db.execute(
           `SELECT cloudsync_network_init('${connectionString}');`
         );
         logger.info('✅ Network initialized');
 
         /** SET AUTHENTICATION **/
         if (apiKey) {
-          await db!.execute(
-            `SELECT cloudsync_network_set_apikey('${apiKey}');`
-          );
+          await db.execute(`SELECT cloudsync_network_set_apikey('${apiKey}');`);
           logger.info('✅ API key set');
         } else if (accessToken) {
-          await db!.execute(
+          await db.execute(
             `SELECT cloudsync_network_set_token('${accessToken}');`
           );
           logger.info('✅ Access token set');
