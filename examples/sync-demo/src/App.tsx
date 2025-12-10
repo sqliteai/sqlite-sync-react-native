@@ -33,8 +33,9 @@ function TestApp() {
     try {
       const result = await db.execute(`SELECT * FROM ${TABLE_NAME};`);
       setRows(result.rows || []);
+      console.log('[sqlite-sync-demo] Loaded rows:', result.rows?.length || 0);
     } catch (err) {
-      console.error('Failed to load rows:', err);
+      console.error('[sqlite-sync-demo] Failed to load rows:', err);
     }
   }, [db]);
 
@@ -46,19 +47,16 @@ function TestApp() {
       await db.execute(
         `INSERT INTO ${TABLE_NAME} (id, value) VALUES ('${id}', '${text}');`
       );
-      console.log('✅ Row inserted:', id, text);
+      console.log('[sqlite-sync-demo] ✅ Row inserted:', id, text);
       setText('');
       loadRows();
     } catch (err) {
-      console.error('Failed to insert:', err);
+      console.error('[sqlite-sync-demo] Failed to insert row:', err);
     }
   };
 
   // Auto-reload rows when sync has changes
-  useOnSqliteSync(() => {
-    console.log('📊 Changes detected, reloading rows...');
-    loadRows();
-  });
+  useOnSqliteSync(loadRows);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
