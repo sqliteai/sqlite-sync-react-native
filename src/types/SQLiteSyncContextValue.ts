@@ -1,3 +1,5 @@
+import type { DB } from '@op-engineering/op-sqlite';
+
 /**
  * The context value provided by SQLiteSyncProvider
  * */
@@ -37,5 +39,5 @@ export interface SQLiteSyncContextValue {
   /**
    * Database instance for manual operations
    */
-  db: any | null;
+  db: DB | null;
 }
