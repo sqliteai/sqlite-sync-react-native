@@ -64,6 +64,26 @@ export function SQLiteSyncProvider({
 
     const initialize = async () => {
       try {
+        /** CHECK PLATFORM SUPPORT **/
+        if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
+          throw new Error(
+            `Platform "${Platform.OS}" is not supported. This library only works on iOS and Android.`
+          );
+        }
+
+        /** WAIT FOR REQUIRED CONFIGURATION **/
+        if (
+          !connectionString ||
+          !databaseName ||
+          tablesToBeSynced.length === 0 ||
+          (!apiKey && !accessToken)
+        ) {
+          logger.info(
+            '⏳ Waiting for required configuration before initializing...'
+          );
+          return;
+        }
+
         const db = open({ name: databaseName });
         dbRef.current = db;
 
@@ -81,7 +101,7 @@ export function SQLiteSyncProvider({
 
           db.loadExtension(extensionPath);
 
-          logger.info('✅ CloudSync extension loaded from:', extensionPath);
+          logger.info('✅ CloudSync extension loaded');
         } catch (loadErr) {
           logger.error('❌ Failed to load CloudSync extension:', loadErr);
           throw new Error(
@@ -178,10 +198,12 @@ export function SQLiteSyncProvider({
 
         if (isMounted) {
           setIsInitialized(true);
+          setInitError(null);
         }
       } catch (err) {
         logger.error('❌ Initialization failed:', err);
         if (isMounted) {
+          setIsInitialized(false);
           setInitError(
             err instanceof Error ? err : new Error('Initialization failed')
           );
