@@ -26,6 +26,12 @@ interface BaseSQLiteSyncProviderProps {
   syncInterval: number;
 
   /**
+   * Enable debug logging (default: false)
+   * When true, logs detailed sync operations to console
+   */
+  debug?: boolean;
+
+  /**
    * Children components
    */
   children: React.ReactNode;
