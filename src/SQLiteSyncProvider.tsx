@@ -107,7 +107,6 @@ export function SQLiteSyncProvider({
         /** CREATE TABLES AND INITIALIZE CLOUDSYNC **/
         for (const table of tablesToBeSynced) {
           try {
-            logger.info(`📋 Creating table: ${table.name}...`);
             await db.execute(table.schema);
             logger.info(`✅ Table created: ${table.name}`);
           } catch (createErr) {
@@ -116,9 +115,6 @@ export function SQLiteSyncProvider({
           }
 
           try {
-            logger.info(
-              `🔄 Initializing CloudSync for table: ${table.name}...`
-            );
             const initResult = await db.execute(
               `SELECT cloudsync_init('${table.name}');`
             );
@@ -144,11 +140,13 @@ export function SQLiteSyncProvider({
 
         /** INITIALIZE NETWORK CONNECTION **/
         try {
-          logger.info('🌐 Initializing network with:', connectionString);
           await db.execute(
             `SELECT cloudsync_network_init('${connectionString}');`
           );
-          logger.info('✅ Network initialized');
+          logger.info(
+            '✅ Network initialized with connection string:',
+            connectionString
+          );
         } catch (networkErr) {
           logger.error('❌ Network initialization failed:', networkErr);
           throw new Error('Failed to initialize network connection');
@@ -157,23 +155,23 @@ export function SQLiteSyncProvider({
         /** SET AUTHENTICATION **/
         try {
           if (apiKey) {
-            logger.info('🔑 Setting API key...');
             await db.execute(
               `SELECT cloudsync_network_set_apikey('${apiKey}');`
             );
             logger.info('✅ API key set');
           } else if (accessToken) {
-            logger.info('🔑 Setting access token...');
             await db.execute(
               `SELECT cloudsync_network_set_token('${accessToken}');`
             );
             logger.info('✅ Access token set');
           } else {
-            logger.warn('⚠️ No authentication credentials provided');
+            throw new Error('No authentication credentials provided');
           }
         } catch (authErr) {
           logger.error('❌ Authentication setup failed:', authErr);
-          throw new Error('Failed to set authentication credentials');
+          throw new Error(
+            'Failed to set authentication credentials: ' + authErr
+          );
         }
 
         if (isMounted) {
