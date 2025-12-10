@@ -351,10 +351,6 @@ Check out the [examples](./examples) directory for complete working examples:
 
 - **[sync-demo](./examples/sync-demo)** - Basic sync demonstration with CRUD operations
 
-## 📄 License
-
-MIT © [SQLite AI](https://www.sqlite.ai/)
-
 ## 🔗 Links
 
 - [SQLite Sync Documentation](https://docs.sqlitecloud.io/docs/sqlite-sync) - Detailed sync docs with API references and best practices
