@@ -32,8 +32,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example:old-arch": "yarn workspace @sqliteai/sqlite-sync-react-native-example-old-arch",
-    "example:new-arch": "yarn workspace @sqliteai/sqlite-sync-react-native-example-new-arch",
+    "example": "yarn workspace @sqliteai/sqlite-sync-react-native-example-sync-demo",
     "clean": "del-cli lib",
     "prepare": "bob build",
     "typecheck": "tsc",
@@ -90,8 +89,7 @@
     "react-native": "*"
   },
   "workspaces": [
-    "examples/old-arch",
-    "examples/new-arch"
+    "examples/sync-demo"
   ],
   "packageManager": "yarn@4.11.0",
   "react-native-builder-bob": {
@@ -141,8 +139,7 @@
   "jest": {
     "preset": "react-native",
     "modulePathIgnorePatterns": [
-      "<rootDir>/examples/old-arch/node_modules",
-      "<rootDir>/examples/new-arch/node_modules",
+      "<rootDir>/examples/sync-demo/node_modules",
       "<rootDir>/lib/"
     ]
   },
