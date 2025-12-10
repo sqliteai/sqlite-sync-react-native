@@ -1,5 +1,8 @@
 import type { TableConfig } from './TableConfig';
 
+/**
+ * The base properties required for SQLiteSyncProvider
+ */
 interface BaseSQLiteSyncProviderProps {
   /**
    * SQLite Cloud connection string

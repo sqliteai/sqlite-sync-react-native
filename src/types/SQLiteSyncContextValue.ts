@@ -1,3 +1,6 @@
+/**
+ * The context value provided by SQLiteSyncProvider
+ * */
 export interface SQLiteSyncContextValue {
   /**
    * Whether the provider is initialized
