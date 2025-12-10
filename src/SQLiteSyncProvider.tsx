@@ -26,10 +26,10 @@ import { createLogger } from './utils/logger';
  * @param {SQLiteSyncProviderProps} props - Configuration props for the provider
  * @param {string} props.connectionString - SQLite Cloud connection string (optional for offline-only)
  * @param {string} props.databaseName - Local database file name
- * @param {Array<{name: string, schema: string}>} props.tablesToBeSynced - Array of tables to sync
+ * @param {Array<{name: string, createTableSql: string}>} props.tablesToBeSynced - Array of tables to sync
  *   Each table requires:
  *   - `name`: Table name (must match remote table name)
- *   - `schema`: SQL CREATE TABLE statement
+ *   - `createTableSql`: SQL CREATE TABLE statement (executed before CloudSync init)
  * @param {number} props.syncInterval - Sync interval in milliseconds
  * @param {string} [props.apiKey] - SQLite Cloud API key for authentication (optional for offline-only)
  *   Use either `apiKey` OR `accessToken`, not both
@@ -97,7 +97,7 @@ export function SQLiteSyncProvider({
         } else {
           for (const table of tablesToBeSynced) {
             try {
-              await db.execute(table.schema);
+              await db.execute(table.createTableSql);
               logger.info(`✅ Table created: ${table.name}`);
             } catch (createErr) {
               logger.error(

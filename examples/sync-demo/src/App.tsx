@@ -149,7 +149,7 @@ export default function App() {
       tablesToBeSynced={[
         {
           name: TABLE_NAME,
-          schema: `
+          createTableSql: `
             CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
               id TEXT PRIMARY KEY NOT NULL,
               value TEXT,
