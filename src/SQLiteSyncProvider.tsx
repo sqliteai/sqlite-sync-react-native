@@ -167,9 +167,9 @@ export function SQLiteSyncProvider({
 
         /** INITIALIZE CLOUDSYNC FOR TABLES **/
         for (const table of tablesToBeSynced) {
-          const initResult = await db.execute(
-            `SELECT cloudsync_init('${table.name}');`
-          );
+          const initResult = await db.execute('SELECT cloudsync_init(?);', [
+            table.name,
+          ]);
 
           const firstRow = initResult.rows?.[0];
           const result = firstRow ? Object.values(firstRow)[0] : undefined;
@@ -182,19 +182,19 @@ export function SQLiteSyncProvider({
         }
 
         /** INITIALIZE NETWORK CONNECTION **/
-        await db.execute(
-          `SELECT cloudsync_network_init('${connectionString}');`
-        );
+        await db.execute('SELECT cloudsync_network_init(?);', [
+          connectionString,
+        ]);
         logger.info('✅ Network initialized');
 
         /** SET AUTHENTICATION **/
         if (apiKey) {
-          await db.execute(`SELECT cloudsync_network_set_apikey('${apiKey}');`);
+          await db.execute('SELECT cloudsync_network_set_apikey(?);', [apiKey]);
           logger.info('✅ API key set');
         } else if (accessToken) {
-          await db.execute(
-            `SELECT cloudsync_network_set_token('${accessToken}');`
-          );
+          await db.execute('SELECT cloudsync_network_set_token(?);', [
+            accessToken,
+          ]);
           logger.info('✅ Access token set');
         }
 
@@ -256,7 +256,11 @@ export function SQLiteSyncProvider({
       try {
         setIsSyncing(true);
 
-        const syncResult = await dbRef.current!.execute(
+        if (!dbRef.current) {
+          throw new Error('Database not available for sync');
+        }
+
+        const syncResult = await dbRef.current.execute(
           'SELECT cloudsync_network_sync();'
         );
 
