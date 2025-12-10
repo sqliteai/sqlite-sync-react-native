@@ -30,6 +30,7 @@ import { createLogger } from './utils/logger';
  * @param {string} [props.accessToken] - SQLite Cloud access token for authentication
  *   Use either `apiKey` OR `accessToken`, not both
  * @param {React.ReactNode} props.children - Child components that will have access to the sync context
+ * @param {boolean} [props.debug=false] - Enable debug logging
  *
  * @returns {JSX.Element} Provider component wrapping children with SQLiteSyncContext
  */
@@ -46,7 +47,8 @@ export function SQLiteSyncProvider({
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
   const [lastSyncChanges, setLastSyncChanges] = useState(0);
-  const [error, setError] = useState<Error | null>(null);
+  const [initError, setInitError] = useState<Error | null>(null);
+  const [syncError, setSyncError] = useState<Error | null>(null);
   const dbRef = useRef<DB | null>(null);
 
   /** EXTRACT AUTH CREDENTIALS **/
@@ -180,7 +182,7 @@ export function SQLiteSyncProvider({
       } catch (err) {
         logger.error('❌ Initialization failed:', err);
         if (isMounted) {
-          setError(
+          setInitError(
             err instanceof Error ? err : new Error('Initialization failed')
           );
         }
@@ -237,9 +239,10 @@ export function SQLiteSyncProvider({
 
         setLastSyncChanges(changes);
         setLastSyncTime(Date.now());
+        setSyncError(null);
       } catch (err) {
         logger.error('❌ Sync failed:', err);
-        setError(err instanceof Error ? err : new Error('Sync failed'));
+        setSyncError(err instanceof Error ? err : new Error('Sync failed'));
       } finally {
         setIsSyncing(false);
       }
@@ -261,10 +264,18 @@ export function SQLiteSyncProvider({
       isSyncing,
       lastSyncTime,
       lastSyncChanges,
-      error,
+      initError,
+      syncError,
       db: dbRef.current,
     }),
-    [isInitialized, isSyncing, lastSyncTime, lastSyncChanges, error]
+    [
+      isInitialized,
+      isSyncing,
+      lastSyncTime,
+      lastSyncChanges,
+      initError,
+      syncError,
+    ]
   );
 
   return (

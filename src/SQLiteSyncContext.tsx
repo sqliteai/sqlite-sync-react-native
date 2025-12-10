@@ -9,7 +9,8 @@ const defaultContextValue: SQLiteSyncContextValue = {
   isSyncing: false,
   lastSyncTime: null,
   lastSyncChanges: 0,
-  error: null,
+  initError: null,
+  syncError: null,
   db: null,
 };
 
@@ -21,7 +22,8 @@ const defaultContextValue: SQLiteSyncContextValue = {
  * - isSyncing: Whether a sync operation is currently in progress
  * - lastSyncTime: Timestamp of the last successful sync
  * - lastSyncChanges: Number of changes synced in the last operation
- * - error: Any initialization or sync errors
+ * - initError: Fatal initialization errors (prevents app from working)
+ * - syncError: Recoverable sync errors (app still works offline)
  * - db: Direct access to the op-sqlite database instance for custom queries
  */
 export const SQLiteSyncContext =

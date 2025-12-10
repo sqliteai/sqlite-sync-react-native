@@ -21,7 +21,7 @@ import {
 } from '@env';
 
 function TestApp() {
-  const { db, isInitialized, isSyncing, lastSyncTime } =
+  const { db, isInitialized, isSyncing, lastSyncTime, initError, syncError } =
     useContext(SQLiteSyncContext);
   const [text, setText] = useState('');
   const [rows, setRows] = useState<any[]>([]);
@@ -57,6 +57,19 @@ function TestApp() {
   // Auto-reload rows when sync has changes
   useOnSqliteSync(loadRows);
 
+  // Show init error (fatal - blocks the app)
+  if (initError) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>Initialization Failed</Text>
+        <Text style={styles.errorDetails}>{initError.message}</Text>
+        <Text style={styles.errorHelp}>
+          Please check your credentials in .env file
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>SQLite Sync Test</Text>
@@ -70,6 +83,18 @@ function TestApp() {
         <Text style={styles.status}>
           Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
         </Text>
+      )}
+
+      {/* Show sync error (non-blocking banner) */}
+      {syncError && (
+        <View style={styles.syncErrorBanner}>
+          <Text style={styles.syncErrorText}>
+            ⚠️ Sync failed: {syncError.message}
+          </Text>
+          <Text style={styles.syncErrorSubtext}>
+            App still works offline. Will retry automatically.
+          </Text>
+        </View>
       )}
 
       <View style={styles.inputContainer}>
@@ -193,5 +218,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorHelp: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  syncErrorBanner: {
+    backgroundColor: '#fff3cd',
+    borderColor: '#ffc107',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 10,
+    width: '100%',
+  },
+  syncErrorText: {
+    fontSize: 13,
+    color: '#856404',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  syncErrorSubtext: {
+    fontSize: 11,
+    color: '#856404',
   },
 });

@@ -23,9 +23,16 @@ export interface SQLiteSyncContextValue {
   lastSyncChanges: number;
 
   /**
-   * Error if any occurred during initialization or sync
+   * Initialization error (fatal - prevents app from working)
+   * Occurs during database setup, extension loading, or network initialization
    */
-  error: Error | null;
+  initError: Error | null;
+
+  /**
+   * Sync error (recoverable - app still works offline)
+   * Occurs during periodic sync operations
+   */
+  syncError: Error | null;
 
   /**
    * Database instance for manual operations
