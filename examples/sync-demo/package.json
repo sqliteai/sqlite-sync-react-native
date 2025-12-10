@@ -23,6 +23,7 @@
   "private": true,
   "devDependencies": {
     "react-native-builder-bob": "^0.40.16",
+    "react-native-dotenv": "^3.4.11",
     "react-native-monorepo-config": "^0.1.9"
   }
 }

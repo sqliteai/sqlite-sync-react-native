@@ -13,6 +13,12 @@ import {
   useOnSqliteSync,
   useTriggerSqliteSync,
 } from '@sqliteai/sqlite-sync-react-native';
+import {
+  SQLITE_CLOUD_CONNECTION_STRING,
+  SQLITE_CLOUD_API_KEY,
+  DATABASE_NAME,
+  TABLE_NAME,
+} from '@env';
 
 function TestApp() {
   const { db, isInitialized, isSyncing, lastSyncTime } =
@@ -25,7 +31,7 @@ function TestApp() {
     if (!db) return;
 
     try {
-      const result = await db.execute('SELECT * FROM test5;');
+      const result = await db.execute(`SELECT * FROM ${TABLE_NAME};`);
       setRows(result.rows || []);
     } catch (err) {
       console.error('Failed to load rows:', err);
@@ -38,7 +44,7 @@ function TestApp() {
     try {
       const id = Date.now().toString();
       await db.execute(
-        `INSERT INTO test5 (id, value) VALUES ('${id}', '${text}');`
+        `INSERT INTO ${TABLE_NAME} (id, value) VALUES ('${id}', '${text}');`
       );
       console.log('✅ Row inserted:', id, text);
       setText('');
@@ -91,15 +97,35 @@ function TestApp() {
 }
 
 export default function App() {
+  // Validate environment variables
+  if (
+    !SQLITE_CLOUD_CONNECTION_STRING ||
+    !SQLITE_CLOUD_API_KEY ||
+    !DATABASE_NAME ||
+    !TABLE_NAME
+  ) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>
+          Missing environment variables. Please create a .env file with your
+          SQLite Cloud credentials.
+        </Text>
+        <Text style={styles.errorDetails}>
+          See README.md for setup instructions.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <SQLiteSyncProvider
-      connectionString="sqlitecloud://cvuzesvcnk.global2.ryujaz.sqlite.cloud:8860/test-database-2"
-      databaseName="test-database-2.db"
+      connectionString={SQLITE_CLOUD_CONNECTION_STRING}
+      databaseName={DATABASE_NAME}
       tablesToBeSynced={[
         {
-          name: 'test5',
+          name: TABLE_NAME,
           schema: `
-            CREATE TABLE IF NOT EXISTS test5 (
+            CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
               id TEXT PRIMARY KEY NOT NULL,
               value TEXT,
               created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -108,7 +134,7 @@ export default function App() {
         },
       ]}
       syncInterval={3000}
-      apiKey="hCcJLRGVabytCQJNJ3BWW6o2YWMPJpxKXGP8jk1uDDk"
+      apiKey={SQLITE_CLOUD_API_KEY}
     >
       <TestApp />
     </SQLiteSyncProvider>
@@ -158,5 +184,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     borderRadius: 4,
     width: '100%',
+  },
+  error: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 10,
+    fontWeight: 'bold',
+  },
+  errorDetails: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });

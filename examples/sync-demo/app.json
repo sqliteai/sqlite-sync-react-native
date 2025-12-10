@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "new-arch",
-    "slug": "new-arch",
+    "name": "sync-demo",
+    "slug": "sync-demo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,7 +24,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "sqliteai.sqlitesyncreactnative.examplenewarch"
+      "bundleIdentifier": "sqliteai.sqlitesyncreactnative.examplesyncdemo"
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +32,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "sqliteai.sqlitesyncreactnative.examplenewarch",
+      "package": "sqliteai.sqlitesyncreactnative.examplesyncdemo",
       "minSdkVersion": 26
     },
     "web": {
