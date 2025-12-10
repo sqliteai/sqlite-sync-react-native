@@ -43,11 +43,10 @@ function TestApp() {
     if (!db || !text.trim()) return;
 
     try {
-      const id = Date.now().toString();
       await db.execute(
-        `INSERT INTO ${TABLE_NAME} (id, value) VALUES ('${id}', '${text}');`
+        `INSERT INTO ${TABLE_NAME} (id, value) VALUES (cloudsync_uuid(), '${text}');`
       );
-      console.log('[sqlite-sync-demo] ✅ Row inserted:', id, text);
+      console.log('[sqlite-sync-demo] ✅ Row inserted:', text);
       setText('');
       loadRows();
     } catch (err) {
@@ -95,7 +94,6 @@ function TestApp() {
 }
 
 export default function App() {
-  // Validate environment variables
   if (
     !SQLITE_CLOUD_CONNECTION_STRING ||
     !SQLITE_CLOUD_API_KEY ||
