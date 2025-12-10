@@ -7,27 +7,33 @@ import type { SQLiteSyncContextValue } from './types/SQLiteSyncContextValue';
 import { createLogger } from './utils/logger';
 
 /**
- * SQLiteSyncProvider - A React context provider that enables real-time SQLite database synchronization
- * with SQLite Cloud using the CloudSync extension.
+ * SQLiteSyncProvider - An offline-first React context provider that enables local SQLite database
+ * operations with optional real-time synchronization to SQLite Cloud.
  *
- * This provider handles:
- * - Database initialization and table creation
- * - Loading and configuring the CloudSync extension
- * - Automatic periodic synchronization with the cloud
- * - Authentication (API key or access token)
- * - Sync state management (initialized, syncing, last sync time, changes count)
+ * **Offline-First Design:**
+ * - Database is always available for local operations, even without network connectivity
+ * - Sync failures (missing credentials, network issues) don't prevent database access
+ * - Only fatal errors (unsupported platform, cannot open database) prevent operation
+ *
+ * **Initialization Phases:**
+ * 1. Database Phase: Opens database and creates tables (must succeed)
+ * 2. Sync Phase: Loads CloudSync extension and configures network (best-effort)
+ *
+ * **Error Handling:**
+ * - `initError`: Fatal database errors (db unavailable)
+ * - `syncError`: Recoverable sync errors (db works offline-only)
  *
  * @param {SQLiteSyncProviderProps} props - Configuration props for the provider
- * @param {string} props.connectionString - SQLite Cloud connection string
- * @param {string} props.databaseName - Local database file name *
+ * @param {string} props.connectionString - SQLite Cloud connection string (optional for offline-only)
+ * @param {string} props.databaseName - Local database file name
  * @param {Array<{name: string, schema: string}>} props.tablesToBeSynced - Array of tables to sync
  *   Each table requires:
  *   - `name`: Table name (must match remote table name)
  *   - `schema`: SQL CREATE TABLE statement
  * @param {number} props.syncInterval - Sync interval in milliseconds
- * @param {string} [props.apiKey] - SQLite Cloud API key for authentication
+ * @param {string} [props.apiKey] - SQLite Cloud API key for authentication (optional for offline-only)
  *   Use either `apiKey` OR `accessToken`, not both
- * @param {string} [props.accessToken] - SQLite Cloud access token for authentication
+ * @param {string} [props.accessToken] - SQLite Cloud access token for authentication (optional for offline-only)
  *   Use either `apiKey` OR `accessToken`, not both
  * @param {React.ReactNode} props.children - Child components that will have access to the sync context
  * @param {boolean} [props.debug=false] - Enable debug logging
@@ -43,7 +49,7 @@ export function SQLiteSyncProvider({
   children,
   ...authProps
 }: SQLiteSyncProviderProps) {
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isSyncReady, setIsSyncReady] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
   const [lastSyncChanges, setLastSyncChanges] = useState(0);
@@ -63,7 +69,12 @@ export function SQLiteSyncProvider({
     let isMounted = true;
 
     const initialize = async () => {
+      let db: DB | null = null;
+
       try {
+        /** PHASE 1: DATABASE INITIALIZATION (must succeed) **/
+        logger.info('📦 Starting database initialization...');
+
         /** CHECK PLATFORM SUPPORT **/
         if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
           throw new Error(
@@ -71,141 +82,135 @@ export function SQLiteSyncProvider({
           );
         }
 
-        /** WAIT FOR REQUIRED CONFIGURATION **/
-        if (
-          !connectionString ||
-          !databaseName ||
-          tablesToBeSynced.length === 0 ||
-          (!apiKey && !accessToken)
-        ) {
-          logger.info(
-            '⏳ Waiting for required configuration before initializing...'
-          );
-          return;
+        /** OPEN DATABASE **/
+        if (!databaseName) {
+          throw new Error('Database name is required');
         }
 
-        const db = open({ name: databaseName });
+        db = open({ name: databaseName });
         dbRef.current = db;
+        logger.info('✅ Database opened:', databaseName);
 
-        logger.info('📦 Database opened:', databaseName);
-
-        /** LOAD CLOUDSYNC EXTENSION **/
-        try {
-          let extensionPath: string;
-
-          if (Platform.OS === 'ios') {
-            extensionPath = getDylibPath('ai.sqlite.cloudsync', 'CloudSync');
-          } else {
-            extensionPath = 'cloudsync';
-          }
-
-          db.loadExtension(extensionPath);
-
-          logger.info('✅ CloudSync extension loaded');
-        } catch (loadErr) {
-          logger.error('❌ Failed to load CloudSync extension:', loadErr);
-          throw new Error(
-            'Failed to load CloudSync extension. Make sure the native module is properly linked.'
-          );
-        }
-
-        /** VERIFY CLOUDSYNC EXTENSION IS LOADED **/
-        try {
-          const versionResult = await db.execute('SELECT cloudsync_version();');
-          const version = versionResult.rows?.[0]?.[
-            'cloudsync_version()'
-          ] as string;
-
-          if (!version) {
-            throw new Error('CloudSync extension not loaded properly');
-          }
-
-          logger.info('✅ CloudSync version:', version);
-        } catch (versionErr) {
-          logger.error('❌ CloudSync version check failed:', versionErr);
-          throw versionErr;
-        }
-
-        /** CREATE TABLES AND INITIALIZE CLOUDSYNC **/
-        for (const table of tablesToBeSynced) {
-          try {
-            await db.execute(table.schema);
-            logger.info(`✅ Table created: ${table.name}`);
-          } catch (createErr) {
-            logger.error(`❌ Failed to create table ${table.name}:`, createErr);
-            throw new Error(`Failed to create table: ${table.name}`);
-          }
-
-          try {
-            const initResult = await db.execute(
-              `SELECT cloudsync_init('${table.name}');`
-            );
-
-            const firstRow = initResult.rows?.[0];
-            const result = firstRow ? Object.values(firstRow)[0] : undefined;
-
-            logger.info(
-              `✅ CloudSync initialized for table: ${table.name}${
-                result ? ` (site_id: ${result})` : ''
-              }`
-            );
-          } catch (initErr) {
-            logger.error(
-              `❌ Failed to initialize CloudSync for table ${table.name}:`,
-              initErr
-            );
-            throw new Error(
-              `Failed to initialize CloudSync for table: ${table.name}`
-            );
+        /** CREATE TABLES **/
+        if (tablesToBeSynced.length === 0) {
+          logger.warn('⚠️ No tables configured for sync');
+        } else {
+          for (const table of tablesToBeSynced) {
+            try {
+              await db.execute(table.schema);
+              logger.info(`✅ Table created: ${table.name}`);
+            } catch (createErr) {
+              logger.error(
+                `❌ Failed to create table ${table.name}:`,
+                createErr
+              );
+              throw new Error(`Failed to create table: ${table.name}`);
+            }
           }
         }
 
-        /** INITIALIZE NETWORK CONNECTION **/
-        try {
-          await db.execute(
-            `SELECT cloudsync_network_init('${connectionString}');`
-          );
-          logger.info(
-            '✅ Network initialized with connection string:',
-            connectionString
-          );
-        } catch (networkErr) {
-          logger.error('❌ Network initialization failed:', networkErr);
-          throw new Error('Failed to initialize network connection');
-        }
-
-        /** SET AUTHENTICATION **/
-        try {
-          if (apiKey) {
-            await db.execute(
-              `SELECT cloudsync_network_set_apikey('${apiKey}');`
-            );
-            logger.info('✅ API key set');
-          } else if (accessToken) {
-            await db.execute(
-              `SELECT cloudsync_network_set_token('${accessToken}');`
-            );
-            logger.info('✅ Access token set');
-          } else {
-            throw new Error('No authentication credentials provided');
-          }
-        } catch (authErr) {
-          logger.error('❌ Authentication setup failed:', authErr);
-          throw new Error(
-            'Failed to set authentication credentials: ' + authErr
-          );
-        }
+        logger.info('✅ Database ready for local use');
 
         if (isMounted) {
-          setIsInitialized(true);
           setInitError(null);
         }
       } catch (err) {
-        logger.error('❌ Initialization failed:', err);
+        /** FATAL ERROR - database cannot be used **/
+        logger.error('❌ Database initialization failed:', err);
         if (isMounted) {
-          setIsInitialized(false);
           setInitError(
-            err instanceof Error ? err : new Error('Initialization failed')
+            err instanceof Error
+              ? err
+              : new Error('Database initialization failed')
+          );
+        }
+        return;
+      }
+
+      /** PHASE 2: SYNC INITIALIZATION **/
+      try {
+        logger.info('🔄 Starting sync initialization...');
+
+        /** CHECK SYNC CONFIGURATION **/
+        if (!connectionString || (!apiKey && !accessToken)) {
+          throw new Error(
+            'Sync configuration incomplete. Database works offline-only until credentials are provided.'
+          );
+        }
+
+        /** LOAD CLOUDSYNC EXTENSION **/
+        let extensionPath: string;
+        if (Platform.OS === 'ios') {
+          extensionPath = getDylibPath('ai.sqlite.cloudsync', 'CloudSync');
+        } else {
+          extensionPath = 'cloudsync';
+        }
+
+        db!.loadExtension(extensionPath);
+        logger.info('✅ CloudSync extension loaded');
+
+        /** VERIFY CLOUDSYNC EXTENSION **/
+        const versionResult = await db!.execute('SELECT cloudsync_version();');
+        const version = versionResult.rows?.[0]?.[
+          'cloudsync_version()'
+        ] as string;
+
+        if (!version) {
+          throw new Error('CloudSync extension not loaded properly');
+        }
+        logger.info('✅ CloudSync version:', version);
+
+        /** INITIALIZE CLOUDSYNC FOR TABLES **/
+        for (const table of tablesToBeSynced) {
+          const initResult = await db!.execute(
+            `SELECT cloudsync_init('${table.name}');`
+          );
+
+          const firstRow = initResult.rows?.[0];
+          const result = firstRow ? Object.values(firstRow)[0] : undefined;
+
+          logger.info(
+            `✅ CloudSync initialized for table: ${table.name}${
+              result ? ` (site_id: ${result})` : ''
+            }`
+          );
+        }
+
+        /** INITIALIZE NETWORK CONNECTION **/
+        await db!.execute(
+          `SELECT cloudsync_network_init('${connectionString}');`
+        );
+        logger.info('✅ Network initialized');
+
+        /** SET AUTHENTICATION **/
+        if (apiKey) {
+          await db!.execute(
+            `SELECT cloudsync_network_set_apikey('${apiKey}');`
+          );
+          logger.info('✅ API key set');
+        } else if (accessToken) {
+          await db!.execute(
+            `SELECT cloudsync_network_set_token('${accessToken}');`
+          );
+          logger.info('✅ Access token set');
+        }
+
+        logger.info('✅ Sync initialization complete');
+
+        if (isMounted) {
+          setIsSyncReady(true);
+          setSyncError(null);
+        }
+      } catch (err) {
+        /** NON-FATAL ERROR - database works, but sync doesn't **/
+        logger.warn(
+          '⚠️ Sync initialization failed. Database works in offline-only mode:',
+          err
+        );
+        if (isMounted) {
+          setIsSyncReady(false);
+          setSyncError(
+            err instanceof Error ? err : new Error('Sync initialization failed')
           );
         }
       }
@@ -236,7 +241,7 @@ export function SQLiteSyncProvider({
 
   /** SYNC ON INTERVAL **/
   useEffect(() => {
-    if (!isInitialized || !dbRef.current) {
+    if (!isSyncReady || !dbRef.current) {
       return;
     }
 
@@ -278,20 +283,20 @@ export function SQLiteSyncProvider({
       clearInterval(intervalId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitialized, syncInterval]);
+  }, [isSyncReady, syncInterval]);
 
   const contextValue = useMemo<SQLiteSyncContextValue>(
     () => ({
-      isInitialized,
+      db: dbRef.current,
+      isSyncReady,
       isSyncing,
       lastSyncTime,
       lastSyncChanges,
       initError,
       syncError,
-      db: dbRef.current,
     }),
     [
-      isInitialized,
+      isSyncReady,
       isSyncing,
       lastSyncTime,
       lastSyncChanges,

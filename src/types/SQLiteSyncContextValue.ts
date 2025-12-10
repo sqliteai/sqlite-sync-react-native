@@ -5,9 +5,17 @@ import type { DB } from '@op-engineering/op-sqlite';
  * */
 export interface SQLiteSyncContextValue {
   /**
-   * Whether the provider is initialized
+   * Database instance for local operations
+   * Check `db !== null` to verify database is ready
    */
-  isInitialized: boolean;
+  db: DB | null;
+
+  /**
+   * Whether sync is configured and ready
+   * true = CloudSync extension loaded and network configured
+   * false = Database works offline-only
+   */
+  isSyncReady: boolean;
 
   /**
    * Whether sync is currently in progress
@@ -25,19 +33,14 @@ export interface SQLiteSyncContextValue {
   lastSyncChanges: number;
 
   /**
-   * Initialization error (fatal - prevents app from working)
-   * Occurs during database setup, extension loading, or network initialization
+   * Initialization error (fatal - prevents database from working)
+   * Occurs during database setup (platform check, database open, table creation)
    */
   initError: Error | null;
 
   /**
    * Sync error (recoverable - app still works offline)
-   * Occurs during periodic sync operations
+   * Occurs during sync initialization or periodic sync operations
    */
   syncError: Error | null;
-
-  /**
-   * Database instance for manual operations
-   */
-  db: DB | null;
 }

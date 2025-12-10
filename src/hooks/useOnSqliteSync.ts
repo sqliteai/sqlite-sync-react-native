@@ -7,16 +7,17 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  * @param callback - Function to call when sync completes with changes
  */
 export function useOnSqliteSync(callback: () => void) {
-  const { lastSyncTime, lastSyncChanges, isInitialized } =
+  const { lastSyncTime, lastSyncChanges, isSyncReady } =
     useContext(SQLiteSyncContext);
 
   useEffect(() => {
-    if (!isInitialized) {
+    if (!isSyncReady) {
       return;
     }
 
     if (lastSyncTime === null || lastSyncChanges > 0) {
       callback();
     }
-  }, [lastSyncTime, lastSyncChanges, isInitialized, callback]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSyncTime, isSyncReady, callback]);
 }

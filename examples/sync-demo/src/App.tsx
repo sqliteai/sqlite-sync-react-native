@@ -21,7 +21,7 @@ import {
 } from '@env';
 
 function TestApp() {
-  const { db, isInitialized, isSyncing, lastSyncTime, initError, syncError } =
+  const { db, isSyncReady, isSyncing, lastSyncTime, initError, syncError } =
     useContext(SQLiteSyncContext);
   const [text, setText] = useState('');
   const [rows, setRows] = useState<any[]>([]);
@@ -61,10 +61,10 @@ function TestApp() {
   if (initError) {
     return (
       <View style={styles.container}>
-        <Text style={styles.error}>Initialization Failed</Text>
+        <Text style={styles.error}>Database Initialization Failed</Text>
         <Text style={styles.errorDetails}>{initError.message}</Text>
         <Text style={styles.errorHelp}>
-          Please check your credentials in .env file
+          This is a fatal error. The database cannot be used.
         </Text>
       </View>
     );
@@ -74,7 +74,10 @@ function TestApp() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>SQLite Sync Test</Text>
       <Text style={styles.status}>
-        {isInitialized ? '✅ Initialized' : '⏳ Initializing...'}
+        Database: {db ? '✅ Ready' : '⏳ Initializing...'}
+      </Text>
+      <Text style={styles.status}>
+        Sync: {isSyncReady ? '✅ Enabled' : '⚠️ Offline-only'}
       </Text>
       <Text style={styles.status}>
         {isSyncing ? '🔄 Syncing...' : '✓ Idle'}

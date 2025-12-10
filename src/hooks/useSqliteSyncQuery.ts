@@ -3,20 +3,21 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
 
 /**
  * Hook that re-runs a query whenever sync completes with changes
+ * Works in both online and offline-only modes
  *
  * @param sql - The SQL query to execute
  *
  * @returns Query result data and loading state
  */
 export function useSqliteSyncQuery<T = any>(sql: string) {
-  const { db, lastSyncTime, lastSyncChanges, isInitialized } =
+  const { db, lastSyncTime, lastSyncChanges, isSyncReady } =
     useContext(SQLiteSyncContext);
   const [data, setData] = useState<T[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const executeQuery = useCallback(async () => {
-    if (!db || !isInitialized) {
+    if (!db) {
       return;
     }
 
@@ -31,17 +32,18 @@ export function useSqliteSyncQuery<T = any>(sql: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [db, sql, isInitialized]);
+  }, [db, sql]);
 
   useEffect(() => {
-    if (!isInitialized) {
+    if (!isSyncReady) {
       return;
     }
 
     if (lastSyncTime === null || lastSyncChanges > 0) {
       executeQuery();
     }
-  }, [executeQuery, lastSyncTime, lastSyncChanges, isInitialized]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastSyncTime, isSyncReady, executeQuery]);
 
   return { data, isLoading, error, refetch: executeQuery };
 }
