@@ -19,9 +19,27 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
   The SQLite Sync extension is automatically loaded and configured for you.  
   No manual setup required — just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `db` instance.
 
-- 📱 **Native-Only, Ultra-Fast**  
-  Under the hood, we use OP-SQLite — a low-level, JSI-enabled SQLite engine for React Native.  
+- 📱 **Native-Only, Ultra-Fast**
+  Under the hood, we use OP-SQLite — a low-level, JSI-enabled SQLite engine for React Native.
   With OP-SQLite, database operations run at near-native speed on iOS and Android.
+
+## 📚 Table of Contents
+
+- [Requirements](#-requirements)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [API Reference](#-api-reference)
+  - [SQLiteSyncProvider](#sqlitesyncprovider)
+  - [TableConfig](#tableconfig)
+  - [SQLiteSyncContext](#context-sqlitesynccontext)
+  - [Hooks](#hooks)
+    - [useTriggerSqliteSync](#usetriggersqlitesync)
+    - [useOnSqliteSync](#useonsqlitesync)
+    - [useSqliteSyncQuery](#usesqlitesyncquery)
+- [Error Handling](#-error-handling)
+- [Debug Logging](#-debug-logging)
+- [Examples](#-examples)
+- [Links](#-links)
 
 ## 📋 Requirements
 
