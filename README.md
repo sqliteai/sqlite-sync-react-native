@@ -243,7 +243,6 @@ The `db` property is a `DB` instance from [`@op-engineering/op-sqlite`](https://
 
 - Use the full [op-sqlite API](https://op-engineering.github.io/op-sqlite/docs/api) for standard database operations
 - Use any [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc.
-- Execute custom queries that leverage CRDT conflict resolution
 
 ### Hooks
 
