@@ -142,10 +142,10 @@ export function SQLiteSyncProvider({
       const result = firstRow ? Object.values(firstRow)[0] : 0;
       const changes = typeof result === 'number' ? result : 0;
 
-      if (changes > 0) {
-        setLastSyncChanges(changes);
-        setLastSyncTime(Date.now());
+      setLastSyncTime(Date.now());
+      setLastSyncChanges(changes);
 
+      if (changes > 0) {
         // Notify all sync listeners (without causing re-renders)
         syncListenersRef.current.forEach((listener) => {
           try {
