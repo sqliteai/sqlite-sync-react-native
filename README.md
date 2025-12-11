@@ -9,13 +9,19 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 ## ✨ Features
 
 - 🧩 **Offline-First, Automatic Sync**  
-  Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
-- 🪝 **React Hooks Designed for Sync-Aware Data**
-  Use hooks like `useSqliteSyncQuery` and `useOnSqliteSync` to automatically refresh your UI when changes are synced from the cloud, keeping your app up-to-date without boilerplate code.
-- 🔧 **Zero-Configuration Extension Loading**
-  The SQLite Sync extension is automatically loaded and configured for you. No manual setup required, just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `db` instance.
-- 📱 **Native‑Only, Ultra‑Fast**
-  Under the hood, we use OP‑SQLite — a low‑level, JSI‑enabled SQLite engine for React Native. With OP‑SQLite, database operations run at near-native speed on iOS and Android.
+  Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization.  
+  Your app works fully offline, and all local changes are synced seamlessly when online.
+
+- 🪝 **React Hooks Designed for Sync-Aware Data**  
+  Use hooks like `useSqliteSyncQuery` and `useOnSqliteSync` to automatically refresh your UI when changes are synced from the cloud — keeping your app up-to-date without boilerplate code.
+
+- 🔧 **Zero-Configuration Extension Loading**  
+  The SQLite Sync extension is automatically loaded and configured for you.  
+  No manual setup required — just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `db` instance.
+
+- 📱 **Native-Only, Ultra-Fast**  
+  Under the hood, we use OP-SQLite — a low-level, JSI-enabled SQLite engine for React Native.  
+  With OP-SQLite, database operations run at near-native speed on iOS and Android.
 
 ## 📋 Requirements
 
@@ -206,6 +212,7 @@ interface TableConfig {
 ```
 
 **Important:**
+
 - Always include `IF NOT EXISTS` to prevent errors if the table already exists
 - The table schema must match exactly to your remote table schema in SQLite Cloud
 - The library executes this SQL during initialization, before SQLiteSync setup
