@@ -9,8 +9,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 ## ✨ Features
 
 - 🧩 **Offline-First, Automatic Sync**  
-  Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization.  
-  Your app works fully offline, and all local changes are synced seamlessly when online.
+  Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
 
 - 🪝 **React Hooks Designed for Sync-Aware Data**  
   Use hooks like `useSqliteSyncQuery` and `useOnSqliteSync` to automatically refresh your UI when changes are synced from the cloud — keeping your app up-to-date without boilerplate code.
@@ -19,9 +18,8 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
   The SQLite Sync extension is automatically loaded and configured for you.  
   No manual setup required — just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `db` instance.
 
-- 📱 **Native-Only, Ultra-Fast**
-  Under the hood, we use OP-SQLite — a low-level, JSI-enabled SQLite engine for React Native.
-  With OP-SQLite, database operations run at near-native speed on iOS and Android.
+- 📱 **Native-Only, Ultra-Fast**  
+  Under the hood, we use OP-SQLite — a low-level, JSI-enabled SQLite engine for React Native With OP-SQLite, database operations run at near-native speed on iOS and Android.
 
 ## 📚 Table of Contents
 
@@ -141,51 +139,68 @@ export default function App() {
 
 ### 3. Use the Hooks
 
+The library provides specialized hooks to simplify querying, syncing, and state management.
+
 ```typescript
-import { useEffect, useContext, useState, useCallback } from 'react';
+import { useContext, useCallback } from 'react';
 import {
   SQLiteSyncContext,
+  useSqliteSyncQuery,
+  useTriggerSqliteSync,
   useOnSqliteSync,
 } from '@sqliteai/sqlite-sync-react-native';
 
 function TaskList() {
-  const { db, isSyncing } = useContext(SQLiteSyncContext);
-  const [tasks, setTasks] = useState([]);
+  // 1. DATA FETCHING: Automatically loads local data AND updates on sync
+  const {
+    data: tasks,
+    isLoading,
+    error,
+  } = useSqliteSyncQuery<{ id: string; title: string }>(
+    'SELECT * FROM tasks ORDER BY created_at DESC'
+  );
 
-  const loadTasks = useCallback(async () => {
-    if (!db) return;
-    const result = await db.execute('SELECT * FROM tasks;');
-    setTasks(result?.rows || []);
-  }, [db]);
+  // 2. MANUAL SYNC: Control when to sync (e.g., Pull-to-Refresh)
+  const { triggerSync, isSyncing } = useTriggerSqliteSync();
 
-  // 1. Initial Load - Run once when DB is ready
-  useEffect(() => {
-    if (db) {
-      loadTasks();
-    }
-  }, [db, loadTasks]);
+  // 3. EVENT LISTENING: React to incoming changes (e.g., Show a toast)
+  useOnSqliteSync(() => {
+    console.log('✨ New data arrived from the cloud!');
+  });
 
-  // 2. Sync Updates - Run only when cloud data arrives
-  useOnSqliteSync(loadTasks);
+  // 4. WRITING DATA: Use the raw DB instance from Context
+  const { db } = useContext(SQLiteSyncContext);
 
   const addTask = useCallback(
     async (title: string) => {
       if (!db) return;
+      // Use cloudsync_uuid() for conflict-free IDs
       await db.execute(
         'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
         [title]
       );
-      loadTasks(); // Refresh immediately after insert
+      // Optional: Push changes to cloud immediately
+      triggerSync();
     },
-    [db, loadTasks]
+    [db, triggerSync]
   );
+
+  if (isLoading) return <Text>Loading local DB...</Text>;
+  if (error) return <Text>Error: {error.message}</Text>;
 
   return (
     <View>
-      <Text>{isSyncing ? '🔄 Syncing...' : '✓ Synced'}</Text>
+      <Button
+        title={isSyncing ? 'Syncing...' : 'Sync Now'}
+        onPress={triggerSync}
+        disabled={isSyncing}
+      />
+
       {tasks.map((task) => (
         <Text key={task.id}>{task.title}</Text>
       ))}
+
+      <Button title="Add Random Task" onPress={() => addTask('New Task')} />
     </View>
   );
 }
@@ -253,16 +268,16 @@ const context = useContext(SQLiteSyncContext);
 
 #### Context Values
 
-| Property          | Type                    | Description                                                                                                                         |
-| ----------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `db`              | `DB \| null`            | [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) database instance. Check `db !== null` to verify database is ready |
-| `isSyncReady`     | `boolean`               | `true` when sync is configured and ready. `false` means offline-only mode                                                           |
-| `isSyncing`       | `boolean`               | `true` during sync operations                                                                                                       |
-| `lastSyncTime`    | `number \| null`        | Timestamp of last successful sync                                                                                                   |
-| `lastSyncChanges` | `number`                | Number of changes in last sync                                                                                                      |
-| `initError`       | `Error \| null`         | Fatal database error (db unavailable)                                                                                               |
-| `syncError`       | `Error \| null`         | Recoverable sync error (db works offline-only)                                                                                      |
-| `triggerSync`     | `() => Promise<void>`   | Function to manually trigger a sync operation. Updates state so all hooks react properly                                            |
+| Property          | Type                  | Description                                                                                                                         |
+| ----------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `db`              | `DB \| null`          | [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) database instance. Check `db !== null` to verify database is ready |
+| `isSyncReady`     | `boolean`             | `true` when sync is configured and ready. `false` means offline-only mode                                                           |
+| `isSyncing`       | `boolean`             | `true` during sync operations                                                                                                       |
+| `lastSyncTime`    | `number \| null`      | Timestamp of last successful sync                                                                                                   |
+| `lastSyncChanges` | `number`              | Number of changes in last sync                                                                                                      |
+| `initError`       | `Error \| null`       | Fatal database error (db unavailable)                                                                                               |
+| `syncError`       | `Error \| null`       | Recoverable sync error (db works offline-only)                                                                                      |
+| `triggerSync`     | `() => Promise<void>` | Function to manually trigger a sync operation. Updates state so all hooks react properly                                            |
 
 **About the `db` instance:**
 
@@ -322,13 +337,13 @@ Execute a query and automatically re-run when sync updates.
 **Auto-Refresh:** Re-runs the query automatically when cloud changes arrive via sync.
 
 **Loading States:**
+
 - `isLoading`: True only during initial load (when there's no data yet)
 - `isRefreshing`: True during background updates (sync updates, manual refresh)
 
 ```typescript
-const { data, isLoading, isRefreshing, error, refresh } = useSqliteSyncQuery<Task>(
-  'SELECT * FROM tasks ORDER BY created_at DESC'
-);
+const { data, isLoading, isRefreshing, error, refresh } =
+  useSqliteSyncQuery<Task>('SELECT * FROM tasks ORDER BY created_at DESC');
 
 // Show full-screen spinner only on first load
 if (isLoading) return <Spinner />;
