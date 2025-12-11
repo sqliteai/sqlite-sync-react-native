@@ -12,7 +12,9 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
   Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
 - 🪝 **React Hooks Designed for Sync-Aware Data**
   Use hooks like `useSqliteSyncQuery` and `useOnSqliteSync` to automatically refresh your UI when changes are synced from the cloud, keeping your app up-to-date without boilerplate code.
-- 📱 **Native‑Only, Ultra‑Fast**  
+- 🔧 **Zero-Configuration Extension Loading**
+  The SQLite Sync extension is automatically loaded and configured for you. No manual setup required, just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `db` instance.
+- 📱 **Native‑Only, Ultra‑Fast**
   Under the hood, we use OP‑SQLite — a low‑level, JSI‑enabled SQLite engine for React Native. With OP‑SQLite, database operations run at near-native speed on iOS and Android.
 
 ## 📋 Requirements
@@ -228,7 +230,13 @@ const context = useContext(SQLiteSyncContext);
 | `initError`       | `Error \| null`  | Fatal database error (db unavailable)                                                                                               |
 | `syncError`       | `Error \| null`  | Recoverable sync error (db works offline-only)                                                                                      |
 
-**Note:** The `db` property is a `DB` instance from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api). You can use the full op-sqlite API for queries, transactions, and other database operations.
+**About the `db` instance:**
+
+The `db` property is a `DB` instance from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api) with the **SQLite Sync extension loaded**. This means you can:
+
+- Use the full [op-sqlite API](https://op-engineering.github.io/op-sqlite/docs/api) for standard database operations
+- Use any [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc.
+- Execute custom queries that leverage CRDT conflict resolution
 
 ### Hooks
 
