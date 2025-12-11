@@ -311,13 +311,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
-    gap: 10,
   },
   button: {
     flex: 1,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
+    marginHorizontal: 5,
   },
   syncButton: {
     backgroundColor: '#007AFF',
@@ -357,7 +357,6 @@ const styles = StyleSheet.create({
   rowId: {
     fontSize: 10,
     color: '#999',
-    fontFamily: 'monospace',
     width: 60,
   },
   rowValue: {
@@ -419,7 +418,6 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
     marginBottom: 24,
     textAlign: 'center',
-    fontFamily: 'monospace',
     width: '100%',
   },
   errorHelp: {
