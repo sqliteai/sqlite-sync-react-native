@@ -360,4 +360,3 @@ Check out the [examples](./examples) directory for complete working examples:
 - [SQLite Sync Documentation](https://docs.sqlitecloud.io/docs/sqlite-sync) - Detailed sync docs with API references and best practices
 - [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/) - Manage your databases
 - [OP-SQLite API Reference](https://op-engineering.github.io/op-sqlite/docs/api)
-- [GitHub Issues](https://github.com/sqliteai/sqlite-sync-react-native/issues) - Report bugs
