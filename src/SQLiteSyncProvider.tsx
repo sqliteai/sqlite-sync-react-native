@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { open, getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import { SQLiteSyncContext } from './SQLiteSyncContext';
@@ -56,6 +56,7 @@ export function SQLiteSyncProvider({
   const [initError, setInitError] = useState<Error | null>(null);
   const [syncError, setSyncError] = useState<Error | null>(null);
   const dbRef = useRef<DB | null>(null);
+  const isSyncingRef = useRef(false);
 
   /** EXTRACT AUTH CREDENTIALS **/
   const apiKey = 'apiKey' in authProps ? authProps.apiKey : undefined;
@@ -64,6 +65,39 @@ export function SQLiteSyncProvider({
 
   /** CREATE LOGGER **/
   const logger = useMemo(() => createLogger(debug), [debug]);
+
+  /** SYNC FUNCTION - used for both manual and automatic sync **/
+  const performSync = useCallback(async () => {
+    // Prevent concurrent syncs
+    if (!dbRef.current || isSyncingRef.current) {
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+      isSyncingRef.current = true;
+
+      const syncResult = await dbRef.current.execute(
+        'SELECT cloudsync_network_sync();'
+      );
+
+      const firstRow = syncResult.rows?.[0];
+      const result = firstRow ? Object.values(firstRow)[0] : 0;
+      const changes = typeof result === 'number' ? result : 0;
+
+      logger.info(`✅ Sync completed: ${changes} changes synced`);
+
+      setLastSyncChanges(changes);
+      setLastSyncTime(Date.now());
+      setSyncError(null);
+    } catch (err) {
+      logger.error('❌ Sync failed:', err);
+      setSyncError(err instanceof Error ? err : new Error('Sync failed'));
+    } finally {
+      setIsSyncing(false);
+      isSyncingRef.current = false;
+    }
+  }, [logger]);
 
   useEffect(() => {
     let isMounted = true;
@@ -248,49 +282,16 @@ export function SQLiteSyncProvider({
       return;
     }
 
-    const performSync = async () => {
-      if (isSyncing) {
-        return;
-      }
-
-      try {
-        setIsSyncing(true);
-
-        if (!dbRef.current) {
-          throw new Error('Database not available for sync');
-        }
-
-        const syncResult = await dbRef.current.execute(
-          'SELECT cloudsync_network_sync();'
-        );
-
-        const firstRow = syncResult.rows?.[0];
-        const result = firstRow ? Object.values(firstRow)[0] : 0;
-
-        const changes = typeof result === 'number' ? result : 0;
-
-        logger.info(`✅ Sync completed: ${changes} changes synced`);
-
-        setLastSyncChanges(changes);
-        setLastSyncTime(Date.now());
-        setSyncError(null);
-      } catch (err) {
-        logger.error('❌ Sync failed:', err);
-        setSyncError(err instanceof Error ? err : new Error('Sync failed'));
-      } finally {
-        setIsSyncing(false);
-      }
-    };
-
+    // Perform initial sync
     performSync();
 
+    // Set up interval for automatic syncs
     const intervalId = setInterval(performSync, syncInterval);
 
     return () => {
       clearInterval(intervalId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSyncReady, syncInterval]);
+  }, [isSyncReady, syncInterval, performSync]);
 
   const contextValue = useMemo<SQLiteSyncContextValue>(
     () => ({
@@ -301,6 +302,7 @@ export function SQLiteSyncProvider({
       lastSyncChanges,
       initError,
       syncError,
+      triggerSync: performSync,
     }),
     [
       isSyncReady,
@@ -309,6 +311,7 @@ export function SQLiteSyncProvider({
       lastSyncChanges,
       initError,
       syncError,
+      performSync,
     ]
   );
 

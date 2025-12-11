@@ -1,17 +1,20 @@
-import { useState, useContext, useCallback } from 'react';
+import { useState, useContext } from 'react';
 import {
   Text,
   View,
   StyleSheet,
   Button,
   TextInput,
-  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  FlatList,
 } from 'react-native';
 import {
   SQLiteSyncProvider,
   SQLiteSyncContext,
   useOnSqliteSync,
   useTriggerSqliteSync,
+  useSqliteSyncQuery,
 } from '@sqliteai/sqlite-sync-react-native';
 import {
   SQLITE_CLOUD_CONNECTION_STRING,
@@ -24,20 +27,27 @@ function TestApp() {
   const { db, isSyncReady, isSyncing, lastSyncTime, initError, syncError } =
     useContext(SQLiteSyncContext);
   const [text, setText] = useState('');
-  const [rows, setRows] = useState<any[]>([]);
+  const [syncNotification, setSyncNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();
 
-  const loadRows = useCallback(async () => {
-    if (!db) return;
+  // Hook 1: useSqliteSyncQuery - Automatic data loading with offline-first support
+  // Loads immediately from local DB, auto-refreshes when sync brings changes
+  const {
+    data: rows,
+    isLoading,
+    isRefreshing,
+    error,
+    refresh,
+  } = useSqliteSyncQuery<{ id: string; value: string; created_at: string }>(
+    `SELECT * FROM ${TABLE_NAME} ORDER BY created_at DESC;`
+  );
 
-    try {
-      const result = await db.execute(`SELECT * FROM ${TABLE_NAME};`);
-      setRows(result.rows || []);
-      console.log('[sqlite-sync-demo] Loaded rows:', result.rows?.length || 0);
-    } catch (err) {
-      console.error('[sqlite-sync-demo] Failed to load rows:', err);
-    }
-  }, [db]);
+  // Hook 2: useOnSqliteSync - Event listener for sync completion
+  // Shows a notification when cloud data arrives (doesn't run on mount)
+  useOnSqliteSync(() => {
+    setSyncNotification('✅ New data synced from cloud!');
+    setTimeout(() => setSyncNotification(null), 2000);
+  });
 
   const addRow = async () => {
     if (!db || !text.trim()) return;
@@ -49,14 +59,12 @@ function TestApp() {
       );
       console.log('[sqlite-sync-demo] ✅ Row inserted:', text);
       setText('');
-      loadRows();
+      // Manually refresh to show new row immediately
+      refresh();
     } catch (err) {
       console.error('[sqlite-sync-demo] Failed to insert row:', err);
     }
   };
-
-  // Auto-reload rows when sync has changes
-  useOnSqliteSync(loadRows);
 
   // Show init error (fatal - blocks the app)
   if (initError) {
@@ -71,54 +79,131 @@ function TestApp() {
     );
   }
 
+  // Show loading spinner only on first load (offline-first: data loads immediately from local DB)
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.status}>Loading data from local database...</Text>
+      </View>
+    );
+  }
+
+  // Show query error
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>Query Error</Text>
+        <Text style={styles.errorDetails}>{error.message}</Text>
+        <Button title="Retry" onPress={refresh} />
+      </View>
+    );
+  }
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>SQLite Sync Test</Text>
-      <Text style={styles.status}>
-        Database: {db ? '✅ Ready' : '⏳ Initializing...'}
-      </Text>
-      <Text style={styles.status}>
-        Sync: {isSyncReady ? '✅ Enabled' : '⚠️ Offline-only'}
-      </Text>
-      <Text style={styles.status}>
-        {isSyncing ? '🔄 Syncing...' : '✓ Idle'}
-      </Text>
-      {lastSyncTime && (
-        <Text style={styles.status}>
-          Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
-        </Text>
-      )}
+    <View style={styles.mainContainer}>
+      {/* 1. FIXED TOP SECTION (Header, Status, Inputs) */}
+      <View style={styles.fixedHeader}>
+        <Text style={styles.title}>SQLite Sync Demo</Text>
 
-      {/* Show sync error (non-blocking banner) */}
-      {syncError && (
-        <View style={styles.syncErrorBanner}>
-          <Text style={styles.syncErrorText}>
-            ⚠️ Sync failed: {syncError.message}
+        {/* Status Section */}
+        <View style={styles.statusSection}>
+          <Text style={styles.status}>
+            Database: {db ? '✅ Ready' : '⏳ Initializing...'}
           </Text>
-          <Text style={styles.syncErrorSubtext}>
-            App still works offline. Will retry automatically.
+          <Text style={styles.status}>
+            Sync: {isSyncReady ? '✅ Enabled' : '⚠️ Offline-only'}
           </Text>
+          <Text style={styles.status}>
+            {isSyncing ? '🔄 Syncing...' : '✓ Idle'}
+          </Text>
+          {lastSyncTime && (
+            <Text style={styles.status}>
+              Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
+            </Text>
+          )}
         </View>
-      )}
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter text"
-          value={text}
-          onChangeText={setText}
-        />
-        <Button title="Add Row" onPress={addRow} />
-        <Button title="Refresh" onPress={triggerSync} />
+        {/* Sync Error Banner (Non-blocking) */}
+        {syncError && (
+          <View style={styles.syncErrorBanner}>
+            <Text style={styles.syncErrorText}>
+              ⚠️ Sync failed: {syncError.message}
+            </Text>
+          </View>
+        )}
+
+        {/* Input Section */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter text to add a row"
+            value={text}
+            onChangeText={setText}
+          />
+          <Button title="Add Row" onPress={addRow} disabled={!db} />
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.button, styles.syncButton]}
+              onPress={triggerSync}
+              disabled={isSyncing}
+            >
+              <Text style={styles.buttonText}>
+                {isSyncing ? 'Syncing...' : 'Sync Now'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.refreshButton]}
+              onPress={refresh}
+              disabled={isRefreshing}
+            >
+              <Text style={styles.buttonText}>
+                {isRefreshing ? 'Refreshing...' : 'Refresh Query'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.listHeader}>
+          <Text style={styles.rowCount}>
+            Rows: {rows.length} {isRefreshing && '(refreshing...)'}
+          </Text>
+          {isRefreshing && <ActivityIndicator size="small" color="#007AFF" />}
+        </View>
       </View>
 
-      <Text style={styles.rowCount}>Rows: {rows.length}</Text>
-      {rows.map((row, index) => (
-        <Text key={index} style={styles.row}>
-          {row.id}: {row.value}
-        </Text>
-      ))}
-    </ScrollView>
+      {/* 2. SCROLLABLE AREA (Rows Only) */}
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        // Empty state component
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            No data yet. Add a row to get started!
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            <Text style={styles.rowId}>{item.id.substring(0, 8)}...</Text>
+            <Text style={styles.rowValue}>{item.value}</Text>
+            <Text style={styles.rowTime}>
+              {item.created_at
+                ? new Date(item.created_at).toLocaleTimeString()
+                : ''}
+            </Text>
+          </View>
+        )}
+      />
+
+      {/* 3. ABSOLUTE BOTTOM NOTIFICATION */}
+      {syncNotification && (
+        <View style={styles.notificationBanner}>
+          <Text style={styles.notificationText}>{syncNotification}</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -168,85 +253,179 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 20,
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+    paddingTop: 60,
+  },
+  fixedHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    backgroundColor: '#F2F2F7',
+    zIndex: 1,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 12,
+    color: '#000',
+  },
+  statusSection: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   status: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#333',
     marginBottom: 4,
+  },
+  syncErrorBanner: {
+    backgroundColor: '#FFD2D2',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  syncErrorText: {
+    color: '#D8000C',
+    fontSize: 12,
   },
   inputContainer: {
-    width: '100%',
-    marginTop: 20,
-    marginBottom: 20,
-    gap: 10,
+    marginBottom: 12,
   },
   input: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: 'white',
+    borderColor: '#E5E5EA',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    gap: 10,
+  },
+  button: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  syncButton: {
+    backgroundColor: '#007AFF',
+  },
+  refreshButton: {
+    backgroundColor: '#5856D6',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   rowCount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 80,
   },
   row: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  rowId: {
+    fontSize: 10,
+    color: '#999',
+    fontFamily: 'monospace',
+    width: 60,
+  },
+  rowValue: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+    marginHorizontal: 10,
+  },
+  rowTime: {
+    fontSize: 11,
+    color: '#666',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 32,
+  },
+  notificationBanner: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: '#323232',
+    padding: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  notificationText: {
+    color: '#fff',
+    fontWeight: '600',
     fontSize: 14,
-    padding: 8,
-    backgroundColor: 'white',
-    marginBottom: 4,
-    borderRadius: 4,
-    width: '100%',
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#fff',
   },
   error: {
-    fontSize: 16,
-    color: '#d32f2f',
-    textAlign: 'center',
-    marginBottom: 10,
+    fontSize: 22,
     fontWeight: 'bold',
+    color: '#D8000C',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   errorDetails: {
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  errorHelp: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  syncErrorBanner: {
-    backgroundColor: '#fff3cd',
-    borderColor: '#ffc107',
-    borderWidth: 1,
+    color: '#333',
+    backgroundColor: '#F2F2F7',
+    padding: 16,
     borderRadius: 8,
-    padding: 12,
-    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    marginBottom: 24,
+    textAlign: 'center',
+    fontFamily: 'monospace',
     width: '100%',
   },
-  syncErrorText: {
-    fontSize: 13,
-    color: '#856404',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  syncErrorSubtext: {
-    fontSize: 11,
-    color: '#856404',
+  errorHelp: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });

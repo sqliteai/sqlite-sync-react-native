@@ -1,35 +1,32 @@
-import { useContext, useCallback } from 'react';
+import { useContext } from 'react';
 import { SQLiteSyncContext } from '../SQLiteSyncContext';
 
 /**
- * Hook to trigger a manual sync operation
+ * Convenience hook to trigger a manual sync operation.
  *
- * @returns A function to trigger sync and the current syncing state
+ * This hook wraps the functionality exposed by SQLiteSyncContext.
+ * The actual sync logic lives in the Provider to ensure that
+ * `isSyncing`, `lastSyncTime`, and `lastSyncChanges` state are
+ * updated correctly, allowing all hooks (useOnSqliteSync, useSqliteSyncQuery)
+ * to react properly.
+ *
+ * @returns Object containing triggerSync function and current syncing state
+ *
+ * @example
+ * ```typescript
+ * const { triggerSync, isSyncing } = useTriggerSqliteSync();
+ *
+ * return (
+ *   <Button
+ *     onPress={triggerSync}
+ *     disabled={isSyncing}
+ *     title={isSyncing ? 'Syncing...' : 'Sync Now'}
+ *   />
+ * );
+ * ```
  */
 export function useTriggerSqliteSync() {
-  const { db, isSyncing } = useContext(SQLiteSyncContext);
-
-  const triggerSync = useCallback(async () => {
-    if (!db || isSyncing) {
-      return;
-    }
-
-    try {
-      const syncResult = await db.execute('SELECT cloudsync_network_sync();');
-      const firstRow = syncResult.rows?.[0];
-      const result = firstRow ? Object.values(firstRow)[0] : 0;
-      const changes = typeof result === 'number' ? result : 0;
-
-      if (changes > 0) {
-        console.log(`✅ Manual sync completed: ${changes} changes synced`);
-      }
-
-      return changes;
-    } catch (err) {
-      console.error('❌ Manual sync failed:', err);
-      throw err;
-    }
-  }, [db, isSyncing]);
+  const { triggerSync, isSyncing } = useContext(SQLiteSyncContext);
 
   return { triggerSync, isSyncing };
 }

@@ -43,4 +43,11 @@ export interface SQLiteSyncContextValue {
    * Occurs during sync initialization or periodic sync operations
    */
   syncError: Error | null;
+
+  /**
+   * Manually trigger a sync operation
+   * This function updates isSyncing, lastSyncTime, and lastSyncChanges
+   * so all hooks (useOnSqliteSync, useSqliteSyncQuery) react properly
+   */
+  triggerSync: () => Promise<void>;
 }

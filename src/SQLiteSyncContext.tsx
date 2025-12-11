@@ -12,6 +12,12 @@ const defaultContextValue: SQLiteSyncContextValue = {
   lastSyncChanges: 0,
   initError: null,
   syncError: null,
+  triggerSync: async () => {
+    console.warn(
+      '[SQLiteSync]',
+      '⚠️ triggerSync called before SQLiteSyncProvider is mounted'
+    );
+  },
 };
 
 /**
@@ -25,6 +31,7 @@ const defaultContextValue: SQLiteSyncContextValue = {
  * - lastSyncChanges: Number of changes synced in the last operation
  * - initError: Fatal initialization errors (database cannot be used)
  * - syncError: Recoverable sync errors (database works offline-only)
+ * - triggerSync: Function to manually trigger a sync operation
  */
 export const SQLiteSyncContext =
   createContext<SQLiteSyncContextValue>(defaultContextValue);
