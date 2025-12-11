@@ -28,9 +28,14 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 - [Quick Start](#-quick-start)
 - [API Reference](#-api-reference)
   - [SQLiteSyncProvider](#sqlitesyncprovider)
-  - [TableConfig](#tableconfig)
-  - [SQLiteSyncContext](#context-sqlitesynccontext)
+  - [Contexts](#contexts)
+    - [SQLiteDbContext](#sqlitedbcontext)
+    - [SQLiteSyncStatusContext](#sqlitesyncstatuscontext)
+    - [SQLiteSyncActionsContext](#sqlitesyncactionscontext)
   - [Hooks](#hooks)
+    - [useSqliteDb](#usesqlitedb)
+    - [useSyncStatus](#usesyncstatus)
+    - [useSqliteSync](#usesqlitesync)
     - [useTriggerSqliteSync](#usetriggersqlitesync)
     - [useOnSqliteSync](#useonsqlitesync)
     - [useSqliteSyncQuery](#usesqlitesyncquery)
@@ -143,9 +148,9 @@ export default function App() {
 The library provides specialized hooks to simplify querying, syncing, and state management.
 
 ```typescript
-import { useContext, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
-  SQLiteSyncContext,
+  useSqliteDb,
   useSqliteSyncQuery,
   useTriggerSqliteSync,
   useOnSqliteSync,
@@ -169,8 +174,8 @@ function TaskList() {
     console.log('✨ New data arrived from the cloud!');
   });
 
-  // 4. WRITING DATA: Use the raw DB instance from Context
-  const { db } = useContext(SQLiteSyncContext);
+  // 4. WRITING DATA: Use the optimized hook (no re-renders on sync)
+  const { db } = useSqliteDb();
 
   const addTask = useCallback(
     async (title: string) => {
@@ -259,26 +264,69 @@ interface TableConfig {
 - The table schema must match exactly to your remote table schema in SQLite Cloud
 - The library executes this SQL during initialization, before SQLiteSync setup
 
-### Context: `SQLiteSyncContext`
+### Contexts
 
-Access sync state and database instance.
+The library provides three separate React Contexts for optimized re-renders:
+
+#### `SQLiteDbContext`
+
+Provides database instance and initialization errors. **Rarely changes** (only on init/error).
 
 ```typescript
-const context = useContext(SQLiteSyncContext);
+import { useContext } from 'react';
+import { SQLiteDbContext } from '@sqliteai/sqlite-sync-react-native';
+
+const { db, initError } = useContext(SQLiteDbContext);
 ```
 
-#### Context Values
+**Values:**
 
-| Property          | Type                  | Description                                                                                                                         |
-| ----------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `db`              | `DB \| null`          | [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) database instance. Check `db !== null` to verify database is ready |
-| `isSyncReady`     | `boolean`             | `true` when sync is configured and ready. `false` means offline-only mode                                                           |
-| `isSyncing`       | `boolean`             | `true` during sync operations                                                                                                       |
-| `lastSyncTime`    | `number \| null`      | Timestamp of last successful sync                                                                                                   |
-| `lastSyncChanges` | `number`              | Number of changes in last sync                                                                                                      |
-| `initError`       | `Error \| null`       | Fatal database error (db unavailable)                                                                                               |
-| `syncError`       | `Error \| null`       | Recoverable sync error (db works offline-only)                                                                                      |
-| `triggerSync`     | `() => Promise<void>` | Function to manually trigger a sync operation. Updates state so all hooks react properly                                            |
+| Property    | Type            | Description                                                                                                          |
+| ----------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `db`        | `DB \| null`    | [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) database instance with SQLite Sync extension loaded |
+| `initError` | `Error \| null` | Fatal database error (db unavailable)                                                                                |
+
+#### `SQLiteSyncStatusContext`
+
+Provides sync status information. **Changes frequently** (on every sync).
+
+```typescript
+import { useContext } from 'react';
+import { SQLiteSyncStatusContext } from '@sqliteai/sqlite-sync-react-native';
+
+const { isSyncing, lastSyncTime, syncError } = useContext(
+  SQLiteSyncStatusContext
+);
+```
+
+**Values:**
+
+| Property          | Type             | Description                                    |
+| ----------------- | ---------------- | ---------------------------------------------- |
+| `isSyncReady`     | `boolean`        | Whether sync is configured and ready           |
+| `isSyncing`       | `boolean`        | Whether sync is currently in progress          |
+| `lastSyncTime`    | `number \| null` | Timestamp of last successful sync              |
+| `lastSyncChanges` | `number`         | Number of changes in last sync                 |
+| `syncError`       | `Error \| null`  | Recoverable sync error (db works offline-only) |
+
+#### `SQLiteSyncActionsContext`
+
+Provides stable sync action functions. **Never changes**.
+
+```typescript
+import { useContext } from 'react';
+import { SQLiteSyncActionsContext } from '@sqliteai/sqlite-sync-react-native';
+
+const { triggerSync } = useContext(SQLiteSyncActionsContext);
+```
+
+**Values:**
+
+| Property      | Type                  | Description                                   |
+| ------------- | --------------------- | --------------------------------------------- |
+| `triggerSync` | `() => Promise<void>` | Function to manually trigger a sync operation |
+
+**Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
 
 **About the `db` instance:**
 
@@ -288,6 +336,89 @@ The `db` property is a `DB` instance from [`@op-engineering/op-sqlite`](https://
 - Use any [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc.
 
 ### Hooks
+
+The library provides specialized hooks for different use cases. Choose the right hook based on what data your component needs to avoid unnecessary re-renders.
+
+#### `useSqliteDb()`
+
+Access the database instance and initialization errors **without subscribing to sync updates**. This hook is optimized for components that only need database access and won't re-render on every sync.
+
+```typescript
+const { db, initError } = useSqliteDb();
+
+if (initError) {
+  return <Text>Error: {initError.message}</Text>;
+}
+
+if (!db) {
+  return <Text>Loading...</Text>;
+}
+
+// Use db for queries without re-rendering on sync
+const addTask = async (title: string) => {
+  await db.execute(
+    'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
+    [title]
+  );
+};
+```
+
+**Returns:**
+
+- `db`: Database instance
+- `initError`: Fatal initialization error
+
+**Best for:** Components that write data or need database access but don't need sync status.
+
+#### `useSyncStatus()`
+
+Access sync status information, use this when you need to display sync state in your UI.
+
+```typescript
+const { isSyncing, lastSyncTime, syncError, isSyncReady, lastSyncChanges } =
+  useSyncStatus();
+
+return (
+  <View>
+    <Text>{isSyncing ? 'Syncing...' : 'Idle'}</Text>
+    {lastSyncTime && (
+      <Text>Last sync: {new Date(lastSyncTime).toLocaleTimeString()}</Text>
+    )}
+    {syncError && <Text>Sync error: {syncError.message}</Text>}
+  </View>
+);
+```
+
+**Returns:**
+
+- `isSyncReady`: Whether sync is configured
+- `isSyncing`: Whether sync is in progress
+- `lastSyncTime`: Last successful sync timestamp
+- `lastSyncChanges`: Number of changes in last sync
+- `syncError`: Recoverable sync error
+
+**Best for:** Status displays, sync indicators, monitoring components.
+
+#### `useSqliteSync()`
+
+Access all sync functionality (database + status + actions). This is a convenience hook that combines all contexts.
+
+**Note:** This hook will re-render on every sync operation. If you only need `db`/`initError`, use `useSqliteDb()` instead.
+
+```typescript
+const { db, initError, isSyncing, lastSyncTime, triggerSync } = useSqliteSync();
+
+return (
+  <View>
+    <Text>Database: {db ? 'Ready' : 'Loading'}</Text>
+    <Button onPress={triggerSync} disabled={isSyncing} />
+  </View>
+);
+```
+
+**Returns:** All properties from `useSqliteDb()` + `useSyncStatus()` + `triggerSync` function
+
+**Best for:** Components that need access to everything (use sparingly to avoid unnecessary re-renders).
 
 #### `useTriggerSqliteSync()`
 
@@ -310,7 +441,10 @@ const { triggerSync, isSyncing } = useTriggerSqliteSync();
 
 Execute a callback when sync completes with changes.
 
-**Important:** This hook does NOT run on initial mount - it's an event listener for sync updates only. For initial data loading, use a separate `useEffect` or `useSqliteSyncQuery`.
+**Important:**
+
+- This hook does NOT run on initial mount - it's an event listener for sync updates only. For initial data loading, use a separate `useEffect` or `useSqliteSyncQuery`
+- This hook uses a subscription pattern that does NOT cause re-renders when sync completes without changes
 
 ```typescript
 import { useEffect, useCallback } from 'react';
@@ -335,7 +469,7 @@ Execute a query and automatically re-run when sync updates.
 
 **Offline-First:** Runs immediately when the database is available, regardless of sync status. This ensures data loads from the local database even when offline.
 
-**Auto-Refresh:** Re-runs the query automatically when cloud changes arrive via sync.
+**Auto-Refresh:** Re-runs the query automatically when cloud changes arrive via sync. Uses a subscription pattern to avoid unnecessary re-renders - only re-renders when data changes.
 
 **Loading States:**
 
@@ -376,7 +510,7 @@ The library separates **fatal database errors** from **recoverable sync errors**
 **Fatal errors** that prevent the database from working at all. The app cannot function when these occur.
 
 ```typescript
-const { initError, db } = useContext(SQLiteSyncContext);
+const { initError, db } = useSqliteDb();
 
 if (initError) {
   return <ErrorScreen message="Database unavailable" />;
@@ -397,7 +531,8 @@ if (initError) {
 **Recoverable errors** that prevent syncing but allow full offline database access.
 
 ```typescript
-const { syncError, db } = useContext(SQLiteSyncContext);
+const { db } = useSqliteDb();
+const { syncError } = useSyncStatus();
 
 // Database still works offline even with syncError!
 if (db) {

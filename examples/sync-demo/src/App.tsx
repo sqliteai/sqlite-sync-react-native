@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import {
   Text,
   View,
@@ -11,10 +11,11 @@ import {
 } from 'react-native';
 import {
   SQLiteSyncProvider,
-  SQLiteSyncContext,
   useOnSqliteSync,
   useTriggerSqliteSync,
   useSqliteSyncQuery,
+  useSqliteDb,
+  useSyncStatus,
 } from '@sqliteai/sqlite-sync-react-native';
 import {
   SQLITE_CLOUD_CONNECTION_STRING,
@@ -24,8 +25,8 @@ import {
 } from '@env';
 
 function TestApp() {
-  const { db, isSyncReady, isSyncing, lastSyncTime, initError, syncError } =
-    useContext(SQLiteSyncContext);
+  const { db, initError } = useSqliteDb();
+  const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
   const [text, setText] = useState('');
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();

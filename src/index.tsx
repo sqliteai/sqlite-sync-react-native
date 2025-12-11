@@ -1,8 +1,15 @@
 export { SQLiteSyncProvider } from './SQLiteSyncProvider';
-export { SQLiteSyncContext } from './SQLiteSyncContext';
+export { SQLiteDbContext } from './SQLiteDbContext';
+export { SQLiteSyncStatusContext } from './SQLiteSyncStatusContext';
+export { SQLiteSyncActionsContext } from './SQLiteSyncActionsContext';
 export { useTriggerSqliteSync } from './hooks/useTriggerSqliteSync';
 export { useOnSqliteSync } from './hooks/useOnSqliteSync';
 export { useSqliteSyncQuery } from './hooks/useSqliteSyncQuery';
+export { useSqliteDb } from './hooks/useSqliteDb';
+export { useSyncStatus } from './hooks/useSyncStatus';
+export { useSqliteSync } from './hooks/useSqliteSync';
 export type { SQLiteSyncProviderProps } from './types/SQLiteSyncProviderProps';
-export type { SQLiteSyncContextValue } from './types/SQLiteSyncContextValue';
+export type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
+export type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusContextValue';
+export type { SQLiteSyncActionsContextValue } from './types/SQLiteSyncActionsContextValue';
 export type { TableConfig } from './types/TableConfig';

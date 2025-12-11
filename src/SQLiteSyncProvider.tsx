@@ -2,9 +2,13 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { open, getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import NetInfo from '@react-native-community/netinfo';
-import { SQLiteSyncContext } from './SQLiteSyncContext';
+import { SQLiteDbContext } from './SQLiteDbContext';
+import { SQLiteSyncStatusContext } from './SQLiteSyncStatusContext';
+import { SQLiteSyncActionsContext } from './SQLiteSyncActionsContext';
 import type { SQLiteSyncProviderProps } from './types/SQLiteSyncProviderProps';
-import type { SQLiteSyncContextValue } from './types/SQLiteSyncContextValue';
+import type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
+import type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusContextValue';
+import type { SQLiteSyncActionsContextValue } from './types/SQLiteSyncActionsContextValue';
 import { createLogger } from './utils/logger';
 
 /**
@@ -61,6 +65,20 @@ export function SQLiteSyncProvider({
   /** REFS - Used for internal async logic to avoid closure staleness **/
   const dbRef = useRef<DB | null>(null);
   const isSyncingRef = useRef(false);
+
+  /** SYNC LISTENERS - Subscription pattern for sync events **/
+  // Uses Set to allow multiple components to subscribe simultaneously
+  // Each component's callback is independent and all are executed on sync
+  const syncListenersRef = useRef<Set<() => void>>(new Set());
+
+  /** SUBSCRIBE FUNCTION - Allows components to listen for sync events without re-rendering **/
+  // Returns an unsubscribe function for cleanup
+  const subscribe = useCallback((callback: () => void) => {
+    syncListenersRef.current.add(callback);
+    return () => {
+      syncListenersRef.current.delete(callback);
+    };
+  }, []);
 
   /** EXTRACT AUTH CREDENTIALS **/
   const apiKey = 'apiKey' in authProps ? authProps.apiKey : undefined;
@@ -127,6 +145,15 @@ export function SQLiteSyncProvider({
       if (changes > 0) {
         setLastSyncChanges(changes);
         setLastSyncTime(Date.now());
+
+        // Notify all sync listeners (without causing re-renders)
+        syncListenersRef.current.forEach((listener) => {
+          try {
+            listener();
+          } catch (err) {
+            logger.error('❌ Error in sync listener:', err);
+          }
+        });
       }
 
       logger.info(`✅ Sync completed: ${changes} changes synced`);
@@ -337,32 +364,41 @@ export function SQLiteSyncProvider({
     };
   }, [isSyncReady, syncInterval, performSync]);
 
-  const contextValue = useMemo<SQLiteSyncContextValue>(
+  // Split context values for optimized re-rendering
+  const dbContextValue = useMemo<SQLiteDbContextValue>(
     () => ({
       db,
-      isSyncReady,
-      isSyncing,
-      lastSyncTime,
-      lastSyncChanges,
       initError,
-      syncError,
-      triggerSync: performSync,
     }),
-    [
-      db,
+    [db, initError]
+  );
+
+  const syncStatusContextValue = useMemo<SQLiteSyncStatusContextValue>(
+    () => ({
       isSyncReady,
       isSyncing,
       lastSyncTime,
       lastSyncChanges,
-      initError,
       syncError,
-      performSync,
-    ]
+    }),
+    [isSyncReady, isSyncing, lastSyncTime, lastSyncChanges, syncError]
+  );
+
+  const syncActionsContextValue = useMemo<SQLiteSyncActionsContextValue>(
+    () => ({
+      triggerSync: performSync,
+      subscribe,
+    }),
+    [performSync, subscribe]
   );
 
   return (
-    <SQLiteSyncContext.Provider value={contextValue}>
-      {children}
-    </SQLiteSyncContext.Provider>
+    <SQLiteDbContext.Provider value={dbContextValue}>
+      <SQLiteSyncStatusContext.Provider value={syncStatusContextValue}>
+        <SQLiteSyncActionsContext.Provider value={syncActionsContextValue}>
+          {children}
+        </SQLiteSyncActionsContext.Provider>
+      </SQLiteSyncStatusContext.Provider>
+    </SQLiteDbContext.Provider>
   );
 }

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef } from 'react';
-import { SQLiteSyncContext } from '../SQLiteSyncContext';
+import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
 
 /**
  * Hook that executes a callback ONLY when a sync completes with changes.
@@ -7,6 +7,9 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  * This is an event listener pattern - it does NOT run on initial mount.
  * Perfect for UI notifications (toasts, badges) or side effects that should
  * only occur when cloud data arrives.
+ *
+ * This hook uses a subscription pattern and will NOT cause re-renders when
+ * sync completes. The component only re-renders if other hooks/state change.
  *
  * For initial data loading, use a separate useEffect or useSqliteSyncQuery.
  *
@@ -26,7 +29,7 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  * ```
  */
 export function useOnSqliteSync(callback: () => void) {
-  const { lastSyncTime, lastSyncChanges } = useContext(SQLiteSyncContext);
+  const { subscribe } = useContext(SQLiteSyncActionsContext);
 
   // Store callback in ref to allow inline functions without causing infinite loops
   const savedCallback = useRef(callback);
@@ -37,11 +40,13 @@ export function useOnSqliteSync(callback: () => void) {
     savedCallback.current = callback;
   }, [callback]);
 
-  // 2. Sync Event Listener Effect
-  // Fires ONLY when a sync completes and brings new changes
+  // 2. Subscribe to sync events
+  // This does NOT cause re-renders - it's a pure subscription
   useEffect(() => {
-    if (lastSyncTime !== null && lastSyncChanges > 0) {
+    const unsubscribe = subscribe(() => {
       savedCallback.current();
-    }
-  }, [lastSyncTime, lastSyncChanges]);
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
 }

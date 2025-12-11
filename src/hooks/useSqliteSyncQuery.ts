@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { SQLiteSyncContext } from '../SQLiteSyncContext';
+import { SQLiteDbContext } from '../SQLiteDbContext';
+import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
 
 /**
  * Hook that executes a SQL query and automatically re-runs it whenever a cloud sync completes.
@@ -8,6 +9,7 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  * This ensures data loads from the local database even when offline.
  *
  * Auto-Refresh: Re-runs the query automatically when cloud changes arrive via sync.
+ * Uses a subscription pattern to avoid unnecessary re-renders - only re-renders when data changes.
  *
  * Loading States:
  * - `isLoading`: True only during initial load (when there's no data yet)
@@ -35,7 +37,8 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  * ```
  */
 export function useSqliteSyncQuery<T = any>(sql: string) {
-  const { db, lastSyncTime, lastSyncChanges } = useContext(SQLiteSyncContext);
+  const { db } = useContext(SQLiteDbContext);
+  const { subscribe } = useContext(SQLiteSyncActionsContext);
 
   // Default to empty array to prevent undefined errors on .map()
   const [data, setData] = useState<T[]>([]);
@@ -93,13 +96,16 @@ export function useSqliteSyncQuery<T = any>(sql: string) {
     }
   }, [db, executeQuery]);
 
-  // 2. Sync Update Effect
-  // Runs ONLY when a sync completes and brings new changes
+  // 2. Sync Update Effect (Subscription Pattern)
+  // Subscribes to sync events without causing re-renders
+  // Only re-renders when executeQuery updates data state
   useEffect(() => {
-    if (lastSyncTime !== null && lastSyncChanges > 0) {
+    const unsubscribe = subscribe(() => {
       executeQuery();
-    }
-  }, [lastSyncTime, lastSyncChanges, executeQuery]);
+    });
+
+    return unsubscribe;
+  }, [subscribe, executeQuery]);
 
   return {
     data,

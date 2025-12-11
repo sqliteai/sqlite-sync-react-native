@@ -1,10 +1,10 @@
 import { useContext } from 'react';
-import { SQLiteSyncContext } from '../SQLiteSyncContext';
+import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
 
 /**
  * Convenience hook to trigger a manual sync operation.
  *
- * This hook wraps the functionality exposed by SQLiteSyncContext.
+ * This hook wraps the functionality exposed by split contexts.
  * The actual sync logic lives in the Provider to ensure that
  * `isSyncing`, `lastSyncTime`, and `lastSyncChanges` state are
  * updated correctly, allowing all hooks (useOnSqliteSync, useSqliteSyncQuery)
@@ -26,7 +26,7 @@ import { SQLiteSyncContext } from '../SQLiteSyncContext';
  * ```
  */
 export function useTriggerSqliteSync() {
-  const { triggerSync, isSyncing } = useContext(SQLiteSyncContext);
+  const { triggerSync } = useContext(SQLiteSyncActionsContext);
 
-  return { triggerSync, isSyncing };
+  return { triggerSync };
 }
