@@ -10,10 +10,10 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 
 - 🧩 **Offline-First, Automatic Sync**  
   Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
-- 🪝 **React Hooks Designed for Sync-Aware Data**  
-  Hooks like `useSqliteSyncQuery` and `useOnSqliteSync` automatically refresh your UI when local or synced data changes, keeping your app up-to-date without boilerplate code.
+- 🪝 **React Hooks Designed for Sync-Aware Data**
+  Use hooks like `useSqliteSyncQuery` and `useOnSqliteSync` to automatically refresh your UI when changes are synced from the cloud, keeping your app up-to-date without boilerplate code.
 - 📱 **Native‑Only, Ultra‑Fast**  
-  Under the hood we use OP‑SQLite — a low‑level, JSI‑enabled SQLite engine for React Native. With OP‑SQLite, database operations run at near-native speed on iOS and Android.
+  Under the hood, we use OP‑SQLite — a low‑level, JSI‑enabled SQLite engine for React Native. With OP‑SQLite, database operations run at near-native speed on iOS and Android.
 
 ## 📋 Requirements
 
@@ -26,8 +26,6 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 ## 📦 Installation
 
 ### 1. Install Dependencies
-
-This library requires `@op-engineering/op-sqlite` as a peer dependency:
 
 ```bash
 npm install @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite
@@ -49,10 +47,16 @@ No additional setup required. Native modules are linked automatically.
 
 #### Expo
 
-If using Expo, you must **prebuild** your app (Expo Go is not supported):
+If using Expo, you must use **development builds** (Expo Go is not supported):
 
 ```bash
+# Generate native directories
 npx expo prebuild
+
+# Run on iOS/Android
+npx expo run:ios
+# or
+npx expo run:android
 ```
 
 ## 🚀 Quick Start
@@ -76,7 +80,7 @@ npx expo prebuild
 
 ### 2. Wrap Your App
 
-The `SQLiteSyncProvider` needs a `createTableSql` statement for each table you want to sync. This is required because tables must exist before CloudSync initialization.
+The `SQLiteSyncProvider` needs a `createTableSql` statement for each table you want to sync. This is required because tables must exist before SQLiteSync initialization.
 
 ```typescript
 import { SQLiteSyncProvider } from '@sqliteai/sqlite-sync-react-native';
@@ -202,7 +206,7 @@ interface TableConfig {
 **Important:**
 - Always include `IF NOT EXISTS` to prevent errors if the table already exists
 - The table schema must match exactly to your remote table schema in SQLite Cloud
-- The library executes this SQL during initialization, before CloudSync setup
+- The library executes this SQL during initialization, before SQLiteSync setup
 
 ### Context: `SQLiteSyncContext`
 
@@ -317,7 +321,7 @@ if (db) {
 
 - Missing or invalid connection string
 - Missing or invalid API key/access token
-- CloudSync extension failed to load
+- SQLiteSync extension failed to load
 - Network initialization failed
 - Temporary network connectivity issues
 
