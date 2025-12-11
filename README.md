@@ -41,6 +41,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 
 ## 📋 Requirements
 
+- iOS **13.0+**
 - Android **API 26+**
 - [`@op-engineering/op-sqlite`](https://github.com/OP-Engineering/op-sqlite) **^15.0.0**
 - [`@react-native-community/netinfo`](https://github.com/react-native-netinfo/react-native-netinfo) **^11.0.0**
