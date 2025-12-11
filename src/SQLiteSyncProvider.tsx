@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { open, getDylibPath, type DB } from '@op-engineering/op-sqlite';
+import NetInfo from '@react-native-community/netinfo';
 import { SQLiteSyncContext } from './SQLiteSyncContext';
 import type { SQLiteSyncProviderProps } from './types/SQLiteSyncProviderProps';
 import type { SQLiteSyncContextValue } from './types/SQLiteSyncContextValue';
@@ -26,6 +27,10 @@ import { createLogger } from './utils/logger';
  *    - Changes to critical props (`connectionString`, `apiKey`, `tablesToBeSynced`) will trigger
  *      a safe teardown (closing DB) and re-initialization to ensure auth consistency.
  *    - Configuration objects are serialized internally to prevent unnecessary re-renders.
+ *
+ * 4. **Android Optimization:**
+ *    - Performs a direct network check before syncing to prevent the native blocking socket
+ *      from freezing the database thread for ~10s on Android when offline.
  *
  * @param props.connectionString - SQLite Cloud connection string
  * @param props.databaseName - Local filename (e.g., 'app.db')
@@ -76,7 +81,7 @@ export function SQLiteSyncProvider({
 
   /** SYNC FUNCTION - used for both manual and automatic sync **/
   const performSync = useCallback(async () => {
-    /** GUARD: DB**/
+    /** GUARD: DB **/
     if (!dbRef.current) {
       return;
     }
@@ -86,7 +91,23 @@ export function SQLiteSyncProvider({
       return;
     }
 
-    /** GUARD: OFFLINE MODE **/
+    /** GUARD: NETWORK CONNECTIVITY (Android Only) **/
+    // On Android, the native call blocks for ~10-15s if offline.
+    // We check NetInfo first to prevent this freeze.
+    // On iOS, the OS fails fast, so we let the native code handle it.
+    if (Platform.OS === 'android') {
+      const networkState = await NetInfo.fetch();
+      const isOnline =
+        networkState.isConnected && (networkState.isInternetReachable ?? true);
+
+      if (!isOnline) {
+        logger.info(`⚠️ Sync skipped: No internet connection`);
+        return;
+      }
+    }
+
+    /** GUARD: OFFLINE MODE (Library State) **/
+    // If Phase 2 Init failed (e.g. bad credentials), we can't sync.
     if (!isSyncReady) {
       return;
     }
@@ -104,10 +125,11 @@ export function SQLiteSyncProvider({
       const changes = typeof result === 'number' ? result : 0;
 
       if (changes > 0) {
-        logger.info(`✅ Sync completed: ${changes} changes synced`);
         setLastSyncChanges(changes);
         setLastSyncTime(Date.now());
       }
+
+      logger.info(`✅ Sync completed: ${changes} changes synced`);
 
       setSyncError(null);
     } catch (err) {
@@ -300,6 +322,8 @@ export function SQLiteSyncProvider({
 
   /** SYNC INTERVAL **/
   useEffect(() => {
+    // Note: We check !isSyncReady here to avoid starting the interval if phase 2 failed.
+    // However, performSync ALSO performs a network check, so double protection.
     if (!isSyncReady) {
       return;
     }

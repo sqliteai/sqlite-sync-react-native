@@ -45,6 +45,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 
 - Android **API 26+**
 - [`@op-engineering/op-sqlite`](https://github.com/OP-Engineering/op-sqlite) **^15.0.0**
+- [`@react-native-community/netinfo`](https://github.com/react-native-netinfo/react-native-netinfo) **^11.0.0**
 - [SQLite Cloud](https://sqlitecloud.io/) account
 
 > **⚠️ Note:** This library is **native-only** (iOS/Android).
@@ -54,9 +55,9 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 ### 1. Install Dependencies
 
 ```bash
-npm install @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite
+npm install @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-native-community/netinfo
 # or
-yarn add @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite
+yarn add @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-native-community/netinfo
 ```
 
 ### 2. Platform Setup
