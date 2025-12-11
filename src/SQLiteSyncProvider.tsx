@@ -9,36 +9,6 @@ import { createLogger } from './utils/logger';
 /**
  * SQLiteSyncProvider - An offline-first React context provider that enables local SQLite database
  * operations with optional real-time synchronization to SQLite Cloud.
- *
- * **Offline-First Design:**
- * - Database is always available for local operations, even without network connectivity
- * - Sync failures (missing credentials, network issues) don't prevent database access
- * - Only fatal errors (unsupported platform, cannot open database) prevent operation
- *
- * **Initialization Phases:**
- * 1. Database Phase: Opens database and creates tables (must succeed)
- * 2. Sync Phase: Loads CloudSync extension and configures network (best-effort)
- *
- * **Error Handling:**
- * - `initError`: Fatal database errors (db unavailable)
- * - `syncError`: Recoverable sync errors (db works offline-only)
- *
- * @param {SQLiteSyncProviderProps} props - Configuration props for the provider
- * @param {string} props.connectionString - SQLite Cloud connection string (optional for offline-only)
- * @param {string} props.databaseName - Local database file name
- * @param {Array<{name: string, createTableSql: string}>} props.tablesToBeSynced - Array of tables to sync
- *   Each table requires:
- *   - `name`: Table name (must match remote table name)
- *   - `createTableSql`: SQL CREATE TABLE statement (executed before CloudSync init)
- * @param {number} props.syncInterval - Sync interval in milliseconds
- * @param {string} [props.apiKey] - SQLite Cloud API key for authentication (optional for offline-only)
- *   Use either `apiKey` OR `accessToken`, not both
- * @param {string} [props.accessToken] - SQLite Cloud access token for authentication (optional for offline-only)
- *   Use either `apiKey` OR `accessToken`, not both
- * @param {React.ReactNode} props.children - Child components that will have access to the sync context
- * @param {boolean} [props.debug=false] - Enable debug logging
- *
- * @returns {JSX.Element} Provider component wrapping children with SQLiteSyncContext
  */
 export function SQLiteSyncProvider({
   connectionString,
@@ -49,12 +19,16 @@ export function SQLiteSyncProvider({
   children,
   ...authProps
 }: SQLiteSyncProviderProps) {
+  /** PUBLIC CONTEXT STATE - Values exposed to consumers via Context */
+  const [db, setDb] = useState<DB | null>(null);
   const [isSyncReady, setIsSyncReady] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
   const [lastSyncChanges, setLastSyncChanges] = useState(0);
   const [initError, setInitError] = useState<Error | null>(null);
   const [syncError, setSyncError] = useState<Error | null>(null);
+
+  /** REFS - Used for internal async logic to avoid closure staleness **/
   const dbRef = useRef<DB | null>(null);
   const isSyncingRef = useRef(false);
 
@@ -66,10 +40,29 @@ export function SQLiteSyncProvider({
   /** CREATE LOGGER **/
   const logger = useMemo(() => createLogger(debug), [debug]);
 
+  /** CONFIG SERIALIZATION - Stabilizes dependency array to prevent infinite loops **/
+  const serializedConfig = JSON.stringify({
+    connectionString,
+    databaseName,
+    tables: tablesToBeSynced,
+    apiKey,
+    accessToken,
+  });
+
   /** SYNC FUNCTION - used for both manual and automatic sync **/
   const performSync = useCallback(async () => {
-    // Prevent concurrent syncs
-    if (!dbRef.current || isSyncingRef.current) {
+    /** GUARD: DB**/
+    if (!dbRef.current) {
+      return;
+    }
+
+    /** GUARD: CONCURRENCY **/
+    if (isSyncingRef.current) {
+      return;
+    }
+
+    /** GUARD: OFFLINE MODE **/
+    if (!isSyncReady) {
       return;
     }
 
@@ -85,10 +78,12 @@ export function SQLiteSyncProvider({
       const result = firstRow ? Object.values(firstRow)[0] : 0;
       const changes = typeof result === 'number' ? result : 0;
 
-      logger.info(`✅ Sync completed: ${changes} changes synced`);
+      if (changes > 0) {
+        logger.info(`✅ Sync completed: ${changes} changes synced`);
+        setLastSyncChanges(changes);
+        setLastSyncTime(Date.now());
+      }
 
-      setLastSyncChanges(changes);
-      setLastSyncTime(Date.now());
       setSyncError(null);
     } catch (err) {
       logger.error('❌ Sync failed:', err);
@@ -97,14 +92,13 @@ export function SQLiteSyncProvider({
       setIsSyncing(false);
       isSyncingRef.current = false;
     }
-  }, [logger]);
+  }, [logger, isSyncReady]);
 
+  /** INITIALIZATION EFFECT **/
   useEffect(() => {
     let isMounted = true;
 
     const initialize = async () => {
-      let db: DB | null = null;
-
       try {
         /** PHASE 1: DATABASE INITIALIZATION (must succeed) **/
         logger.info('📦 Starting database initialization...');
@@ -121,8 +115,12 @@ export function SQLiteSyncProvider({
           throw new Error('Database name is required');
         }
 
-        db = open({ name: databaseName });
-        dbRef.current = db;
+        const localDb = open({ name: databaseName });
+        dbRef.current = localDb;
+        if (isMounted) {
+          setDb(localDb);
+        }
+
         logger.info('✅ Database opened:', databaseName);
 
         /** CREATE TABLES **/
@@ -131,7 +129,7 @@ export function SQLiteSyncProvider({
         } else {
           for (const table of tablesToBeSynced) {
             try {
-              await db.execute(table.createTableSql);
+              await localDb.execute(table.createTableSql);
               logger.info(`✅ Table created: ${table.name}`);
             } catch (createErr) {
               logger.error(
@@ -148,106 +146,105 @@ export function SQLiteSyncProvider({
         if (isMounted) {
           setInitError(null);
         }
+
+        /** PHASE 2: SYNC INITIALIZATION **/
+        try {
+          logger.info('🔄 Starting sync initialization...');
+
+          /** CHECK SYNC CONFIGURATION **/
+          if (!connectionString || (!apiKey && !accessToken)) {
+            throw new Error(
+              'Sync configuration incomplete. Database works offline-only.'
+            );
+          }
+
+          /** LOAD CLOUDSYNC EXTENSION **/
+          let extensionPath: string;
+          if (Platform.OS === 'ios') {
+            extensionPath = getDylibPath('ai.sqlite.cloudsync', 'CloudSync');
+          } else {
+            extensionPath = 'cloudsync';
+          }
+
+          localDb.loadExtension(extensionPath);
+          logger.info('✅ CloudSync extension loaded');
+
+          /** VERIFY CLOUDSYNC EXTENSION **/
+          const versionResult = await localDb.execute(
+            'SELECT cloudsync_version();'
+          );
+          const version = versionResult.rows?.[0]?.['cloudsync_version()'];
+
+          if (!version) {
+            throw new Error('CloudSync extension not loaded properly');
+          }
+          logger.info('✅ CloudSync version:', version);
+
+          /** INITIALIZE CLOUDSYNC FOR TABLES **/
+          for (const table of tablesToBeSynced) {
+            const initResult = await localDb.execute(
+              'SELECT cloudsync_init(?);',
+              [table.name]
+            );
+
+            const firstRow = initResult.rows?.[0];
+            const result = firstRow ? Object.values(firstRow)[0] : undefined;
+
+            logger.info(
+              `✅ CloudSync initialized for table: ${table.name}${
+                result ? ` (site_id: ${result})` : ''
+              }`
+            );
+          }
+
+          /** INITIALIZE NETWORK CONNECTION **/
+          await localDb.execute('SELECT cloudsync_network_init(?);', [
+            connectionString,
+          ]);
+          logger.info('✅ Network initialized');
+
+          /** SET AUTHENTICATION **/
+          if (apiKey) {
+            await localDb.execute('SELECT cloudsync_network_set_apikey(?);', [
+              apiKey,
+            ]);
+            logger.info('✅ API key set');
+          } else if (accessToken) {
+            await localDb.execute('SELECT cloudsync_network_set_token(?);', [
+              accessToken,
+            ]);
+            logger.info('✅ Access token set');
+          }
+
+          logger.info('✅ Sync initialization complete');
+
+          if (isMounted) {
+            setIsSyncReady(true);
+            setSyncError(null);
+          }
+        } catch (err) {
+          /** NON-FATAL ERROR - database works, but sync doesn't **/
+          logger.warn(
+            '⚠️ Sync initialization failed. Database works in offline-only mode:',
+            err
+          );
+          if (isMounted) {
+            setIsSyncReady(false);
+            setSyncError(
+              err instanceof Error
+                ? err
+                : new Error('Sync initialization failed')
+            );
+          }
+        }
       } catch (err) {
-        /** FATAL ERROR - database cannot be used **/
+        /** FATAL ERROR - database can not be used **/
         logger.error('❌ Database initialization failed:', err);
         if (isMounted) {
           setInitError(
             err instanceof Error
               ? err
               : new Error('Database initialization failed')
-          );
-        }
-        return;
-      }
-
-      /** PHASE 2: SYNC INITIALIZATION **/
-      try {
-        logger.info('🔄 Starting sync initialization...');
-
-        /** ENSURE DATABASE IS AVAILABLE **/
-        if (!db) {
-          throw new Error('Database not available for sync initialization');
-        }
-
-        /** CHECK SYNC CONFIGURATION **/
-        if (!connectionString || (!apiKey && !accessToken)) {
-          throw new Error(
-            'Sync configuration incomplete. Database works offline-only until credentials are provided.'
-          );
-        }
-
-        /** LOAD CLOUDSYNC EXTENSION **/
-        let extensionPath: string;
-        if (Platform.OS === 'ios') {
-          extensionPath = getDylibPath('ai.sqlite.cloudsync', 'CloudSync');
-        } else {
-          extensionPath = 'cloudsync';
-        }
-
-        db.loadExtension(extensionPath);
-        logger.info('✅ CloudSync extension loaded');
-
-        /** VERIFY CLOUDSYNC EXTENSION **/
-        const versionResult = await db.execute('SELECT cloudsync_version();');
-        const version = versionResult.rows?.[0]?.[
-          'cloudsync_version()'
-        ] as string;
-
-        if (!version) {
-          throw new Error('CloudSync extension not loaded properly');
-        }
-        logger.info('✅ CloudSync version:', version);
-
-        /** INITIALIZE CLOUDSYNC FOR TABLES **/
-        for (const table of tablesToBeSynced) {
-          const initResult = await db.execute('SELECT cloudsync_init(?);', [
-            table.name,
-          ]);
-
-          const firstRow = initResult.rows?.[0];
-          const result = firstRow ? Object.values(firstRow)[0] : undefined;
-
-          logger.info(
-            `✅ CloudSync initialized for table: ${table.name}${
-              result ? ` (site_id: ${result})` : ''
-            }`
-          );
-        }
-
-        /** INITIALIZE NETWORK CONNECTION **/
-        await db.execute('SELECT cloudsync_network_init(?);', [
-          connectionString,
-        ]);
-        logger.info('✅ Network initialized');
-
-        /** SET AUTHENTICATION **/
-        if (apiKey) {
-          await db.execute('SELECT cloudsync_network_set_apikey(?);', [apiKey]);
-          logger.info('✅ API key set');
-        } else if (accessToken) {
-          await db.execute('SELECT cloudsync_network_set_token(?);', [
-            accessToken,
-          ]);
-          logger.info('✅ Access token set');
-        }
-
-        logger.info('✅ Sync initialization complete');
-
-        if (isMounted) {
-          setIsSyncReady(true);
-          setSyncError(null);
-        }
-      } catch (err) {
-        /** NON-FATAL ERROR - database works, but sync doesn't **/
-        logger.warn(
-          '⚠️ Sync initialization failed. Database works in offline-only mode:',
-          err
-        );
-        if (isMounted) {
-          setIsSyncReady(false);
-          setSyncError(
-            err instanceof Error ? err : new Error('Sync initialization failed')
           );
         }
       }
@@ -258,34 +255,30 @@ export function SQLiteSyncProvider({
     return () => {
       isMounted = false;
 
-      /** CLEANUP - CLOSE DATABASE **/
-      if (dbRef.current) {
+      /** CLEANUP - close database safeguard **/
+      const closingDb = dbRef.current;
+      dbRef.current = null;
+
+      if (closingDb) {
         try {
-          dbRef.current.close();
+          closingDb.close();
+          logger.info('Database closed');
         } catch (err) {
           logger.error('❌ Error closing database:', err);
         }
       }
     };
-  }, [
-    connectionString,
-    databaseName,
-    tablesToBeSynced,
-    apiKey,
-    accessToken,
-    logger,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serializedConfig, logger]);
 
-  /** SYNC ON INTERVAL **/
+  /** SYNC INTERVAL **/
   useEffect(() => {
-    if (!isSyncReady || !dbRef.current) {
+    if (!isSyncReady) {
       return;
     }
 
-    // Perform initial sync
     performSync();
 
-    // Set up interval for automatic syncs
     const intervalId = setInterval(performSync, syncInterval);
 
     return () => {
@@ -295,7 +288,7 @@ export function SQLiteSyncProvider({
 
   const contextValue = useMemo<SQLiteSyncContextValue>(
     () => ({
-      db: dbRef.current,
+      db,
       isSyncReady,
       isSyncing,
       lastSyncTime,
@@ -305,6 +298,7 @@ export function SQLiteSyncProvider({
       triggerSync: performSync,
     }),
     [
+      db,
       isSyncReady,
       isSyncing,
       lastSyncTime,
