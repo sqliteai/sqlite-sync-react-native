@@ -7,8 +7,33 @@ import type { SQLiteSyncContextValue } from './types/SQLiteSyncContextValue';
 import { createLogger } from './utils/logger';
 
 /**
- * SQLiteSyncProvider - An offline-first React context provider that enables local SQLite database
- * operations with optional real-time synchronization to SQLite Cloud.
+ * SQLiteSyncProvider
+ *
+ * A robust, offline-first context provider that manages a local SQLite database
+ * with automatic, bi-directional synchronization to SQLite Cloud.
+ *
+ * **Core Behaviors:**
+ * 1. **Two-Phase Initialization:**
+ *    - **Phase 1 (Database):** Opens the local database immediately. If this fails, `initError` is set.
+ *    - **Phase 2 (Sync):** Attempts to load the CloudSync extension and connect to the network.
+ *      If this fails (e.g., offline), `syncError` is set, but the app **remains usable** in offline mode.
+ *
+ * 2. **Offline-First:**
+ *    - The `db` instance is exposed as soon as Phase 1 completes.
+ *    - Operations can be performed immediately, even if `isSyncReady` is false.
+ *
+ * 3. **Reactive Configuration:**
+ *    - Changes to critical props (`connectionString`, `apiKey`, `tablesToBeSynced`) will trigger
+ *      a safe teardown (closing DB) and re-initialization to ensure auth consistency.
+ *    - Configuration objects are serialized internally to prevent unnecessary re-renders.
+ *
+ * @param props.connectionString - SQLite Cloud connection string
+ * @param props.databaseName - Local filename (e.g., 'app.db')
+ * @param props.tablesToBeSynced - Array of table configs. (Changes to content trigger re-init)
+ * @param props.syncInterval - Time in ms between automatic sync attempts
+ * @param props.apiKey - (Optional) API Key for auth. Triggers re-init when changed.
+ * @param props.accessToken - (Optional) Access Token for auth. Triggers re-init when changed.
+ * @param props.debug - Enable console logging
  */
 export function SQLiteSyncProvider({
   connectionString,
@@ -136,7 +161,9 @@ export function SQLiteSyncProvider({
                 `❌ Failed to create table ${table.name}:`,
                 createErr
               );
-              throw new Error(`Failed to create table: ${table.name}`);
+              throw new Error(
+                `Failed to create table ${table.name}: ${createErr}`
+              );
             }
           }
         }
