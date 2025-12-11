@@ -124,7 +124,7 @@ export function SQLiteSyncProvider({
       }
     }
 
-    /** GUARD: OFFLINE MODE (Library State) **/
+    /** GUARD: OFFLINE MODE **/
     // If Phase 2 Init failed (e.g. bad credentials), we can't sync.
     if (!isSyncReady) {
       return;
@@ -146,7 +146,7 @@ export function SQLiteSyncProvider({
       setLastSyncChanges(changes);
 
       if (changes > 0) {
-        // Notify all sync listeners (without causing re-renders)
+        // Notify all sync listeners
         syncListenersRef.current.forEach((listener) => {
           try {
             listener();

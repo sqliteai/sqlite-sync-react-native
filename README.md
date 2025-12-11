@@ -15,7 +15,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
   Use hooks like `useSqliteSyncQuery` and `useOnSqliteSync` to automatically refresh your UI when changes are synced from the cloud — keeping your app up-to-date without boilerplate code.
 
 - 🔧 **Zero-Configuration Extension Loading**  
-  The SQLite Sync extension is automatically loaded and configured for you.  
+  The SQLite Sync extension is automatically loaded and configured for you.
   No manual setup required — just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `db` instance.
 
 - 📱 **Native-Only, Ultra-Fast**  
@@ -322,9 +322,10 @@ const { triggerSync } = useContext(SQLiteSyncActionsContext);
 
 **Values:**
 
-| Property      | Type                  | Description                                   |
-| ------------- | --------------------- | --------------------------------------------- |
-| `triggerSync` | `() => Promise<void>` | Function to manually trigger a sync operation |
+| Property      | Type                                       | Description                                                              |
+| ------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `triggerSync` | `() => Promise<void>`                      | Function to manually trigger a sync operation                            |
+| `subscribe`   | `(callback: () => void) => () => void`     | Subscribe to sync events without re-renders. Returns unsubscribe function |
 
 **Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
 
