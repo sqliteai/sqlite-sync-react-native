@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
-import { open, getDylibPath, type DB } from '@op-engineering/op-sqlite';
+import {
+  open,
+  getDylibPath,
+  type DB,
+  type QueryResult,
+} from '@op-engineering/op-sqlite';
 import NetInfo from '@react-native-community/netinfo';
 import { SQLiteDbContext } from './SQLiteDbContext';
 import { SQLiteSyncStatusContext } from './SQLiteSyncStatusContext';
@@ -134,11 +139,18 @@ export function SQLiteSyncProvider({
       setIsSyncing(true);
       isSyncingRef.current = true;
 
-      const syncResult = await dbRef.current.execute(
-        'SELECT cloudsync_network_sync();'
-      );
+      let syncResult: QueryResult | undefined;
 
-      const firstRow = syncResult.rows?.[0];
+      /**
+       * Wrap the sync command in a transaction. It ensures compatibility with op-sqlite's
+       * `db.reactiveExecute`. Reactive queries are designed to re-run only
+       * after a transaction successfully commits, providing a single, efficient update.
+       */
+      await dbRef.current.transaction(async (tx) => {
+        syncResult = await tx.execute('SELECT cloudsync_network_sync();');
+      });
+
+      const firstRow = syncResult?.rows?.[0];
       const result = firstRow ? Object.values(firstRow)[0] : 0;
       const changes = typeof result === 'number' ? result : 0;
 
