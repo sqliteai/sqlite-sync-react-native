@@ -68,7 +68,7 @@
     "@op-engineering/op-sqlite": "^15.1.6",
     "@react-native-community/netinfo": "^11.4.1",
     "@react-native/babel-preset": "0.81.1",
-    "@react-native/eslint-config": "^0.81.1",
+    "@react-native/eslint-config": "^0.83.0",
     "@release-it/conventional-changelog": "^10.0.1",
     "@types/jest": "^29.5.14",
     "@types/react": "^19.1.12",
