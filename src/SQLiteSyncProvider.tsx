@@ -349,8 +349,6 @@ export function SQLiteSyncProvider({
 
   /** SYNC INTERVAL **/
   useEffect(() => {
-    // Note: We check !isSyncReady here to avoid starting the interval if phase 2 failed.
-    // However, performSync ALSO performs a network check, so double protection.
     if (!isSyncReady) {
       return;
     }
@@ -364,7 +362,7 @@ export function SQLiteSyncProvider({
     };
   }, [isSyncReady, syncInterval, performSync]);
 
-  // Split context values for optimized re-rendering
+  /** SPLIT CONTEXT VALUES - for optimized rendering */
   const dbContextValue = useMemo<SQLiteDbContextValue>(
     () => ({
       db,
@@ -372,7 +370,6 @@ export function SQLiteSyncProvider({
     }),
     [db, initError]
   );
-
   const syncStatusContextValue = useMemo<SQLiteSyncStatusContextValue>(
     () => ({
       isSyncReady,
@@ -383,7 +380,6 @@ export function SQLiteSyncProvider({
     }),
     [isSyncReady, isSyncing, lastSyncTime, lastSyncChanges, syncError]
   );
-
   const syncActionsContextValue = useMemo<SQLiteSyncActionsContextValue>(
     () => ({
       triggerSync: performSync,
