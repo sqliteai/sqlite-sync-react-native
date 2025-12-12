@@ -21,9 +21,34 @@ export default defineConfig([
     rules: {
       'react/react-in-jsx-scope': 'off',
       'prettier/prettier': 'error',
+
+      // ===================================================================
+      // React Hooks Rules - Configured for Production Library Code
+      // ===================================================================
+
+      // CRITICAL RULES
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/set-state-in-render': 'error',
+      'react-hooks/purity': 'error',
+
+      // IMPORTANT RULES
+      'react-hooks/static-components': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-hooks/use-memo': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/unsupported-syntax': 'warn',
+      'react-hooks/incompatible-library': 'warn',
+      'react-hooks/component-hook-factories': 'warn',
+      'react-hooks/globals': 'warn',
+      'react-hooks/config': 'warn',
+      'react-hooks/gating': 'warn',
     },
   },
   {
-    ignores: ['node_modules/', 'lib/'],
+    ignores: ['node_modules/', 'lib/', 'eslint.config.mjs'],
   },
 ]);
