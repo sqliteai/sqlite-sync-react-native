@@ -502,6 +502,10 @@ return (
 );
 ```
 
+### 🔄 Alternative: op-sqlite Reactive Queries (Table-Level Granularity)
+
+For more fine-grained control over when queries re-execute, you can use [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) directly instead of `useSqliteSyncQuery`.
+
 ## 🚨 Error Handling
 
 The library separates **fatal database errors** from **recoverable sync errors** to enable true offline-first operation.
