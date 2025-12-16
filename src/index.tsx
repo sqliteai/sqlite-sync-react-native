@@ -5,6 +5,7 @@ export { SQLiteSyncActionsContext } from './SQLiteSyncActionsContext';
 export { useTriggerSqliteSync } from './hooks/useTriggerSqliteSync';
 export { useOnSqliteSync } from './hooks/useOnSqliteSync';
 export { useSqliteSyncQuery } from './hooks/useSqliteSyncQuery';
+export { useOnTableUpdate } from './hooks/useOnTableUpdate';
 export { useSqliteExecute } from './hooks/useSqliteExecute';
 export { useSqliteDb } from './hooks/useSqliteDb';
 export { useSyncStatus } from './hooks/useSyncStatus';
@@ -14,3 +15,8 @@ export type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
 export type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusContextValue';
 export type { SQLiteSyncActionsContextValue } from './types/SQLiteSyncActionsContextValue';
 export type { TableConfig } from './types/TableConfig';
+export type { ReactiveQueryConfig } from './types/ReactiveQueryConfig';
+export type {
+  TableUpdateData,
+  TableUpdateConfig,
+} from './types/TableUpdateConfig';

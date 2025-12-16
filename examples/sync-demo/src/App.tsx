@@ -14,9 +14,9 @@ import {
   useOnSqliteSync,
   useTriggerSqliteSync,
   useSqliteSyncQuery,
+  useOnTableUpdate,
   useSqliteDb,
   useSyncStatus,
-  useSqliteExecute,
 } from '@sqliteai/sqlite-sync-react-native';
 import {
   SQLITE_CLOUD_CONNECTION_STRING,
@@ -25,39 +25,71 @@ import {
   TABLE_NAME,
 } from '@env';
 
+/**
+ * Demo app showcasing the reactive hooks:
+ *
+ * 1. useSqliteSyncQuery - Table-level reactive queries using op-sqlite's reactiveExecute
+ *    - Automatically re-runs when the table changes (transaction-based)
+ *    - No manual refresh needed!
+ *
+ * 2. useOnTableUpdate - Row-level update notifications using op-sqlite's updateHook
+ *    - Fires for individual INSERT/UPDATE/DELETE operations
+ *    - Automatically fetches row data for you
+ *    - Shows notifications when rows change
+ *
+ * 3. useOnSqliteSync - Sync completion notifications
+ *    - Fires when cloud sync completes
+ */
 function TestApp() {
   const { db, initError } = useSqliteDb();
   const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
   const [searchText, setSearchText] = useState('');
   const [text, setText] = useState('');
+  const [rowNotification, setRowNotification] = useState<string | null>(null);
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();
 
-  const { execute, isExecuting, error: executeError } = useSqliteExecute();
-
-  // 2. Dynamic SQL Generation
-  // We sanitize the input purely to prevent syntax crashes with apostrophes.
-  // In a real scenario, use parameterized queries if the hook supports them,
-  // or sanitize thoroughly.
-  const sanitizedSearch = searchText.replace(/'/g, "''");
-
-  const querySql = searchText.trim()
-    ? `SELECT * FROM ${TABLE_NAME} WHERE value LIKE '%${sanitizedSearch}%' ORDER BY created_at DESC;`
-    : `SELECT * FROM ${TABLE_NAME} ORDER BY created_at DESC;`;
-
-  // Hook 1: useSqliteSyncQuery - Automatic data loading with offline-first support
-  // Loads immediately from local DB, auto-refreshes when sync brings changes
+  // Hook 1: useSqliteSyncQuery - Reactive query with table-level granularity
+  // Uses op-sqlite's reactiveExecute to automatically re-run when the table changes
+  // Changes are detected at the transaction level
   const {
     data: rows,
     isLoading,
-    isRefreshing,
     error,
-    refresh,
-  } = useSqliteSyncQuery<{ id: string; value: string; created_at: string }>(
-    querySql
-  );
+  } = useSqliteSyncQuery<{ id: string; value: string; created_at: string }>({
+    query: searchText.trim()
+      ? `SELECT * FROM ${TABLE_NAME} WHERE value LIKE ? ORDER BY created_at DESC`
+      : `SELECT * FROM ${TABLE_NAME} ORDER BY created_at DESC`,
+    arguments: searchText.trim() ? [`%${searchText}%`] : [],
+    fireOn: [{ table: TABLE_NAME }],
+  });
 
-  // Hook 2: useOnSqliteSync - Event listener for sync completion
+  // Hook 2: useOnTableUpdate - Row-level update notifications
+  // Fires for individual row changes with automatic row data fetching
+  useOnTableUpdate<{ id: string; value: string; created_at: string }>({
+    tables: [TABLE_NAME],
+    onUpdate: (data) => {
+      const operationName =
+        data.operation === 'INSERT'
+          ? 'added'
+          : data.operation === 'UPDATE'
+          ? 'updated'
+          : 'deleted';
+
+      if (data.row) {
+        setRowNotification(
+          `🔔 Row ${operationName}: "${data.row.value.substring(0, 20)}${
+            data.row.value.length > 20 ? '...' : ''
+          }"`
+        );
+      } else {
+        setRowNotification(`🔔 Row ${operationName}`);
+      }
+      setTimeout(() => setRowNotification(null), 2000);
+    },
+  });
+
+  // Hook 3: useOnSqliteSync - Event listener for sync completion
   // Shows a notification when cloud data arrives (doesn't run on mount)
   useOnSqliteSync(() => {
     setSyncNotification('✅ New data synced from cloud!');
@@ -65,17 +97,20 @@ function TestApp() {
   });
 
   const addRow = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || !db) return;
 
     try {
-      await execute(
-        `INSERT INTO ${TABLE_NAME} (id, value) VALUES (cloudsync_uuid(), ?);`,
-        [text]
-      );
+      // Use transaction to trigger reactive query updates
+      // Reactive queries only fire on committed transactions, not on direct execute
+      await db.transaction(async (tx) => {
+        await tx.execute(
+          `INSERT INTO ${TABLE_NAME} (id, value) VALUES (cloudsync_uuid(), ?);`,
+          [text]
+        );
+      });
       console.log('[sqlite-sync-demo] ✅ Row inserted:', text);
       setText('');
-      // Manually refresh to show new row immediately
-      refresh();
+      // No manual refresh needed - reactive query updates automatically when transaction commits!
     } catch (err) {
       console.error('[sqlite-sync-demo] Failed to insert row:', err);
     }
@@ -110,7 +145,6 @@ function TestApp() {
       <View style={styles.container}>
         <Text style={styles.error}>Query Error</Text>
         <Text style={styles.errorDetails}>{error.message}</Text>
-        <Button title="Retry" onPress={refresh} />
       </View>
     );
   }
@@ -168,39 +202,21 @@ function TestApp() {
             value={text}
             onChangeText={setText}
           />
-          <Button
-            title="Add Row"
-            onPress={addRow}
-            disabled={!db || isExecuting}
-          />
+          <Button title="Add Row" onPress={addRow} disabled={!db} />
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.button, styles.syncButton]}
-              onPress={triggerSync}
-              disabled={isSyncing}
-            >
-              <Text style={styles.buttonText}>
-                {isSyncing ? 'Syncing...' : 'Sync Now'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.refreshButton]}
-              onPress={refresh}
-              disabled={isRefreshing}
-            >
-              <Text style={styles.buttonText}>
-                {isRefreshing ? 'Refreshing...' : 'Refresh Query'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.button, styles.syncButton]}
+            onPress={triggerSync}
+            disabled={isSyncing}
+          >
+            <Text style={styles.buttonText}>
+              {isSyncing ? 'Syncing...' : 'Sync Now'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.listHeader}>
-          <Text style={styles.rowCount}>
-            Rows: {rows.length} {isRefreshing && '(refreshing...)'}
-          </Text>
-          {isRefreshing && <ActivityIndicator size="small" color="#007AFF" />}
+          <Text style={styles.rowCount}>Rows: {rows.length}</Text>
         </View>
       </View>
 
@@ -228,7 +244,15 @@ function TestApp() {
         )}
       />
 
-      {/* 3. ABSOLUTE BOTTOM NOTIFICATION */}
+      {/* 3. ABSOLUTE BOTTOM NOTIFICATIONS */}
+      {/* Row-level update notification (slightly higher) */}
+      {rowNotification && (
+        <View style={[styles.notificationBanner, styles.rowNotificationBanner]}>
+          <Text style={styles.notificationText}>{rowNotification}</Text>
+        </View>
+      )}
+
+      {/* Sync completion notification */}
       {syncNotification && (
         <View style={styles.notificationBanner}>
           <Text style={styles.notificationText}>{syncNotification}</Text>
@@ -356,23 +380,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5EA',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
   button: {
-    flex: 1,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginHorizontal: 5,
+    marginTop: 8,
   },
   syncButton: {
     backgroundColor: '#007AFF',
-  },
-  refreshButton: {
-    backgroundColor: '#5856D6',
   },
   buttonText: {
     color: '#fff',
@@ -437,6 +452,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 8,
+  },
+  rowNotificationBanner: {
+    bottom: 100, // Position higher to avoid overlapping with sync notification
+    backgroundColor: '#5856D6', // Purple color to distinguish from sync notification
   },
   notificationText: {
     color: '#fff',
