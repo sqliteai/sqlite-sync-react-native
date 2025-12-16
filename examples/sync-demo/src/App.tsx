@@ -16,6 +16,7 @@ import {
   useSqliteSyncQuery,
   useSqliteDb,
   useSyncStatus,
+  useSqliteExecute,
 } from '@sqliteai/sqlite-sync-react-native';
 import {
   SQLITE_CLOUD_CONNECTION_STRING,
@@ -27,9 +28,22 @@ import {
 function TestApp() {
   const { db, initError } = useSqliteDb();
   const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
+  const [searchText, setSearchText] = useState('');
   const [text, setText] = useState('');
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();
+
+  const { execute, isExecuting, error: executeError } = useSqliteExecute();
+
+  // 2. Dynamic SQL Generation
+  // We sanitize the input purely to prevent syntax crashes with apostrophes.
+  // In a real scenario, use parameterized queries if the hook supports them,
+  // or sanitize thoroughly.
+  const sanitizedSearch = searchText.replace(/'/g, "''");
+
+  const querySql = searchText.trim()
+    ? `SELECT * FROM ${TABLE_NAME} WHERE value LIKE '%${sanitizedSearch}%' ORDER BY created_at DESC;`
+    : `SELECT * FROM ${TABLE_NAME} ORDER BY created_at DESC;`;
 
   // Hook 1: useSqliteSyncQuery - Automatic data loading with offline-first support
   // Loads immediately from local DB, auto-refreshes when sync brings changes
@@ -40,7 +54,7 @@ function TestApp() {
     error,
     refresh,
   } = useSqliteSyncQuery<{ id: string; value: string; created_at: string }>(
-    `SELECT * FROM ${TABLE_NAME} ORDER BY created_at DESC;`
+    querySql
   );
 
   // Hook 2: useOnSqliteSync - Event listener for sync completion
@@ -51,10 +65,10 @@ function TestApp() {
   });
 
   const addRow = async () => {
-    if (!db || !text.trim()) return;
+    if (!text.trim()) return;
 
     try {
-      await db.execute(
+      await execute(
         `INSERT INTO ${TABLE_NAME} (id, value) VALUES (cloudsync_uuid(), ?);`,
         [text]
       );
@@ -125,6 +139,18 @@ function TestApp() {
           )}
         </View>
 
+        {/* SEARCH BAR (New) */}
+        <View style={styles.searchContainer}>
+          <Text style={styles.sectionLabel}>🔍 Search (Live Filter)</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Type to filter list..."
+            value={searchText}
+            onChangeText={setSearchText} // No debounce! Testing concurrency.
+            autoCapitalize="none"
+          />
+        </View>
+
         {/* Sync Error Banner (Non-blocking) */}
         {syncError && (
           <View style={styles.syncErrorBanner}>
@@ -142,7 +168,11 @@ function TestApp() {
             value={text}
             onChangeText={setText}
           />
-          <Button title="Add Row" onPress={addRow} disabled={!db} />
+          <Button
+            title="Add Row"
+            onPress={addRow}
+            disabled={!db || isExecuting}
+          />
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -292,6 +322,24 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+    marginLeft: 4,
+  },
+  searchContainer: {
+    marginBottom: 16,
+  },
+  searchInput: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF', // Blue border to highlight search focus
+    fontSize: 16,
   },
   syncErrorText: {
     color: '#D8000C',
