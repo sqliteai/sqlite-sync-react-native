@@ -5,6 +5,7 @@ export { SQLiteSyncActionsContext } from './SQLiteSyncActionsContext';
 export { useTriggerSqliteSync } from './hooks/useTriggerSqliteSync';
 export { useOnSqliteSync } from './hooks/useOnSqliteSync';
 export { useSqliteSyncQuery } from './hooks/useSqliteSyncQuery';
+export { useSqliteExecute } from './hooks/useSqliteExecute';
 export { useSqliteDb } from './hooks/useSqliteDb';
 export { useSyncStatus } from './hooks/useSyncStatus';
 export { useSqliteSync } from './hooks/useSqliteSync';
