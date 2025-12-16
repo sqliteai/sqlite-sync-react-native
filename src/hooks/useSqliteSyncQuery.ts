@@ -5,11 +5,15 @@ import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
 /**
  * Hook that executes a SQL query and automatically re-runs it whenever a cloud sync completes.
  *
- * Offline-First: Runs immediately when the database is available, regardless of sync status.
- * This ensures data loads from the local database even when offline.
+ * Offline-First Strategy:
+ * - Runs immediately when the database is available.
+ * - DOES NOT block concurrent executions. Instead, it uses a "Last Request Wins" strategy.
+ *   If multiple queries are triggered rapidly (e.g. user typing), all are executed,
+ *   but the UI only updates with the result of the most recent request.
  *
- * Auto-Refresh: Re-runs the query automatically when cloud changes arrive via sync.
- * Uses a subscription pattern to avoid unnecessary re-renders - only re-renders when data changes.
+ * Auto-Refresh:
+ * - Re-runs the query automatically when cloud changes arrive via sync.
+ * - Uses a subscription pattern to avoid unnecessary re-renders.
  *
  * Loading States:
  * - `isLoading`: True only during initial load (when there's no data yet)
@@ -18,25 +22,9 @@ import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
  * @param sql - The SQL query to execute
  *
  * @returns Object containing data, loading states, error, and a manual refresh function
- *
- * @example
- * ```typescript
- * const { data, isLoading, isRefreshing, error, refresh } = useSqliteSyncQuery<Task>(
- *   'SELECT * FROM tasks ORDER BY created_at DESC'
- * );
- *
- * if (isLoading) return <Spinner />;
- * if (error) return <Error message={error.message} />;
- *
- * return (
- *   <>
- *     {isRefreshing && <TopBarSpinner />}
- *     <TaskList tasks={data} />
- *   </>
- * );
- * ```
  */
 export function useSqliteSyncQuery<T = any>(sql: string) {
+  console.log('NEW useSqliteSyncQuery called with SQL:', sql);
   const { db } = useContext(SQLiteDbContext);
   const { subscribe } = useContext(SQLiteSyncActionsContext);
 
@@ -45,26 +33,25 @@ export function useSqliteSyncQuery<T = any>(sql: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const hasLoadedRef = useRef(false);
-  const isExecutingRef = useRef(false);
+
+  // Refs for concurrency management
+  const lastQueryIdRef = useRef(0); // Tracks the sequence ID of the requests
+  const hasLoadedRef = useRef(false); // Tracks if initial load is complete
 
   const executeQuery = useCallback(async () => {
-    // Early return if DB isn't available yet
-    // We do NOT check isSyncReady here because we want local data immediately (offline-first)
+    // Early return if DB isn't available yet (App startup safety)
     if (!db) {
       return;
     }
 
-    // Prevent concurrent executions to avoid race conditions
-    if (isExecutingRef.current) {
-      return;
-    }
+    // 1. Concurrency Management: "Last Request Wins"
+    // We increment the ID for this specific execution.
+    // We capture this value in a local variable (closure).
+    const currentQueryId = ++lastQueryIdRef.current;
 
     try {
-      isExecutingRef.current = true;
-
-      // Set isLoading only on first load, isRefreshing for subsequent loads
-      // This keeps content visible during background updates
+      // 2. Optimistic UI Updates
+      // We don't block. We update loading state immediately.
       if (hasLoadedRef.current) {
         setIsRefreshing(true);
       } else {
@@ -72,33 +59,44 @@ export function useSqliteSyncQuery<T = any>(sql: string) {
       }
       setError(null);
 
+      // 3. Execution
+      // We let the query run. Even if previous queries are still running,
+      // SQLite handles them efficiently. We don't want to drop user intent.
       const result = await db.execute(sql);
-      setData(result.rows as T[]);
 
-      // Mark as loaded after first successful query
-      if (!hasLoadedRef.current) {
-        hasLoadedRef.current = true;
+      // 4. Stale Data Protection
+      // Before updating the state, we check: "Is this still the latest request?"
+      // If lastQueryIdRef has incremented while we were awaiting, it means
+      // a newer query started. We discard this result to prevent UI flickering with old data.
+      if (currentQueryId === lastQueryIdRef.current) {
+        setData(result.rows as T[]);
+
+        if (!hasLoadedRef.current) {
+          hasLoadedRef.current = true;
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Query failed'));
+      // Only set error if this was the latest request
+      if (currentQueryId === lastQueryIdRef.current) {
+        setError(err instanceof Error ? err : new Error('Query failed'));
+      }
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-      isExecutingRef.current = false;
+      // Only turn off loading if this was the latest request
+      if (currentQueryId === lastQueryIdRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
   }, [db, sql]);
 
-  // 1. Initial Load Effect
-  // Runs as soon as the DB is available (Mounts & Offline support)
+  // 1. Initial Load & SQL Change Effect
+  // Runs as soon as the DB is available OR if the SQL string changes (e.g. search filter)
   useEffect(() => {
-    if (db) {
-      executeQuery();
-    }
-  }, [db, executeQuery]);
+    executeQuery();
+  }, [executeQuery]);
 
   // 2. Sync Update Effect (Subscription Pattern)
   // Subscribes to sync events without causing re-renders
-  // Only re-renders when executeQuery updates data state
   useEffect(() => {
     const unsubscribe = subscribe(() => {
       executeQuery();
