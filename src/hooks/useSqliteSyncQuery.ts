@@ -24,7 +24,6 @@ import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
  * @returns Object containing data, loading states, error, and a manual refresh function
  */
 export function useSqliteSyncQuery<T = any>(sql: string) {
-  console.log('NEW useSqliteSyncQuery called with SQL:', sql);
   const { db } = useContext(SQLiteDbContext);
   const { subscribe } = useContext(SQLiteSyncActionsContext);
 
@@ -35,8 +34,8 @@ export function useSqliteSyncQuery<T = any>(sql: string) {
   const [error, setError] = useState<Error | null>(null);
 
   // Refs for concurrency management
-  const lastQueryIdRef = useRef(0); // Tracks the sequence ID of the requests
-  const hasLoadedRef = useRef(false); // Tracks if initial load is complete
+  const lastQueryIdRef = useRef(0);
+  const hasLoadedRef = useRef(false);
 
   const executeQuery = useCallback(async () => {
     // Early return if DB isn't available yet (App startup safety)

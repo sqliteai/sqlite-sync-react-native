@@ -42,7 +42,9 @@ export function useSqliteExecute() {
    *
    * @param sql - The SQL statement to execute
    * @param params - Optional array of parameters to bind to the query
+   *
    * @returns Promise resolving to the QueryResult (rowsAffected, insertId, etc.)
+   *
    * @throws Error if execution fails (allows for try/catch in UI handler)
    */
   const execute = useCallback(
@@ -50,10 +52,7 @@ export function useSqliteExecute() {
       sql: string,
       params: any[] = []
     ): Promise<QueryResult | undefined> => {
-      // Safety check: if DB isn't ready, we throw.
-      // Usually buttons should be disabled if app is initializing, but this protects logic.
       if (!db) {
-        console.warn('[useSqliteExecute] Database is not open yet.');
         return undefined;
       }
 
@@ -61,18 +60,14 @@ export function useSqliteExecute() {
       setError(null);
 
       try {
-        // We await the result. SQLite (via op-sqlite) handles the serialization
-        // of concurrent writes thanks to WAL mode.
         const result = await db.execute(sql, params);
         return result;
       } catch (err) {
         const errorObj =
           err instanceof Error ? err : new Error('Execution failed');
 
-        // Update local state for UI rendering
         setError(errorObj);
 
-        // Re-throw the error so the caller can handle it (e.g. show Alert/Toast)
         throw errorObj;
       } finally {
         setIsExecuting(false);
