@@ -11,8 +11,8 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 - 🧩 **Offline-First, Automatic Sync**  
   Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
 
-- 🪝 **React Hooks Designed for Sync-Aware Data**  
-  Use hooks like `useSqliteSyncQuery` and `useOnSqliteSync` to automatically refresh your UI when changes are synced from the cloud — keeping your app up-to-date without boilerplate code.
+- 🪝 **React Hooks with Reactive Queries**
+  Use `useSqliteSyncQuery` for table-level reactivity and `useOnTableUpdate` for row-level notifications. Your UI automatically updates when data changes, locally or from the cloud — no manual refresh needed.
 
 - 🔧 **Zero-Configuration Extension Loading**  
   The SQLite Sync extension is automatically loaded and configured for you.
@@ -39,6 +39,8 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
     - [useTriggerSqliteSync](#usetriggersqlitesync)
     - [useOnSqliteSync](#useonsqlitesync)
     - [useSqliteSyncQuery](#usesqlitesyncquery)
+    - [useOnTableUpdate](#useontableupdate)
+  - [Types](#types)
 - [Error Handling](#-error-handling)
 - [Debug Logging](#-debug-logging)
 - [Examples](#-examples)
@@ -152,39 +154,56 @@ import { useCallback } from 'react';
 import {
   useSqliteDb,
   useSqliteSyncQuery,
+  useOnTableUpdate,
   useTriggerSqliteSync,
   useOnSqliteSync,
 } from '@sqliteai/sqlite-sync-react-native';
 
+interface Task {
+  id: string;
+  title: string;
+  completed: number;
+}
+
 function TaskList() {
-  // 1. DATA FETCHING: Automatically loads local data AND updates on sync
+  // 1. REACTIVE QUERY: Automatically updates when table changes (via transactions)
   const {
     data: tasks,
     isLoading,
     error,
-  } = useSqliteSyncQuery<{ id: string; title: string }>(
-    'SELECT * FROM tasks ORDER BY created_at DESC'
-  );
-
-  // 2. MANUAL SYNC: Control when to sync (e.g., Pull-to-Refresh)
-  const { triggerSync, isSyncing } = useTriggerSqliteSync();
-
-  // 3. EVENT LISTENING: React to incoming changes (e.g., Show a toast)
-  useOnSqliteSync(() => {
-    console.log('✨ New data arrived from the cloud!');
+  } = useSqliteSyncQuery<Task>({
+    query: 'SELECT * FROM tasks ORDER BY created_at DESC',
+    arguments: [],
+    fireOn: [{ table: 'tasks' }],
   });
 
-  // 4. WRITING DATA: Use the optimized hook (no re-renders on sync)
+  // 2. ROW-LEVEL NOTIFICATIONS: Get notified of individual INSERT/UPDATE/DELETE
+  useOnTableUpdate<Task>({
+    tables: ['tasks'],
+    onUpdate: (data) => {
+      console.log(`Row ${data.operation}:`, data.row);
+    },
+  });
+
+  // 3. SYNC COMPLETION: React to cloud sync events
+  useOnSqliteSync(() => {
+    console.log('✨ New data synced from cloud!');
+  });
+
+  // 4. WRITING DATA: Use transactions to trigger reactive queries
   const { db } = useSqliteDb();
+  const { triggerSync, isSyncing } = useTriggerSqliteSync();
 
   const addTask = useCallback(
     async (title: string) => {
       if (!db) return;
-      // Use cloudsync_uuid() for conflict-free IDs
-      await db.execute(
-        'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
-        [title]
-      );
+      // Use transaction to trigger reactive query update
+      await db.transaction(async (tx) => {
+        await tx.execute(
+          'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
+          [title]
+        );
+      });
       // Optional: Push changes to cloud immediately
       triggerSync();
     },
@@ -206,7 +225,7 @@ function TaskList() {
         <Text key={task.id}>{task.title}</Text>
       ))}
 
-      <Button title="Add Random Task" onPress={() => addTask('New Task')} />
+      <Button title="Add Task" onPress={() => addTask('New Task')} />
     </View>
   );
 }
@@ -263,6 +282,91 @@ interface TableConfig {
 - Always include `IF NOT EXISTS` to prevent errors if the table already exists
 - The table schema must match exactly to your remote table schema in SQLite Cloud
 - The library executes this SQL during initialization, before SQLiteSync setup
+
+#### `ReactiveQueryConfig`
+
+Configuration for reactive queries with table-level granularity.
+
+```typescript
+interface ReactiveQueryConfig {
+  /**
+   * The SQL query to execute
+   */
+  query: string;
+
+  /**
+   * Query parameters/arguments (optional)
+   */
+  arguments?: any[];
+
+  /**
+   * Tables to monitor for changes
+   */
+  fireOn: Array<{
+    /** Table name to monitor */
+    table: string;
+    /** Optional: specific operation to monitor (INSERT, UPDATE, or DELETE) */
+    operation?: 'INSERT' | 'UPDATE' | 'DELETE';
+  }>;
+}
+```
+
+#### `TableUpdateData<T>`
+
+Row-level update event data from op-sqlite's updateHook.
+
+```typescript
+interface TableUpdateData<T = any> {
+  /**
+   * The table that was modified
+   */
+  table: string;
+
+  /**
+   * The type of operation that occurred
+   *
+   * Possible values:
+   * - 'DELETE' - Row was deleted
+   * - 'INSERT' - Row was inserted
+   * - 'UPDATE' - Row was updated
+   */
+  operation: 'INSERT' | 'UPDATE' | 'DELETE';
+
+  /**
+   * SQLite's internal rowid (NOT your table's primary key)
+   */
+  rowId: number;
+
+  /**
+   * The row data retrieved from the database
+   *
+   * The hook automatically queries the database to fetch the row data.
+   * For DELETE operations, this will be null since the row no longer exists.
+   */
+  row: T | null;
+}
+```
+
+#### `TableUpdateConfig<T>`
+
+Configuration for row-level table update listeners.
+
+```typescript
+interface TableUpdateConfig<T = any> {
+  /**
+   * List of table names to monitor for changes
+   */
+  tables: string[];
+
+  /**
+   * Callback function executed when a monitored table is updated
+   *
+   * Receives detailed information about the row-level change
+   * including the operation type (INSERT/UPDATE/DELETE) and row data
+   */
+  onUpdate: (data: TableUpdateData<T>) => void;
+}
+```
 
 ### Contexts
 
@@ -322,10 +426,10 @@ const { triggerSync } = useContext(SQLiteSyncActionsContext);
 
 **Values:**
 
-| Property      | Type                                       | Description                                                              |
-| ------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `triggerSync` | `() => Promise<void>`                      | Function to manually trigger a sync operation                            |
-| `subscribe`   | `(callback: () => void) => () => void`     | Subscribe to sync events without re-renders. Returns unsubscribe function |
+| Property      | Type                                   | Description                                                               |
+| ------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| `triggerSync` | `() => Promise<void>`                  | Function to manually trigger a sync operation                             |
+| `subscribe`   | `(callback: () => void) => () => void` | Subscribe to sync events without re-renders. Returns unsubscribe function |
 
 **Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
 
@@ -464,47 +568,138 @@ useEffect(() => {
 useOnSqliteSync(loadData);
 ```
 
-#### `useSqliteSyncQuery(query)`
+#### `useSqliteSyncQuery(config)`
 
-Execute a query and automatically re-run when sync updates.
+Execute a reactive query with table-level granularity using op-sqlite's `reactiveExecute`.
 
-**Offline-First:** Runs immediately when the database is available, regardless of sync status. This ensures data loads from the local database even when offline.
+**How it works:** This hook uses [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) to automatically re-run the query when specified tables are modified via transactions.
 
-**Auto-Refresh:** Re-runs the query automatically when cloud changes arrive via sync. Uses a subscription pattern to avoid unnecessary re-renders - only re-renders when data changes.
+**Key Features:**
 
-**Loading States:**
+- **Automatic updates:** Query re-runs when monitored tables change
+- **Initial data loading:** Executes query immediately when database is ready
 
-- `isLoading`: True only during initial load (when there's no data yet)
-- `isRefreshing`: True during background updates (sync updates, manual refresh)
+**Parameters:**
 
 ```typescript
-const { data, isLoading, isRefreshing, error, refresh } =
-  useSqliteSyncQuery<Task>('SELECT * FROM tasks ORDER BY created_at DESC');
+interface ReactiveQueryConfig {
+  query: string; // SQL query to execute
+  arguments?: any[]; // Query parameters (optional)
+  fireOn: Array<{
+    // Tables to monitor
+    table: string;
+    operation?: 'INSERT' | 'UPDATE' | 'DELETE'; // Optional: specific operation
+  }>;
+}
+```
 
-// Show full-screen spinner only on first load
+**Returns:**
+
+```typescript
+{
+  data: T[];              // Query results
+  isLoading: boolean;     // True during initial load
+  error: Error | null;    // Query error
+  unsubscribe: () => void; // Manually unsubscribe (auto-cleanup on unmount)
+}
+```
+
+**Example:**
+
+```typescript
+const { data, isLoading, error } = useSqliteSyncQuery<Task>({
+  query: 'SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC',
+  arguments: [userId],
+  fireOn: [{ table: 'tasks' }, { table: 'task_assignments' }],
+});
+
 if (isLoading) return <Spinner />;
 if (error) return <Error message={error.message} />;
 
 return (
-  <>
-    {/* Subtle indicator for background updates */}
-    {isRefreshing && <TopBarSpinner />}
-
-    <Button onPress={refresh} title="Refresh" />
-    <FlatList
-      data={data}
-      renderItem={({ item }) => <TaskItem task={item} />}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={refresh} />
-      }
-    />
-  </>
+  <FlatList data={data} renderItem={({ item }) => <TaskItem task={item} />} />
 );
 ```
 
-### 🔄 Alternative: op-sqlite Reactive Queries (Table-Level Granularity)
+**Important: Use Transactions for Writes**
 
-For more fine-grained control over when queries re-execute, you can use [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) directly instead of `useSqliteSyncQuery`.
+Reactive queries **only fire on committed transactions**. When writing data, always use transactions:
+
+```typescript
+// ✅ This will trigger reactive queries
+await db.transaction(async (tx) => {
+  await tx.execute('INSERT INTO tasks (id, title) VALUES (?, ?);', [id, title]);
+});
+
+// ❌ This will NOT trigger reactive queries
+await db.execute('INSERT INTO tasks (id, title) VALUES (?, ?);', [id, title]);
+```
+
+The library automatically wraps sync operations in transactions, so reactive queries update when cloud changes arrive.
+
+#### `useOnTableUpdate(config)`
+
+Listen for row-level changes (INSERT, UPDATE, DELETE) on specified tables using op-sqlite's `updateHook`.
+
+**How it works:** This hook uses op-sqlite's `updateHook` to receive individual row change notifications. Unlike reactive queries which re-run the entire query, this hook fires for each row modification and automatically fetches the complete row data for you.
+
+**Key Features:**
+
+- **Row-level granularity:** Callback fires for each individual row change
+- **Operation details:** Know exactly what operation (INSERT/UPDATE/DELETE) occurred
+- **Automatic row fetching:** Row data is queried and provided in the callback
+
+**Parameters:**
+
+```typescript
+interface TableUpdateConfig<T = any> {
+  tables: string[]; // Tables to monitor
+  onUpdate: (data: TableUpdateData<T>) => void; // Callback function
+}
+
+interface TableUpdateData<T = any> {
+  table: string; // Table that was modified
+  operation: 'INSERT' | 'UPDATE' | 'DELETE'; // Operation type
+  rowId: number; // SQLite internal rowid (not your primary key)
+  row: T | null; // Row data (null for DELETE operations)
+}
+```
+
+**Example:**
+
+```typescript
+interface Task {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+useOnTableUpdate<Task>({
+  tables: ['tasks', 'notes'],
+  onUpdate: (data) => {
+    console.log(`Table: ${data.table}`);
+    console.log(`Operation: ${data.operation}`);
+
+    if (data.row) {
+      // Row data is automatically fetched and typed
+      Toast.show(
+        `Task "${data.row.title}" was ${data.operation.toLowerCase()}d`
+      );
+
+      // Update analytics
+      analytics.track('task_modified', {
+        operation: data.operation,
+        taskId: data.row.id,
+      });
+    } else {
+      // DELETE operations have null row
+      console.log('Row was deleted');
+    }
+  },
+});
+```
+
+**Note:** For DELETE operations, `row` will be `null` since the row no longer exists in the database.
 
 ## 🚨 Error Handling
 
