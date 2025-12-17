@@ -32,7 +32,7 @@ import { SQLiteDbContext } from '../SQLiteDbContext';
  * ```
  */
 export function useSqliteExecute() {
-  const { db } = useContext(SQLiteDbContext);
+  const { writeDb } = useContext(SQLiteDbContext);
 
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -52,7 +52,7 @@ export function useSqliteExecute() {
       sql: string,
       params: any[] = []
     ): Promise<QueryResult | undefined> => {
-      if (!db) {
+      if (!writeDb) {
         return undefined;
       }
 
@@ -60,7 +60,7 @@ export function useSqliteExecute() {
       setError(null);
 
       try {
-        const result = await db.execute(sql, params);
+        const result = await writeDb.execute(sql, params);
         return result;
       } catch (err) {
         const errorObj =
@@ -73,7 +73,7 @@ export function useSqliteExecute() {
         setIsExecuting(false);
       }
     },
-    [db]
+    [writeDb]
   );
 
   return {

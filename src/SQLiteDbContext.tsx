@@ -5,7 +5,8 @@ import type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
  * Default context value used before SQLiteSyncProvider initializes
  */
 const defaultContextValue: SQLiteDbContextValue = {
-  db: null,
+  writeDb: null,
+  readDb: null,
   initError: null,
 };
 

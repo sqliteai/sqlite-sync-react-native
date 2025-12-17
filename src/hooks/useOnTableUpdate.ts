@@ -54,7 +54,7 @@ import type { TableUpdateConfig } from '../types/TableUpdateConfig';
  * For DELETE operations, `row` will be `null` since the row no longer exists.
  */
 export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
-  const { db } = useContext(SQLiteDbContext);
+  const { writeDb, readDb } = useContext(SQLiteDbContext);
 
   // Store callback in ref to allow inline functions without causing infinite loops
   const savedCallback = useRef(config.onUpdate);
@@ -67,23 +67,21 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
   }, [config.onUpdate, config.tables]);
 
   useEffect(() => {
-    if (!db) return;
+    if (!writeDb || !readDb) return;
 
-    // Subscribe to update hook - fires on every row change
-    db.updateHook(async (hookData) => {
-      // Only fire callback if the updated table is in our watch list
+    // Subscribe to update hook on write connection - fires on every row change
+    writeDb.updateHook(async (hookData) => {
       if (!savedTables.current.includes(hookData.table)) {
         return;
       }
 
-      // Fetch the row data using SQLite's internal rowid
       let row: T | null = null;
 
       // For DELETE operations, the row no longer exists, so row will be null
       // For INSERT and UPDATE, we can fetch the row data
       if (hookData.operation !== 'DELETE') {
         try {
-          const result = await db.execute(
+          const result = await readDb.execute(
             `SELECT * FROM ${hookData.table} WHERE rowid = ?`,
             [hookData.rowId]
           );
@@ -93,7 +91,6 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
         }
       }
 
-      // Call the user's callback with enriched data including the row
       savedCallback.current({
         table: hookData.table,
         operation: hookData.operation,
@@ -104,7 +101,7 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
 
     // Cleanup: Remove the hook on unmount by passing null
     return () => {
-      db.updateHook(null);
+      writeDb.updateHook(null);
     };
-  }, [db]);
+  }, [writeDb, readDb]);
 }

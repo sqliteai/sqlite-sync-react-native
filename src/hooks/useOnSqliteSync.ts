@@ -29,7 +29,7 @@ import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
  * ```
  */
 export function useOnSqliteSync(callback: () => void) {
-  const { subscribe } = useContext(SQLiteSyncActionsContext);
+  const { subscribeToSync } = useContext(SQLiteSyncActionsContext);
 
   // Store callback in ref to allow inline functions without causing infinite loops
   const savedCallback = useRef(callback);
@@ -43,10 +43,10 @@ export function useOnSqliteSync(callback: () => void) {
   // 2. Subscribe to sync events
   // This does NOT cause re-renders - it's a pure subscription
   useEffect(() => {
-    const unsubscribe = subscribe(() => {
+    const unsubscribe = subscribeToSync(() => {
       savedCallback.current();
     });
 
     return unsubscribe;
-  }, [subscribe]);
+  }, [subscribeToSync]);
 }

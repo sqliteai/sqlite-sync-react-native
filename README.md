@@ -34,12 +34,14 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
     - [SQLiteSyncActionsContext](#sqlitesyncactionscontext)
   - [Hooks](#hooks)
     - [useSqliteDb](#usesqlitedb)
-    - [useSyncStatus](#usesyncstatus)
+    - [useSqliteSyncStatus](#useSqliteSyncStatus)
     - [useSqliteSync](#usesqlitesync)
     - [useTriggerSqliteSync](#usetriggersqlitesync)
     - [useOnSqliteSync](#useonsqlitesync)
     - [useSqliteSyncQuery](#usesqlitesyncquery)
     - [useOnTableUpdate](#useontableupdate)
+    - [useSqliteTransaction](#usesqlitetransaction)
+    - [useSqliteExecute](#usesqliteexecute)
   - [Types](#types)
 - [Error Handling](#-error-handling)
 - [Debug Logging](#-debug-logging)
@@ -157,6 +159,7 @@ import {
   useOnTableUpdate,
   useTriggerSqliteSync,
   useOnSqliteSync,
+  useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
 
 interface Task {
@@ -191,14 +194,13 @@ function TaskList() {
   });
 
   // 4. WRITING DATA: Use transactions to trigger reactive queries
-  const { db } = useSqliteDb();
+  const { executeTransaction, isExecuting } = useSqliteTransaction();
   const { triggerSync, isSyncing } = useTriggerSqliteSync();
 
   const addTask = useCallback(
     async (title: string) => {
-      if (!db) return;
       // Use transaction to trigger reactive query update
-      await db.transaction(async (tx) => {
+      await executeTransaction(async (tx) => {
         await tx.execute(
           'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
           [title]
@@ -207,7 +209,7 @@ function TaskList() {
       // Optional: Push changes to cloud immediately
       triggerSync();
     },
-    [db, triggerSync]
+    [executeTransaction, triggerSync]
   );
 
   if (isLoading) return <Text>Loading local DB...</Text>;
@@ -225,7 +227,11 @@ function TaskList() {
         <Text key={task.id}>{task.title}</Text>
       ))}
 
-      <Button title="Add Task" onPress={() => addTask('New Task')} />
+      <Button
+        title="Add Task"
+        onPress={() => addTask('New Task')}
+        disabled={isExecuting}
+      />
     </View>
   );
 }
@@ -374,21 +380,32 @@ The library provides three separate React Contexts for optimized re-renders:
 
 #### `SQLiteDbContext`
 
-Provides database instance and initialization errors. **Rarely changes** (only on init/error).
+Provides database connections and initialization errors. **Rarely changes** (only on init/error).
 
 ```typescript
 import { useContext } from 'react';
 import { SQLiteDbContext } from '@sqliteai/sqlite-sync-react-native';
 
-const { db, initError } = useContext(SQLiteDbContext);
+const { writeDb, readDb, initError } = useContext(SQLiteDbContext);
 ```
 
 **Values:**
 
-| Property    | Type            | Description                                                                                                          |
-| ----------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `db`        | `DB \| null`    | [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) database instance with SQLite Sync extension loaded |
-| `initError` | `Error \| null` | Fatal database error (db unavailable)                                                                                |
+| Property    | Type            | Description                                                       |
+| ----------- | --------------- | ----------------------------------------------------------------- |
+| `writeDb`   | `DB \| null`    | Write connection for INSERT, UPDATE, DELETE, and sync operations. |
+| `readDb`    | `DB \| null`    | Read connection for SELECT queries.                               |
+| `initError` | `Error \| null` | Fatal database error (db unavailable)                             |
+
+**About the database connections:**
+
+The library uses **dual database connections** for optimal performance:
+
+- **`writeDb`**: Write connection configured with WAL mode and NORMAL synchronous. Has the **SQLite Sync extension loaded** with access to all [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc. Use for all INSERT, UPDATE, DELETE, and sync operations.
+
+- **`readDb`**: Read-only connection configured with `query_only = true`. Use for all SELECT queries to prevent blocking during writes and sync operations. Does not have access to SQLite Sync extension functions.
+
+Both connections are `DB` instances from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api) with full access to the op-sqlite API.
 
 #### `SQLiteSyncStatusContext`
 
@@ -426,19 +443,12 @@ const { triggerSync } = useContext(SQLiteSyncActionsContext);
 
 **Values:**
 
-| Property      | Type                                   | Description                                                               |
-| ------------- | -------------------------------------- | ------------------------------------------------------------------------- |
-| `triggerSync` | `() => Promise<void>`                  | Function to manually trigger a sync operation                             |
-| `subscribe`   | `(callback: () => void) => () => void` | Subscribe to sync events without re-renders. Returns unsubscribe function |
+| Property          | Type                                   | Description                                                               |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| `triggerSync`     | `() => Promise<void>`                  | Function to manually trigger a sync operation                             |
+| `subscribeToSync` | `(callback: () => void) => () => void` | Subscribe to sync events without re-renders. Returns unsubscribe function |
 
 **Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
-
-**About the `db` instance:**
-
-The `db` property is a `DB` instance from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api) with the **SQLite Sync extension loaded**. This means you can:
-
-- Use the full [op-sqlite API](https://op-engineering.github.io/op-sqlite/docs/api) for standard database operations
-- Use any [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc.
 
 ### Hooks
 
@@ -446,42 +456,50 @@ The library provides specialized hooks for different use cases. Choose the right
 
 #### `useSqliteDb()`
 
-Access the database instance and initialization errors **without subscribing to sync updates**. This hook is optimized for components that only need database access and won't re-render on every sync.
+Access the database connections and initialization errors **without subscribing to sync updates**. This hook is optimized for components that only need database access and won't re-render on every sync.
+
+**Important:** The library uses dual connections for optimal performance. Use `readDb` for queries and `writeDb` for write operations.
 
 ```typescript
-const { db, initError } = useSqliteDb();
+const { writeDb, readDb, initError } = useSqliteDb();
 
 if (initError) {
   return <Text>Error: {initError.message}</Text>;
 }
 
-if (!db) {
+if (!writeDb || !readDb) {
   return <Text>Loading...</Text>;
 }
 
-// Use db for queries without re-rendering on sync
+// Use writeDb for write operations
 const addTask = async (title: string) => {
-  await db.execute(
-    'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
-    [title]
-  );
+  await writeDb.transaction(async (tx) => {
+    await tx.execute(
+      'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
+      [title]
+    );
+  });
 };
+
+// Use readDb for queries (won't block during sync)
+const result = await readDb.execute('SELECT * FROM tasks');
 ```
 
 **Returns:**
 
-- `db`: Database instance
+- `writeDb`: Write database connection (use for INSERT, UPDATE, DELETE)
+- `readDb`: Read database connection (use for SELECT queries)
 - `initError`: Fatal initialization error
 
-**Best for:** Components that write data or need database access but don't need sync status.
+**Best for:** Components that need direct database access but don't need sync status.
 
-#### `useSyncStatus()`
+#### `useSqliteSyncStatus()`
 
 Access sync status information, use this when you need to display sync state in your UI.
 
 ```typescript
 const { isSyncing, lastSyncTime, syncError, isSyncReady, lastSyncChanges } =
-  useSyncStatus();
+  useSqliteSyncStatus();
 
 return (
   <View>
@@ -521,7 +539,7 @@ return (
 );
 ```
 
-**Returns:** All properties from `useSqliteDb()` + `useSyncStatus()` + `triggerSync` function
+**Returns:** All properties from `useSqliteDb()` + `useSqliteSyncStatus()` hooks and `triggerSync()` + `subscribeToSync()` functions
 
 **Best for:** Components that need access to everything (use sparingly to avoid unnecessary re-renders).
 
@@ -701,6 +719,190 @@ useOnTableUpdate<Task>({
 
 **Note:** For DELETE operations, `row` will be `null` since the row no longer exists in the database.
 
+#### `useSqliteTransaction()`
+
+Execute database transactions with state tracking.
+
+**Important:** Always use transactions for write operations to ensure reactive queries update automatically.
+
+**Returns:**
+
+```typescript
+{
+  executeTransaction: (callback: (tx: Transaction) => Promise<void>) =>
+    Promise<void>;
+  isExecuting: boolean; // True while transaction is executing
+  error: Error | null; // Transaction error if any
+}
+```
+
+**Example:**
+
+```typescript
+const { executeTransaction, isExecuting, error } = useSqliteTransaction();
+
+const handleSave = async () => {
+  try {
+    await executeTransuseSqliteSyncStatus(tx) => {
+      // All operations run in a single transaction
+      await tx.execute(
+        'INSERT INTO tasks (id, title) VALUES (?, ?)',
+        [id, 'New Task']
+      );
+      await tx.execute(
+        'UPDATE counters SET count = count + 1 WHERE type = ?',
+        ['tasks']
+      );
+    });
+    // Transaction committed - reactive queries will update
+    navigation.goBack();
+  } catch (e) {
+    Alert.alert('Error', 'Could not save task');
+  }
+};
+
+return (
+  <Button
+    title="Save"
+    onPress={handleSave}
+    disabled={isExecuting}
+  />
+);
+```
+
+#### `useSqliteExecute()`
+
+Execute single SQL commands (INSERT, UPDATE, DELETE) with state tracking.
+
+**Note:** For most use cases, prefer `useSqliteTransaction` since transactions are required to trigger reactive query updates.
+
+**Returns:**
+
+```typescript
+{
+  execute: (sql: string, params?: any[]) => Promise<QueryResult | undefined>;
+  isExecuting: boolean; // True while executing
+  error: Error | null; // Execution error if any
+}
+```
+
+**Example:**
+
+```typescript
+const { execute, isExecuting, error } = useSqliteExecute();
+
+const handleDelete = async (id: string) => {
+  try {
+    await execute('DELETE FROM tasks WHERE id = ?', [id]);
+    // Note: Reactive queries won't update unless this is in a transaction
+  } catch (e) {
+    Alert.alert('Error', 'Could not delete task');
+  }
+};
+```
+
+### Types
+
+The library exports TypeScript types for all configuration objects and data structures.
+
+#### `ReactiveQueryConfig`
+
+Configuration for reactive queries with table-level granularity.
+
+```typescript
+interface ReactiveQueryConfig {
+  /**
+   * The SQL query to execute
+   */
+  query: string;
+
+  /**
+   * Query parameters/arguments (optional)
+   */
+  arguments?: any[];
+
+  /**
+   * Tables to monitor for changes
+   */
+  fireOn: Array<{
+    /** Table name to monitor */
+    table: string;
+    /** Optional: specific operation to monitor (INSERT, UPDATE, or DELETE) */
+    operation?: 'INSERT' | 'UPDATE' | 'DELETE';
+  }>;
+}
+```
+
+#### `TableUpdateData<T>`
+
+Row-level update event data from op-sqlite's updateHook.
+
+```typescript
+interface TableUpdateData<T = any> {
+  /**
+   * The table that was modified
+   */
+  table: string;
+
+  /**
+   * The type of operation that occurred
+   *
+   * Possible values:
+   * - 'DELETE' - Row was deleted
+   * - 'INSERT' - Row was inserted
+   * - 'UPDATE' - Row was updated
+   */
+  operation: 'INSERT' | 'UPDATE' | 'DELETE';
+
+  /**
+   * SQLite's internal rowid (NOT your table's primary key)
+   */
+  rowId: number;
+
+  /**
+   * The row data retrieved from the database
+   *
+   * The hook automatically queries the database to fetch the row data.
+   * For DELETE operations, this will be null since the row no longer exists.
+   */
+  row: T | null;
+}
+```
+
+#### `TableUpdateConfig<T>`
+
+Configuration for row-level table update listeners.
+
+```typescript
+interface TableUpdateConfig<T = any> {
+  /**
+   * List of table names to monitor for changes
+   */
+  tables: string[];
+
+  /**
+   * Callback function executed when a monitored table is updated
+   *
+   * Receives detailed information about the row-level change
+   * including the operation type (INSERT/UPDATE/DELETE) and row data
+   */
+  onUpdate: (data: TableUpdateData<T>) => void;
+}
+```
+
+#### `TableConfig`
+
+Configuration for tables to sync (used in `SQLiteSyncProvider`).
+
+```typescript
+interface TableConfig {
+  /** Table name (must match cloud table) */
+  name: string;
+  /** CREATE TABLE SQL statement */
+  createTableSql: string;
+}
+```
+
 ## 🚨 Error Handling
 
 The library separates **fatal database errors** from **recoverable sync errors** to enable true offline-first operation.
@@ -710,7 +912,7 @@ The library separates **fatal database errors** from **recoverable sync errors**
 **Fatal errors** that prevent the database from working at all. The app cannot function when these occur.
 
 ```typescript
-const { initError, db } = useSqliteDb();
+const { writeDb, readDb, initError } = useSqliteDb();
 
 if (initError) {
   return <ErrorScreen message="Database unavailable" />;
@@ -724,19 +926,24 @@ if (initError) {
 - Failed to open database file
 - Failed to create tables
 
-**When this happens:** The `db` instance will be `null` and the app cannot work offline or online.
+**When this happens:** Both `writeDb` and `readDb` will be `null` and the app cannot work offline or online.
 
 ### Sync Errors (`syncError`)
 
 **Recoverable errors** that prevent syncing but allow full offline database access.
 
 ```typescript
-const { db } = useSqliteDb();
-const { syncError } = useSyncStatus();
+const { writeDb } = useSqliteDb();
+const { syncError } = useSqliteSyncStatus();
 
 // Database still works offline even with syncError!
-if (db) {
-  await db.execute('INSERT INTO tasks ...');
+if (writeDb) {
+  await writeDb.transaction(async (tx) => {
+    await tx.execute('INSERT INTO tasks (id, title) VALUES (?, ?)', [
+      id,
+      title,
+    ]);
+  });
 }
 
 // Show non-blocking warning
@@ -753,7 +960,7 @@ if (db) {
 - Network initialization failed
 - Temporary network connectivity issues
 
-**When this happens:** The `db` instance is available and fully functional for local-only operations. Sync will be retried on the next interval or when credentials are provided.
+**When this happens:** Both database connections (`writeDb` and `readDb`) are available and fully functional for local-only operations. Sync will be retried on the next interval or when credentials are provided.
 
 **Important:** Sync errors automatically clear on the next successful sync.
 

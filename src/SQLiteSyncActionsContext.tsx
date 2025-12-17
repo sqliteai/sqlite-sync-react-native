@@ -11,10 +11,10 @@ const defaultContextValue: SQLiteSyncActionsContextValue = {
       '⚠️ triggerSync called before SQLiteSyncProvider is mounted'
     );
   },
-  subscribe: () => {
+  subscribeToSync: () => {
     console.warn(
       '[SQLiteSync]',
-      '⚠️ subscribe called before SQLiteSyncProvider is mounted'
+      '⚠️ subscribeToSync called before SQLiteSyncProvider is mounted'
     );
     return () => {};
   },
@@ -23,7 +23,7 @@ const defaultContextValue: SQLiteSyncActionsContextValue = {
 /**
  * React Context for SQLite Sync Actions
  *
- * Provides access to sync actions (like triggerSync).
+ * Provides access to sync actions.
  * This context never changes (stable function reference).
  */
 export const SQLiteSyncActionsContext =

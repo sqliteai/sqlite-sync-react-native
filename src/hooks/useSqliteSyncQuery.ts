@@ -52,7 +52,7 @@ import type { ReactiveQueryConfig } from '../types/ReactiveQueryConfig';
  * will fire when cloud changes arrive.
  */
 export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
-  const { db } = useContext(SQLiteDbContext);
+  const { readDb } = useContext(SQLiteDbContext);
 
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,12 +64,13 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
   const serializedFireOn = JSON.stringify(config.fireOn);
 
   useEffect(() => {
-    if (!db) return;
+    if (!readDb) return;
 
     setIsLoading(true);
     setError(null);
 
-    db.execute(config.query, config.arguments || [])
+    readDb
+      .execute(config.query, config.arguments || [])
       .then((result) => {
         setData((result.rows || []) as T[]);
         setIsLoading(false);
@@ -80,7 +81,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
         setIsLoading(false);
       });
 
-    const unsubscribe = db.reactiveExecute({
+    const unsubscribe = readDb.reactiveExecute({
       query: config.query,
       arguments: config.arguments || [],
       fireOn: config.fireOn,
@@ -96,7 +97,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
       unsubscribeRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, config.query, serializedArgs, serializedFireOn]);
+  }, [readDb, config.query, serializedArgs, serializedFireOn]);
 
   const unsubscribe = useCallback(() => {
     if (unsubscribeRef.current) {

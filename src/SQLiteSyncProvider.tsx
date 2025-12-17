@@ -59,7 +59,8 @@ export function SQLiteSyncProvider({
   ...authProps
 }: SQLiteSyncProviderProps) {
   /** PUBLIC CONTEXT STATE - Values exposed to consumers via Context */
-  const [db, setDb] = useState<DB | null>(null);
+  const [writeDb, setWriteDb] = useState<DB | null>(null);
+  const [readDb, setReadDb] = useState<DB | null>(null);
   const [isSyncReady, setIsSyncReady] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
@@ -68,7 +69,8 @@ export function SQLiteSyncProvider({
   const [syncError, setSyncError] = useState<Error | null>(null);
 
   /** REFS - Used for internal async logic to avoid closure staleness **/
-  const dbRef = useRef<DB | null>(null);
+  const writeDbRef = useRef<DB | null>(null);
+  const readDbRef = useRef<DB | null>(null);
   const isSyncingRef = useRef(false);
 
   /** SYNC LISTENERS - Subscription pattern for sync events **/
@@ -78,7 +80,7 @@ export function SQLiteSyncProvider({
 
   /** SUBSCRIBE FUNCTION - Allows components to listen for sync events without re-rendering **/
   // Returns an unsubscribe function for cleanup
-  const subscribe = useCallback((callback: () => void) => {
+  const subscribeToSync = useCallback((callback: () => void) => {
     syncListenersRef.current.add(callback);
     return () => {
       syncListenersRef.current.delete(callback);
@@ -105,7 +107,7 @@ export function SQLiteSyncProvider({
   /** SYNC FUNCTION - used for both manual and automatic sync **/
   const performSync = useCallback(async () => {
     /** GUARD: DB **/
-    if (!dbRef.current) {
+    if (!writeDbRef.current) {
       return;
     }
 
@@ -146,7 +148,7 @@ export function SQLiteSyncProvider({
        * `db.reactiveExecute`. Reactive queries are designed to re-run only
        * after a transaction successfully commits, providing a single, efficient update.
        */
-      await dbRef.current.transaction(async (tx) => {
+      await writeDbRef.current.transaction(async (tx) => {
         syncResult = await tx.execute('SELECT cloudsync_network_sync();');
       });
 
@@ -196,18 +198,37 @@ export function SQLiteSyncProvider({
           );
         }
 
-        /** OPEN DATABASE **/
+        /** OPEN DATABASE CONNECTIONS **/
         if (!databaseName) {
           throw new Error('Database name is required');
         }
 
-        const localDb = open({ name: databaseName });
-        dbRef.current = localDb;
+        // Open write connection
+        const localWriteDb = open({ name: databaseName });
+
+        // Configure write connection for optimal write performance
+        await localWriteDb.execute('PRAGMA journal_mode = WAL');
+        await localWriteDb.execute('PRAGMA synchronous = NORMAL');
+
+        writeDbRef.current = localWriteDb;
         if (isMounted) {
-          setDb(localDb);
+          setWriteDb(localWriteDb);
         }
 
-        logger.info('✅ Database opened:', databaseName);
+        logger.info('✅ Write database opened:', databaseName);
+
+        // Open read connection
+        const localReadDb = open({ name: databaseName });
+
+        // Configure read connection as read-only to prevent blocking
+        await localReadDb.execute('PRAGMA query_only = true');
+
+        readDbRef.current = localReadDb;
+        if (isMounted) {
+          setReadDb(localReadDb);
+        }
+
+        logger.info('✅ Read database opened:', databaseName);
 
         /** CREATE TABLES **/
         if (tablesToBeSynced.length === 0) {
@@ -215,7 +236,7 @@ export function SQLiteSyncProvider({
         } else {
           for (const table of tablesToBeSynced) {
             try {
-              await localDb.execute(table.createTableSql);
+              await localWriteDb.execute(table.createTableSql);
               logger.info(`✅ Table created: ${table.name}`);
             } catch (createErr) {
               logger.error(
@@ -254,11 +275,11 @@ export function SQLiteSyncProvider({
             extensionPath = 'cloudsync';
           }
 
-          localDb.loadExtension(extensionPath);
+          localWriteDb.loadExtension(extensionPath);
           logger.info('✅ CloudSync extension loaded');
 
           /** VERIFY CLOUDSYNC EXTENSION **/
-          const versionResult = await localDb.execute(
+          const versionResult = await localWriteDb.execute(
             'SELECT cloudsync_version();'
           );
           const version = versionResult.rows?.[0]?.['cloudsync_version()'];
@@ -270,7 +291,7 @@ export function SQLiteSyncProvider({
 
           /** INITIALIZE CLOUDSYNC FOR TABLES **/
           for (const table of tablesToBeSynced) {
-            const initResult = await localDb.execute(
+            const initResult = await localWriteDb.execute(
               'SELECT cloudsync_init(?);',
               [table.name]
             );
@@ -286,21 +307,23 @@ export function SQLiteSyncProvider({
           }
 
           /** INITIALIZE NETWORK CONNECTION **/
-          await localDb.execute('SELECT cloudsync_network_init(?);', [
+          await localWriteDb.execute('SELECT cloudsync_network_init(?);', [
             connectionString,
           ]);
           logger.info('✅ Network initialized');
 
           /** SET AUTHENTICATION **/
           if (apiKey) {
-            await localDb.execute('SELECT cloudsync_network_set_apikey(?);', [
-              apiKey,
-            ]);
+            await localWriteDb.execute(
+              'SELECT cloudsync_network_set_apikey(?);',
+              [apiKey]
+            );
             logger.info('✅ API key set');
           } else if (accessToken) {
-            await localDb.execute('SELECT cloudsync_network_set_token(?);', [
-              accessToken,
-            ]);
+            await localWriteDb.execute(
+              'SELECT cloudsync_network_set_token(?);',
+              [accessToken]
+            );
             logger.info('✅ Access token set');
           }
 
@@ -343,16 +366,27 @@ export function SQLiteSyncProvider({
     return () => {
       isMounted = false;
 
-      /** CLEANUP - close database safeguard **/
-      const closingDb = dbRef.current;
-      dbRef.current = null;
+      /** CLEANUP - close database connections **/
+      const closingWriteDb = writeDbRef.current;
+      const closingReadDb = readDbRef.current;
+      writeDbRef.current = null;
+      readDbRef.current = null;
 
-      if (closingDb) {
+      if (closingWriteDb) {
         try {
-          closingDb.close();
-          logger.info('Database closed');
+          closingWriteDb.close();
+          logger.info('Write database closed');
         } catch (err) {
-          logger.error('❌ Error closing database:', err);
+          logger.error('❌ Error closing write database:', err);
+        }
+      }
+
+      if (closingReadDb) {
+        try {
+          closingReadDb.close();
+          logger.info('Read database closed');
+        } catch (err) {
+          logger.error('❌ Error closing read database:', err);
         }
       }
     };
@@ -377,10 +411,11 @@ export function SQLiteSyncProvider({
   /** SPLIT CONTEXT VALUES - for optimized rendering */
   const dbContextValue = useMemo<SQLiteDbContextValue>(
     () => ({
-      db,
+      writeDb,
+      readDb,
       initError,
     }),
-    [db, initError]
+    [writeDb, readDb, initError]
   );
   const syncStatusContextValue = useMemo<SQLiteSyncStatusContextValue>(
     () => ({
@@ -395,9 +430,9 @@ export function SQLiteSyncProvider({
   const syncActionsContextValue = useMemo<SQLiteSyncActionsContextValue>(
     () => ({
       triggerSync: performSync,
-      subscribe,
+      subscribeToSync,
     }),
-    [performSync, subscribe]
+    [performSync, subscribeToSync]
   );
 
   return (

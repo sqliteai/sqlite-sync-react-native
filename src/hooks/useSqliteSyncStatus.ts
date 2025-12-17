@@ -12,7 +12,7 @@ import { SQLiteSyncStatusContext } from '../SQLiteSyncStatusContext';
  * @example
  * ```typescript
  * function SyncStatus() {
- *   const { isSyncing, lastSyncTime, syncError } = useSyncStatus();
+ *   const { isSyncing, lastSyncTime, syncError } = useSqliteSyncStatus();
  *
  *   return (
  *     <View>
@@ -26,6 +26,6 @@ import { SQLiteSyncStatusContext } from '../SQLiteSyncStatusContext';
  * }
  * ```
  */
-export function useSyncStatus() {
+export function useSqliteSyncStatus() {
   return useContext(SQLiteSyncStatusContext);
 }

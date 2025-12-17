@@ -16,7 +16,8 @@ import {
   useSqliteSyncQuery,
   useOnTableUpdate,
   useSqliteDb,
-  useSyncStatus,
+  useSqliteSyncStatus,
+  useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
 import {
   SQLITE_CLOUD_CONNECTION_STRING,
@@ -41,13 +42,15 @@ import {
  *    - Fires when cloud sync completes
  */
 function TestApp() {
-  const { db, initError } = useSqliteDb();
-  const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
+  const { writeDb, readDb, initError } = useSqliteDb();
+  const { isSyncReady, isSyncing, lastSyncTime, syncError } =
+    useSqliteSyncStatus();
   const [searchText, setSearchText] = useState('');
   const [text, setText] = useState('');
   const [rowNotification, setRowNotification] = useState<string | null>(null);
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();
+  const { executeTransaction, isExecuting } = useSqliteTransaction();
 
   // Hook 1: useSqliteSyncQuery - Reactive query with table-level granularity
   // Uses op-sqlite's reactiveExecute to automatically re-run when the table changes
@@ -97,12 +100,12 @@ function TestApp() {
   });
 
   const addRow = async () => {
-    if (!text.trim() || !db) return;
+    if (!text.trim()) return;
 
     try {
       // Use transaction to trigger reactive query updates
       // Reactive queries only fire on committed transactions, not on direct execute
-      await db.transaction(async (tx) => {
+      await executeTransaction(async (tx) => {
         await tx.execute(
           `INSERT INTO ${TABLE_NAME} (id, value) VALUES (cloudsync_uuid(), ?);`,
           [text]
@@ -158,7 +161,7 @@ function TestApp() {
         {/* Status Section */}
         <View style={styles.statusSection}>
           <Text style={styles.status}>
-            Database: {db ? '✅ Ready' : '⏳ Initializing...'}
+            Database: {writeDb && readDb ? '✅ Ready' : '⏳ Initializing...'}
           </Text>
           <Text style={styles.status}>
             Sync: {isSyncReady ? '✅ Enabled' : '⚠️ Offline-only'}
@@ -202,7 +205,7 @@ function TestApp() {
             value={text}
             onChangeText={setText}
           />
-          <Button title="Add Row" onPress={addRow} disabled={!db} />
+          <Button title="Add Row" onPress={addRow} disabled={isExecuting} />
 
           <TouchableOpacity
             style={[styles.button, styles.syncButton]}

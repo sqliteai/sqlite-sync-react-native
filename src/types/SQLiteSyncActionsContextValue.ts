@@ -14,5 +14,5 @@ export interface SQLiteSyncActionsContextValue {
    * Returns an unsubscribe function
    * Callback is called when sync completes with changes (changes > 0)
    */
-  subscribe: (callback: () => void) => () => void;
+  subscribeToSync: (callback: () => void) => () => void;
 }
