@@ -132,17 +132,6 @@ function TestApp() {
     );
   }
 
-  // Show full-screen loading spinner only on initial load (when we have no data yet)
-  // For subsequent queries (like search filter changes), we'll show an inline loader
-  if (isLoading && rows.length === 0) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.status}>Loading data from local database...</Text>
-      </View>
-    );
-  }
-
   // Show query error
   if (error) {
     return (
