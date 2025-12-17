@@ -132,8 +132,9 @@ function TestApp() {
     );
   }
 
-  // Show loading spinner only on first load (offline-first: data loads immediately from local DB)
-  if (isLoading) {
+  // Show full-screen loading spinner only on initial load (when we have no data yet)
+  // For subsequent queries (like search filter changes), we'll show an inline loader
+  if (isLoading && rows.length === 0) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -220,6 +221,7 @@ function TestApp() {
 
         <View style={styles.listHeader}>
           <Text style={styles.rowCount}>Rows: {rows.length}</Text>
+          {isLoading && <ActivityIndicator size="small" color="#007AFF" />}
         </View>
       </View>
 
