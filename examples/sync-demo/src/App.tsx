@@ -129,26 +129,6 @@ function TestApp() {
     );
   }
 
-  // Show loading spinner only on first load (offline-first: data loads immediately from local DB)
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.status}>Loading data from local database...</Text>
-      </View>
-    );
-  }
-
-  // Show query error
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.error}>Query Error</Text>
-        <Text style={styles.errorDetails}>{error.message}</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.mainContainer}>
       {/* 1. FIXED TOP SECTION (Header, Status, Inputs) */}
@@ -221,28 +201,41 @@ function TestApp() {
       </View>
 
       {/* 2. SCROLLABLE AREA (Rows Only) */}
-      <FlatList
-        data={rows}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        // Empty state component
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            No data yet. Add a row to get started!
+      {isLoading ? (
+        <View style={styles.listLoading}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.listLoadingText}>
+            Loading data from local database...
           </Text>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text style={styles.rowId}>{item.id.substring(0, 8)}...</Text>
-            <Text style={styles.rowValue}>{item.value}</Text>
-            <Text style={styles.rowTime}>
-              {item.created_at
-                ? new Date(item.created_at).toLocaleTimeString()
-                : ''}
+        </View>
+      ) : error ? (
+        <View style={styles.listError}>
+          <Text style={styles.listErrorTitle}>Query Error</Text>
+          <Text style={styles.listErrorMessage}>{error.message}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              No data yet. Add a row to get started!
             </Text>
-          </View>
-        )}
-      />
+          }
+          renderItem={({ item }) => (
+            <View style={styles.row}>
+              <Text style={styles.rowId}>{item.id.substring(0, 8)}...</Text>
+              <Text style={styles.rowValue}>{item.value}</Text>
+              <Text style={styles.rowTime}>
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleTimeString()
+                  : ''}
+              </Text>
+            </View>
+          )}
+        />
+      )}
 
       {/* 3. ABSOLUTE BOTTOM NOTIFICATIONS */}
       {/* Row-level update notification (slightly higher) */}
@@ -493,5 +486,25 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  listLoading: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  listLoadingText: {
+    textAlign: 'center',
+    marginTop: 8,
+    color: '#333',
+  },
+  listError: {
+    padding: 16,
+  },
+  listErrorTitle: {
+    color: '#D8000C',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  listErrorMessage: {
+    color: '#333',
   },
 });
