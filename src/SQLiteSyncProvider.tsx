@@ -146,7 +146,7 @@ export function SQLiteSyncProvider({
       /**
        * Wrap the sync command in a transaction. It ensures compatibility with op-sqlite's
        * `db.reactiveExecute`. Reactive queries are designed to re-run only
-       * after a transaction successfully commits, providing a single, efficient update.
+       * after a transaction successfully commits, providing a single, efficient update.ÅÅ
        */
       await writeDbRef.current.transaction(async (tx) => {
         syncResult = await tx.execute('SELECT cloudsync_network_sync();');
@@ -206,7 +206,6 @@ export function SQLiteSyncProvider({
         // Open write connection
         const localWriteDb = open({ name: databaseName });
 
-        // Configure write connection for optimal write performance
         await localWriteDb.execute('PRAGMA journal_mode = WAL');
         await localWriteDb.execute('PRAGMA synchronous = NORMAL');
 
@@ -220,7 +219,8 @@ export function SQLiteSyncProvider({
         // Open read connection
         const localReadDb = open({ name: databaseName });
 
-        // Configure read connection as read-only to prevent blocking
+        await localReadDb.execute('PRAGMA journal_mode = WAL');
+        await localReadDb.execute('PRAGMA locking_mode = NORMAL');
         await localReadDb.execute('PRAGMA query_only = true');
 
         readDbRef.current = localReadDb;
