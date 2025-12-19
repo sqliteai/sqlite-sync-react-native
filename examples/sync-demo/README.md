@@ -71,31 +71,43 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
 ```bash
 # From repository root
 yarn install
-yarn prepare
-
-# Install example dependencies
-cd examples/sync-demo
-yarn install
 ```
+
+This will install dependencies for both the library and the example.
 
 ## Running the Example
 
-### iOS
+You can run the example from either the **repository root** or the **example directory**.
+
+### Option 1: Run from Root (Recommended)
+
+This automatically builds the library and runs the example:
 
 ```bash
-cd examples/sync-demo
-npx expo prebuild --platform ios --clean
-cd ios && pod install && cd ..
-npx expo run:ios
+# From repository root
+yarn ios      # Build library + run iOS
+yarn android  # Build library + run Android
 ```
 
-### Android
+### Option 2: Run from Example Directory
+
+If you prefer to run commands from the example directory:
 
 ```bash
+# From repository root
 cd examples/sync-demo
-npx expo prebuild --platform android --clean
-npx expo run:android
+
+# iOS
+yarn ios
+
+# Android
+yarn android
 ```
+
+These commands will:
+1. Run `expo prebuild --clean` to generate native folders
+2. For iOS: install CocoaPods dependencies
+3. Build and launch the app
 
 ## How It Works
 
