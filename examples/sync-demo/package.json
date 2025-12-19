@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
-    "@op-engineering/op-sqlite": "^15.1.6",
+    "@op-engineering/op-sqlite": "^15.1.14",
     "@react-native-community/netinfo": "^11.4.1",
     "@sqliteai/sqlite-sync-react-native": "*",
     "expo": "~54.0.25",

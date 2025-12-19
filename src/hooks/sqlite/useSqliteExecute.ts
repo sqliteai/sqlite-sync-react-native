@@ -1,9 +1,14 @@
 import { useContext, useState, useCallback } from 'react';
 import type { QueryResult } from '@op-engineering/op-sqlite';
 import { SQLiteDbContext } from '../../SQLiteDbContext';
+import type { ExecuteOptions } from '../../types/ExecuteOptions';
 
 /**
- * Hook for executing imperative SQL commands (INSERT, UPDATE, DELETE).
+ * Hook for executing SQL commands with configurable connection selection.
+ *
+ * **Connection Selection:**
+ * - By default, uses the WRITE connection (sees sync changes, can write)
+ * - Pass `{ readOnly: true }` to use the READ connection (read-only queries)
  *
  * Unlike useSqliteSyncQuery (which is declarative and "Last Request Wins"),
  * this hook is imperative and ensures ALL requests are processed by SQLite.
@@ -21,18 +26,15 @@ import { SQLiteDbContext } from '../../SQLiteDbContext';
  * ```typescript
  * const { execute, isExecuting, error } = useSqliteExecute();
  *
- * const handleSave = async () => {
- *   try {
- *     await execute('INSERT INTO todos (text) VALUES (?)', ['New Item']);
- *     navigation.goBack();
- *   } catch (e) {
- *     Alert.alert('Error', 'Could not save todo');
- *   }
- * };
+ * // Write operation (uses writeDb by default)
+ * await execute('INSERT INTO todos (text) VALUES (?)', ['New Item']);
+ *
+ * // Read operation (explicitly use readDb)
+ * await execute('SELECT * FROM todos WHERE id = ?', [id], { readOnly: true });
  * ```
  */
 export function useSqliteExecute() {
-  const { db } = useContext(SQLiteDbContext);
+  const { writeDb, readDb } = useContext(SQLiteDbContext);
 
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -42,6 +44,7 @@ export function useSqliteExecute() {
    *
    * @param sql - The SQL statement to execute
    * @param params - Optional array of parameters to bind to the query
+   * @param options - Optional configuration (readOnly flag)
    *
    * @returns Promise resolving to the QueryResult (rowsAffected, insertId, etc.)
    *
@@ -50,8 +53,11 @@ export function useSqliteExecute() {
   const execute = useCallback(
     async (
       sql: string,
-      params: any[] = []
+      params: any[] = [],
+      options?: ExecuteOptions
     ): Promise<QueryResult | undefined> => {
+      const db = options?.readOnly ? readDb : writeDb;
+
       if (!db) {
         return undefined;
       }
@@ -73,7 +79,7 @@ export function useSqliteExecute() {
         setIsExecuting(false);
       }
     },
-    [db]
+    [writeDb, readDb]
   );
 
   return {

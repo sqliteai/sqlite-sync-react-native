@@ -5,6 +5,8 @@ import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
 /**
  * Hook that executes a SQL query using op-sqlite's reactive queries for table-level granularity.
  *
+ * **Always uses the WRITE connection** to ensure reactive queries see sync changes immediately.
+ *
  * This hook uses op-sqlite's `reactiveExecute` which automatically re-runs the query
  * when any of the specified tables change. Changes are detected at the transaction level.
  *
@@ -13,6 +15,7 @@ import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
  * - **Transaction-based**: Updates fire only on committed transactions
  * - **Automatic sync updates**: Works seamlessly with cloud sync (sync operations use transactions)
  * - **No manual refresh needed**: Reactive queries eliminate the need for manual refresh
+ * - **Uses write connection**: Sees all changes including sync operations
  *
  * @param config - Configuration object with query, arguments, and tables to monitor
  *
@@ -52,7 +55,7 @@ import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
  * will fire when cloud changes arrive.
  */
 export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
-  const { db } = useContext(SQLiteDbContext);
+  const { readDb, writeDb } = useContext(SQLiteDbContext);
 
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,12 +67,13 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
   const serializedFireOn = JSON.stringify(config.fireOn);
 
   useEffect(() => {
-    if (!db) return;
+    if (!writeDb || !readDb) return;
 
     setIsLoading(true);
     setError(null);
 
-    db.execute(config.query, config.arguments || [])
+    readDb
+      .execute(config.query, config.arguments || [])
       .then((result) => {
         setData((result.rows || []) as T[]);
         setIsLoading(false);
@@ -80,12 +84,13 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
         setIsLoading(false);
       });
 
-    const unsubscribe = db.reactiveExecute({
+    const unsubscribe = writeDb.reactiveExecute({
       query: config.query,
       arguments: config.arguments || [],
       fireOn: config.fireOn,
       callback: (result) => {
         setData((result.rows || []) as T[]);
+        setIsLoading(false);
       },
     });
 
@@ -96,7 +101,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
       unsubscribeRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [db, config.query, serializedArgs, serializedFireOn]);
+  }, [writeDb, readDb, config.query, serializedArgs, serializedFireOn]);
 
   const unsubscribe = useCallback(() => {
     if (unsubscribeRef.current) {

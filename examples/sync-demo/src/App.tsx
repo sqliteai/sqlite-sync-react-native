@@ -17,6 +17,7 @@ import {
   useOnTableUpdate,
   useSqliteDb,
   useSyncStatus,
+  useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
 import {
   SQLITE_CLOUD_CONNECTION_STRING,
@@ -26,28 +27,35 @@ import {
 } from '@env';
 
 /**
- * Demo app showcasing the reactive hooks:
+ * Demo app showcasing the reactive hooks and dual connection architecture:
  *
  * 1. useSqliteSyncQuery - Table-level reactive queries using op-sqlite's reactiveExecute
+ *    - Always uses writeDb (sees sync changes immediately)
  *    - Automatically re-runs when the table changes (transaction-based)
  *    - No manual refresh needed!
  *
  * 2. useOnTableUpdate - Row-level update notifications using op-sqlite's updateHook
+ *    - Always uses writeDb (sees sync changes immediately)
  *    - Fires for individual INSERT/UPDATE/DELETE operations
  *    - Automatically fetches row data for you
  *    - Shows notifications when rows change
  *
- * 3. useOnSqliteSync - Sync completion notifications
+ * 3. useSqliteTransaction - Execute SQL in transactions for atomic writes
+ *    - Always uses writeDb (for atomic write operations)
+ *    - Triggers reactive queries when transaction commits
+ *
+ * 4. useOnSqliteSync - Sync completion notifications
  *    - Fires when cloud sync completes
  */
 function TestApp() {
-  const { db, initError } = useSqliteDb();
+  const { writeDb, initError } = useSqliteDb();
   const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
   const [searchText, setSearchText] = useState('');
   const [text, setText] = useState('');
   const [rowNotification, setRowNotification] = useState<string | null>(null);
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();
+  const { executeTransaction } = useSqliteTransaction();
 
   // Hook 1: useSqliteSyncQuery - Reactive query with table-level granularity
   // Uses op-sqlite's reactiveExecute to automatically re-run when the table changes
@@ -97,12 +105,12 @@ function TestApp() {
   });
 
   const addRow = async () => {
-    if (!text.trim() || !db) return;
+    if (!text.trim() || !writeDb) return;
 
     try {
       // Use transaction to trigger reactive query updates
       // Reactive queries only fire on committed transactions, not on direct execute
-      await db.transaction(async (tx) => {
+      await executeTransaction(async (tx) => {
         await tx.execute(
           `INSERT INTO ${TABLE_NAME} (id, value) VALUES (cloudsync_uuid(), ?);`,
           [text]
@@ -138,7 +146,7 @@ function TestApp() {
         {/* Status Section */}
         <View style={styles.statusSection}>
           <Text style={styles.status}>
-            Database: {db ? '✅ Ready' : '⏳ Initializing...'}
+            Database: {writeDb ? '✅ Ready' : '⏳ Initializing...'}
           </Text>
           <Text style={styles.status}>
             Sync: {isSyncReady ? '✅ Enabled' : '⚠️ Offline-only'}
@@ -182,7 +190,7 @@ function TestApp() {
             value={text}
             onChangeText={setText}
           />
-          <Button title="Add Row" onPress={addRow} disabled={!db} />
+          <Button title="Add Row" onPress={addRow} disabled={!writeDb} />
 
           <TouchableOpacity
             style={[styles.button, styles.syncButton]}

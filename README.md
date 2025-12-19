@@ -16,7 +16,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 
 - 🔧 **Zero-Configuration Extension Loading**  
   The SQLite Sync extension is automatically loaded and configured for you.
-  No manual setup required — just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `db` instance.
+  No manual setup required — just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `writeDb` / `readDb` instances.
 
 - 📱 **Native-Only, Ultra-Fast**  
   Under the hood, we use OP-SQLite — a low-level, JSI-enabled SQLite engine for React Native With OP-SQLite, database operations run at near-native speed on iOS and Android.
@@ -40,6 +40,8 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
     - [useOnSqliteSync](#useonsqlitesync)
     - [useSqliteSyncQuery](#usesqlitesyncquery)
     - [useOnTableUpdate](#useontableupdate)
+    - [useSqliteExecute](#usesqliteexecute)
+    - [useSqliteTransaction](#usesqlitetransaction)
   - [Types](#types)
 - [Error Handling](#-error-handling)
 - [Debug Logging](#-debug-logging)
@@ -50,7 +52,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 
 - iOS **13.0+**
 - Android **API 26+**
-- [`@op-engineering/op-sqlite`](https://github.com/OP-Engineering/op-sqlite) **^15.0.0**
+- [`@op-engineering/op-sqlite`](https://github.com/OP-Engineering/op-sqlite) **^15.1.14**
 - [`@react-native-community/netinfo`](https://github.com/react-native-netinfo/react-native-netinfo) **^11.0.0**
 - [SQLite Cloud](https://sqlitecloud.io/) account
 
@@ -152,11 +154,11 @@ The library provides specialized hooks to simplify querying, syncing, and state 
 ```typescript
 import { useCallback } from 'react';
 import {
-  useSqliteDb,
   useSqliteSyncQuery,
   useOnTableUpdate,
   useTriggerSqliteSync,
   useOnSqliteSync,
+  useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
 
 interface Task {
@@ -191,14 +193,14 @@ function TaskList() {
   });
 
   // 4. WRITING DATA: Use transactions to trigger reactive queries
-  const { db } = useSqliteDb();
+  const { executeTransaction } = useSqliteTransaction();
   const { triggerSync, isSyncing } = useTriggerSqliteSync();
 
   const addTask = useCallback(
     async (title: string) => {
-      if (!db) return;
       // Use transaction to trigger reactive query update
-      await db.transaction(async (tx) => {
+      // Uses writeDb by default (no need to specify readOnly: false)
+      await executeTransaction(async (tx) => {
         await tx.execute(
           'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
           [title]
@@ -207,7 +209,7 @@ function TaskList() {
       // Optional: Push changes to cloud immediately
       triggerSync();
     },
-    [db, triggerSync]
+    [executeTransaction, triggerSync]
   );
 
   if (isLoading) return <Text>Loading local DB...</Text>;
@@ -374,21 +376,30 @@ The library provides three separate React Contexts for optimized re-renders:
 
 #### `SQLiteDbContext`
 
-Provides database instance and initialization errors. **Rarely changes** (only on init/error).
+Provides database connections and initialization errors. **Rarely changes** (only on init/error).
+
+**Dual Connection Architecture:**
+The library opens **two connections** to the same database file for optimal performance:
+
+- **writeDb** - Write connection for sync operations, reactive queries, update hooks, and write operations
+- **readDb** - Read-only connection for read-only queries (optional for performance)
+
+Both connections use SQLite's WAL (Write-Ahead Logging) mode to enable concurrent read/write access without blocking.
 
 ```typescript
 import { useContext } from 'react';
 import { SQLiteDbContext } from '@sqliteai/sqlite-sync-react-native';
 
-const { db, initError } = useContext(SQLiteDbContext);
+const { writeDb, readDb, initError } = useContext(SQLiteDbContext);
 ```
 
 **Values:**
 
-| Property    | Type            | Description                                                                                                          |
-| ----------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `db`        | `DB \| null`    | [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) database instance with SQLite Sync extension loaded |
-| `initError` | `Error \| null` | Fatal database error (db unavailable)                                                                                |
+| Property    | Type            | Description                                                                                                            |
+| ----------- | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `writeDb`   | `DB \| null`    | Write [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) connection with SQLite Sync extension loaded    |
+| `readDb`    | `DB \| null`    | Read-only [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) connection for read-only queries (optional) |
+| `initError` | `Error \| null` | Fatal database error (connections unavailable)                                                                         |
 
 #### `SQLiteSyncStatusContext`
 
@@ -433,47 +444,36 @@ const { triggerSync } = useContext(SQLiteSyncActionsContext);
 
 **Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
 
-**About the `db` instance:**
-
-The `db` property is a `DB` instance from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api) with the **SQLite Sync extension loaded**. This means you can:
-
-- Use the full [op-sqlite API](https://op-engineering.github.io/op-sqlite/docs/api) for standard database operations
-- Use any [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc.
-
 ### Hooks
 
 The library provides specialized hooks for different use cases. Choose the right hook based on what data your component needs to avoid unnecessary re-renders.
 
 #### `useSqliteDb()`
 
-Access the database instance and initialization errors **without subscribing to sync updates**. This hook is optimized for components that only need database access and won't re-render on every sync.
+Access the database connections and initialization errors **without subscribing to sync updates**. This hook is optimized for components that only need database access and won't re-render on every sync.
 
 ```typescript
-const { db, initError } = useSqliteDb();
-
-if (initError) {
-  return <Text>Error: {initError.message}</Text>;
-}
-
-if (!db) {
-  return <Text>Loading...</Text>;
-}
-
-// Use db for queries without re-rendering on sync
-const addTask = async (title: string) => {
-  await db.execute(
-    'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
-    [title]
-  );
-};
+const { writeDb, readDb, initError } = useSqliteDb();
 ```
 
 **Returns:**
 
-- `db`: Database instance
+- `writeDb`: Write database connection
+- `readDb`: Read-only database connection
 - `initError`: Fatal initialization error
 
-**Best for:** Components that write data or need database access but don't need sync status.
+**Best for:** Components that need database access but don't need sync status.
+
+**Note:** In most cases, you should use the specialized hooks (`useSqliteExecute`, `useSqliteTransaction`, `useSqliteSyncQuery`) instead of accessing database connections directly.
+
+**About the database connections:**
+
+Both `writeDb` and `readDb` are `DB` instances from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api). The `writeDb` connection has the **SQLite Sync extension loaded**. This means you can:
+
+- Use the full [op-sqlite API](https://op-engineering.github.io/op-sqlite/docs/api) for standard database operations
+- Use any [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc.
+- Use `writeDb` for all sync operations, reactive queries, and writes
+- Use `readDb` for read-only queries (optional performance optimization)
 
 #### `useSyncStatus()`
 
@@ -572,7 +572,7 @@ useOnSqliteSync(loadData);
 
 Execute a reactive query with table-level granularity using op-sqlite's `reactiveExecute`.
 
-**How it works:** This hook uses [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) to automatically re-run the query when specified tables are modified via transactions.
+**How it works:** This hook uses [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) to automatically re-run the query when specified tables are modified via transactions. Always uses **writeDb** to ensure queries see sync changes immediately.
 
 **Key Features:**
 
@@ -641,7 +641,7 @@ The library automatically wraps sync operations in transactions, so reactive que
 
 Listen for row-level changes (INSERT, UPDATE, DELETE) on specified tables using op-sqlite's `updateHook`.
 
-**How it works:** This hook uses op-sqlite's `updateHook` to receive individual row change notifications. Unlike reactive queries which re-run the entire query, this hook fires for each row modification and automatically fetches the complete row data for you.
+**How it works:** This hook uses op-sqlite's `updateHook` to receive individual row change notifications. Unlike reactive queries which re-run the entire query, this hook fires for each row modification and automatically fetches the complete row data for you. Always uses **writeDb** to ensure update hooks see sync changes immediately.
 
 **Key Features:**
 
@@ -700,6 +700,138 @@ useOnTableUpdate<Task>({
 ```
 
 **Note:** For DELETE operations, `row` will be `null` since the row no longer exists in the database.
+
+#### `useSqliteExecute()`
+
+Execute SQL commands with configurable connection selection (write or read-only).
+
+**How it works:** This hook provides an imperative way to execute SQL commands. Unlike `useSqliteSyncQuery` (which is declarative and reactive), this hook ensures all requests are processed by SQLite in the order they're called.
+
+**Connection Selection:**
+
+- By default, uses **writeDb** (sees sync changes, can write)
+- Pass `{ readOnly: true }` to use **readDb** (read-only queries)
+
+**Parameters:**
+
+```typescript
+interface ExecuteOptions {
+  readOnly?: boolean; // Use read-only connection (default: false)
+}
+```
+
+**Returns:**
+
+```typescript
+{
+  execute: (sql: string, params?: any[], options?: ExecuteOptions) =>
+    Promise<QueryResult | undefined>;
+  isExecuting: boolean; // True while executing
+  error: Error | null; // Execution error
+}
+```
+
+**Example:**
+
+```typescript
+import { useSqliteExecute } from '@sqliteai/sqlite-sync-react-native';
+
+function TaskManager() {
+  const { execute, isExecuting, error } = useSqliteExecute();
+
+  const addTask = async (title: string) => {
+    try {
+      // Write operation (uses writeDb by default)
+      const result = await execute(
+        'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?)',
+        [title]
+      );
+      console.log('Inserted row ID:', result?.insertId);
+    } catch (err) {
+      console.error('Failed to insert:', err);
+    }
+  };
+
+  const getTask = async (id: string) => {
+    try {
+      // Read operation (explicitly use readDb for performance)
+      const result = await execute('SELECT * FROM tasks WHERE id = ?', [id], {
+        readOnly: true,
+      });
+      return result?.rows?.[0];
+    } catch (err) {
+      console.error('Failed to fetch:', err);
+    }
+  };
+
+  return (
+    <View>
+      <Button
+        title="Add Task"
+        onPress={() => addTask('New Task')}
+        disabled={isExecuting}
+      />
+      {error && <Text>Error: {error.message}</Text>}
+    </View>
+  );
+}
+```
+
+**Important:** Direct `execute()` calls do NOT trigger reactive queries. To trigger reactive queries, use `useSqliteTransaction()` instead.
+
+#### `useSqliteTransaction()`
+
+Execute SQL commands within a transaction for atomic write operations.
+
+**Returns:**
+
+```typescript
+{
+  executeTransaction: (fn: (tx: Transaction) => Promise<void>) => Promise<void>;
+  isExecuting: boolean; // True while executing
+  error: Error | null; // Transaction error
+}
+```
+
+**Example:**
+
+```typescript
+import { useSqliteTransaction } from '@sqliteai/sqlite-sync-react-native';
+
+function TaskManager() {
+  const { executeTransaction, isExecuting } = useSqliteTransaction();
+
+  const addTaskWithLog = async (title: string) => {
+    try {
+      // Execute multiple writes atomically
+      // This will trigger reactive queries when it commits
+      await executeTransaction(async (tx) => {
+        await tx.execute(
+          'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?)',
+          [title]
+        );
+        await tx.execute('INSERT INTO logs (action, timestamp) VALUES (?, ?)', [
+          'task_created',
+          Date.now(),
+        ]);
+      });
+      console.log('Task and log inserted successfully');
+    } catch (err) {
+      console.error('Transaction failed:', err);
+    }
+  };
+
+  return (
+    <Button
+      title="Add Task"
+      onPress={() => addTaskWithLog('New Task')}
+      disabled={isExecuting}
+    />
+  );
+}
+```
+
+**Important:** Transactions automatically trigger reactive queries when they commit successfully. This is the recommended way to write data when using `useSqliteSyncQuery`.
 
 ## 🚨 Error Handling
 

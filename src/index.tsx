@@ -10,6 +10,7 @@ export { useSqliteSync } from './hooks/context/useSqliteSync';
 // SQLite hooks
 export { useOnTableUpdate } from './hooks/sqlite/useOnTableUpdate';
 export { useSqliteExecute } from './hooks/sqlite/useSqliteExecute';
+export { useSqliteTransaction } from './hooks/sqlite/useSqliteTransaction';
 
 // Sync hooks
 export { useTriggerSqliteSync } from './hooks/sync/useTriggerSqliteSync';
@@ -25,3 +26,4 @@ export type {
   TableUpdateData,
   TableUpdateConfig,
 } from './types/TableUpdateConfig';
+export type { ExecuteOptions } from './types/ExecuteOptions';

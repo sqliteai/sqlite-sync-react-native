@@ -5,10 +5,18 @@ import type { DB } from '@op-engineering/op-sqlite';
  */
 export interface SQLiteDbContextValue {
   /**
-   * Database instance for local operations
-   * Check `db !== null` to verify database is ready
+   * Write database connection
+   * Used for: sync operations, reactive queries, update hooks, and write operations
+   * Configured with WAL mode and NORMAL synchronous
    */
-  db: DB | null;
+  writeDb: DB | null;
+
+  /**
+   * Read database connection
+   * Used for: read-only queries that don't need to see sync changes immediately
+   * Configured with WAL mode and query_only
+   */
+  readDb: DB | null;
 
   /**
    * Initialization error (fatal - prevents database from working)

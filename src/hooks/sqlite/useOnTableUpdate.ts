@@ -5,6 +5,8 @@ import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
 /**
  * Hook that listens for row-level updates on specified tables using op-sqlite's updateHook.
  *
+ * **Always uses the WRITE connection** to ensure update hooks see sync changes immediately.
+ *
  * This hook provides fine-grained, row-level notifications when data changes in specified tables.
  * Unlike reactive queries which re-run the entire query, this hook receives individual update events
  * with the complete row data automatically fetched for you.
@@ -15,6 +17,7 @@ import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
  * - **Automatic row fetching**: Row data is queried and provided in the callback
  * - **Lightweight**: No full query re-execution, just individual row updates
  * - **Real-time sync updates**: Automatically notified when cloud sync modifies data
+ * - **Uses write connection**: Sees all changes including sync operations
  *
  * @template T - The type of the row data
  * @param config - Configuration with tables to monitor and callback function
@@ -54,7 +57,7 @@ import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
  * For DELETE operations, `row` will be `null` since the row no longer exists.
  */
 export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
-  const { db } = useContext(SQLiteDbContext);
+  const { writeDb } = useContext(SQLiteDbContext);
 
   // Store callback in ref to allow inline functions without causing infinite loops
   const savedCallback = useRef(config.onUpdate);
@@ -67,10 +70,10 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
   }, [config.onUpdate, config.tables]);
 
   useEffect(() => {
-    if (!db) return;
+    if (!writeDb) return;
 
     // Subscribe to update hook - fires on every row change
-    db.updateHook(async (hookData) => {
+    writeDb.updateHook(async (hookData) => {
       // Only fire callback if the updated table is in our watch list
       if (!savedTables.current.includes(hookData.table)) {
         return;
@@ -83,7 +86,7 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
       // For INSERT and UPDATE, we can fetch the row data
       if (hookData.operation !== 'DELETE') {
         try {
-          const result = await db.execute(
+          const result = await writeDb.execute(
             `SELECT * FROM ${hookData.table} WHERE rowid = ?`,
             [hookData.rowId]
           );
@@ -104,7 +107,7 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
 
     // Cleanup: Remove the hook on unmount by passing null
     return () => {
-      db.updateHook(null);
+      writeDb.updateHook(null);
     };
-  }, [db]);
+  }, [writeDb]);
 }
