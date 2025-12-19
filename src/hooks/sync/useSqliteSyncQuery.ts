@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState, useRef, useCallback } from 'react';
-import { SQLiteDbContext } from '../SQLiteDbContext';
-import type { ReactiveQueryConfig } from '../types/ReactiveQueryConfig';
+import { SQLiteDbContext } from '../../SQLiteDbContext';
+import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
 
 /**
  * Hook that executes a SQL query using op-sqlite's reactive queries for table-level granularity.

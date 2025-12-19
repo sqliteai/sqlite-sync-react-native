@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef } from 'react';
-import { SQLiteSyncActionsContext } from '../SQLiteSyncActionsContext';
+import { SQLiteSyncActionsContext } from '../../SQLiteSyncActionsContext';
 
 /**
  * Hook that executes a callback ONLY when a sync completes with changes.

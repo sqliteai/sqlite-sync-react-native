@@ -1,6 +1,6 @@
 import { useContext, useState, useCallback } from 'react';
 import type { QueryResult } from '@op-engineering/op-sqlite';
-import { SQLiteDbContext } from '../SQLiteDbContext';
+import { SQLiteDbContext } from '../../SQLiteDbContext';
 
 /**
  * Hook for executing imperative SQL commands (INSERT, UPDATE, DELETE).

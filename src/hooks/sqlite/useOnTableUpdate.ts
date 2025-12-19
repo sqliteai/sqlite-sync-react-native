@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef } from 'react';
-import { SQLiteDbContext } from '../SQLiteDbContext';
-import type { TableUpdateConfig } from '../types/TableUpdateConfig';
+import { SQLiteDbContext } from '../../SQLiteDbContext';
+import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
 
 /**
  * Hook that listens for row-level updates on specified tables using op-sqlite's updateHook.
