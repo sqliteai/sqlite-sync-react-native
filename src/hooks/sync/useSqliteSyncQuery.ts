@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useRef, useCallback } from 'react';
+import { useContext, useEffect, useState, useRef } from 'react';
 import { SQLiteDbContext } from '../../SQLiteDbContext';
 import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
 
@@ -60,60 +60,95 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [internalSubscriptionSignature, setInternalSubscriptionSignature] =
+    useState('');
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const subscriptionUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const activeQuerySignatureRef = useRef<string>('');
 
-  const serializedArgs = JSON.stringify(config.arguments);
+  const serializedArgs = JSON.stringify(config.arguments || []);
   const serializedFireOn = JSON.stringify(config.fireOn);
+  const currentSubscriptionSignature = `${config.query}-${serializedArgs}`;
 
+  const safeUnsubscribe = (unsubscribe: (() => void) | null) => {
+    if (unsubscribe) {
+      setTimeout(() => unsubscribe(), 0);
+    }
+  };
+
+  // Effect 1: Immediate Async Read + Debounce Trigger
   useEffect(() => {
-    if (!writeDb || !readDb) return;
+    if (!readDb) return;
 
+    activeQuerySignatureRef.current = currentSubscriptionSignature;
     setIsLoading(true);
-    setError(null);
 
     readDb
       .execute(config.query, config.arguments || [])
       .then((result) => {
-        setData((result.rows || []) as T[]);
-        setIsLoading(false);
-        setError(null);
+        // Only update if the user hasn't already changed the query again
+        if (activeQuerySignatureRef.current === currentSubscriptionSignature) {
+          setData((result.rows || []) as T[]);
+          setIsLoading(false);
+        }
       })
       .catch((err) => {
-        setError(err instanceof Error ? err : new Error('Query failed'));
-        setIsLoading(false);
+        if (activeQuerySignatureRef.current === currentSubscriptionSignature) {
+          setError(err);
+          setIsLoading(false);
+        }
       });
+
+    // Schedule the reactive subscription
+    if (subscriptionUpdateTimerRef.current)
+      clearTimeout(subscriptionUpdateTimerRef.current);
+
+    subscriptionUpdateTimerRef.current = setTimeout(() => {
+      // Trigger Effect 2 by changing the signature
+      setInternalSubscriptionSignature(currentSubscriptionSignature);
+    }, 1000);
+
+    return () => {
+      if (subscriptionUpdateTimerRef.current)
+        clearTimeout(subscriptionUpdateTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readDb, serializedFireOn, currentSubscriptionSignature]);
+
+  // Effect 2: Reactive Subscription logic
+  useEffect(() => {
+    if (!writeDb || !internalSubscriptionSignature) return;
+
+    // Safety: If the user changed the query during the debounce, skip
+    if (internalSubscriptionSignature !== activeQuerySignatureRef.current)
+      return;
 
     const unsubscribe = writeDb.reactiveExecute({
       query: config.query,
       arguments: config.arguments || [],
       fireOn: config.fireOn,
       callback: (result) => {
-        setData((result.rows || []) as T[]);
-        setIsLoading(false);
+        if (activeQuerySignatureRef.current === internalSubscriptionSignature) {
+          setData((result.rows || []) as T[]);
+        }
       },
     });
 
     unsubscribeRef.current = unsubscribe;
 
     return () => {
-      unsubscribe();
+      const toCleanup = unsubscribeRef.current;
       unsubscribeRef.current = null;
+      safeUnsubscribe(toCleanup);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [writeDb, readDb, config.query, serializedArgs, serializedFireOn]);
-
-  const unsubscribe = useCallback(() => {
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-  }, []);
+  }, [writeDb, internalSubscriptionSignature]);
 
   return {
     data,
     isLoading,
     error,
-    unsubscribe,
+    unsubscribe: () => safeUnsubscribe(unsubscribeRef.current),
   };
 }
