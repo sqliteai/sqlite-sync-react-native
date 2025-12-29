@@ -37,7 +37,6 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
     - [useSyncStatus](#usesyncstatus)
     - [useSqliteSync](#usesqlitesync)
     - [useTriggerSqliteSync](#usetriggersqlitesync)
-    - [useOnSqliteSync](#useonsqlitesync)
     - [useSqliteSyncQuery](#usesqlitesyncquery)
     - [useOnTableUpdate](#useontableupdate)
     - [useSqliteExecute](#usesqliteexecute)
@@ -157,7 +156,6 @@ import {
   useSqliteSyncQuery,
   useOnTableUpdate,
   useTriggerSqliteSync,
-  useOnSqliteSync,
   useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
 
@@ -187,12 +185,7 @@ function TaskList() {
     },
   });
 
-  // 3. SYNC COMPLETION: React to cloud sync events
-  useOnSqliteSync(() => {
-    console.log('✨ New data synced from cloud!');
-  });
-
-  // 4. WRITING DATA: Use transactions to trigger reactive queries
+  // 3. WRITING DATA: Use transactions to trigger reactive queries
   const { executeTransaction } = useSqliteTransaction();
   const { triggerSync, isSyncing } = useTriggerSqliteSync();
 
@@ -437,10 +430,9 @@ const { triggerSync } = useContext(SQLiteSyncActionsContext);
 
 **Values:**
 
-| Property      | Type                                   | Description                                                               |
-| ------------- | -------------------------------------- | ------------------------------------------------------------------------- |
-| `triggerSync` | `() => Promise<void>`                  | Function to manually trigger a sync operation                             |
-| `subscribe`   | `(callback: () => void) => () => void` | Subscribe to sync events without re-renders. Returns unsubscribe function |
+| Property      | Type                  | Description                               |
+| ------------- | --------------------- | ----------------------------------------- |
+| `triggerSync` | `() => Promise<void>` | Function to manually trigger a sync operation |
 
 **Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
 
@@ -529,7 +521,7 @@ return (
 
 Manually trigger a sync operation.
 
-**How it works:** This hook is a convenience wrapper that exposes the `triggerSync` function from the Provider. The actual sync logic lives in `SQLiteSyncProvider` to ensure that `isSyncing`, `lastSyncTime`, and `lastSyncChanges` state are updated correctly, allowing all hooks (`useOnSqliteSync`, `useSqliteSyncQuery`) to react properly.
+**How it works:** This hook is a convenience wrapper that exposes the `triggerSync` function from the Provider. The actual sync logic lives in `SQLiteSyncProvider` to ensure that `isSyncing`, `lastSyncTime`, and `lastSyncChanges` state are updated correctly, allowing all hooks (`useSqliteSyncQuery`) to react properly.
 
 ```typescript
 const { triggerSync, isSyncing } = useTriggerSqliteSync();
@@ -540,32 +532,6 @@ const { triggerSync, isSyncing } = useTriggerSqliteSync();
   disabled={isSyncing}
   title={isSyncing ? 'Syncing...' : 'Sync Now'}
 />;
-```
-
-#### `useOnSqliteSync(callback)`
-
-Execute a callback when sync completes with changes.
-
-**Important:**
-
-- This hook does NOT run on initial mount - it's an event listener for sync updates only. For initial data loading, use a separate `useEffect` or `useSqliteSyncQuery`
-- This hook uses a subscription pattern that does NOT cause re-renders when sync completes without changes
-
-```typescript
-import { useEffect, useCallback } from 'react';
-
-const loadData = useCallback(async () => {
-  const result = await db?.execute('SELECT * FROM tasks;');
-  setTasks(result?.rows || []);
-}, [db]);
-
-// 1. Initial Load (Run once when DB is ready)
-useEffect(() => {
-  if (db) loadData();
-}, [db, loadData]);
-
-// 2. Sync Updates (Run only when cloud data arrives)
-useOnSqliteSync(loadData);
 ```
 
 #### `useSqliteSyncQuery(config)`

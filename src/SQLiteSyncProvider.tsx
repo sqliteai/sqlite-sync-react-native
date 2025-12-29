@@ -73,20 +73,6 @@ export function SQLiteSyncProvider({
   const readDbRef = useRef<DB | null>(null);
   const isSyncingRef = useRef(false);
 
-  /** SYNC LISTENERS - Subscription pattern for sync events **/
-  // Uses Set to allow multiple components to subscribe simultaneously
-  // Each component's callback is independent and all are executed on sync
-  const syncListenersRef = useRef<Set<() => void>>(new Set());
-
-  /** SUBSCRIBE FUNCTION - Allows components to listen for sync events without re-rendering **/
-  // Returns an unsubscribe function for cleanup
-  const subscribe = useCallback((callback: () => void) => {
-    syncListenersRef.current.add(callback);
-    return () => {
-      syncListenersRef.current.delete(callback);
-    };
-  }, []);
-
   /** EXTRACT AUTH CREDENTIALS **/
   const apiKey = 'apiKey' in authProps ? authProps.apiKey : undefined;
   const accessToken =
@@ -158,17 +144,6 @@ export function SQLiteSyncProvider({
 
       setLastSyncTime(Date.now());
       setLastSyncChanges(changes);
-
-      if (changes > 0) {
-        // Notify all sync listeners
-        syncListenersRef.current.forEach((listener) => {
-          try {
-            listener();
-          } catch (err) {
-            logger.error('❌ Error in sync listener:', err);
-          }
-        });
-      }
 
       logger.info(`✅ Sync completed: ${changes} changes synced`);
 
@@ -424,9 +399,8 @@ export function SQLiteSyncProvider({
   const syncActionsContextValue = useMemo<SQLiteSyncActionsContextValue>(
     () => ({
       triggerSync: performSync,
-      subscribe,
     }),
-    [performSync, subscribe]
+    [performSync]
   );
 
   return (

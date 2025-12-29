@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import {
   SQLiteSyncProvider,
-  useOnSqliteSync,
   useTriggerSqliteSync,
   useSqliteSyncQuery,
   useOnTableUpdate,
@@ -43,9 +42,6 @@ import {
  * 3. useSqliteTransaction - Execute SQL in transactions for atomic writes
  *    - Always uses writeDb (for atomic write operations)
  *    - Triggers reactive queries when transaction commits
- *
- * 4. useOnSqliteSync - Sync completion notifications
- *    - Fires when cloud sync completes
  */
 function TestApp() {
   const { writeDb, initError } = useSqliteDb();
@@ -53,7 +49,6 @@ function TestApp() {
   const [searchText, setSearchText] = useState('');
   const [text, setText] = useState('');
   const [rowNotification, setRowNotification] = useState<string | null>(null);
-  const [syncNotification, setSyncNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();
   const { executeTransaction } = useSqliteTransaction();
 
@@ -95,13 +90,6 @@ function TestApp() {
       }
       setTimeout(() => setRowNotification(null), 2000);
     },
-  });
-
-  // Hook 3: useOnSqliteSync - Event listener for sync completion
-  // Shows a notification when cloud data arrives (doesn't run on mount)
-  useOnSqliteSync(() => {
-    setSyncNotification('✅ New data synced from cloud!');
-    setTimeout(() => setSyncNotification(null), 2000);
   });
 
   const addRow = async () => {
@@ -246,17 +234,10 @@ function TestApp() {
       )}
 
       {/* 3. ABSOLUTE BOTTOM NOTIFICATIONS */}
-      {/* Row-level update notification (slightly higher) */}
+      {/* Row-level update notification */}
       {rowNotification && (
-        <View style={[styles.notificationBanner, styles.rowNotificationBanner]}>
-          <Text style={styles.notificationText}>{rowNotification}</Text>
-        </View>
-      )}
-
-      {/* Sync completion notification */}
-      {syncNotification && (
         <View style={styles.notificationBanner}>
-          <Text style={styles.notificationText}>{syncNotification}</Text>
+          <Text style={styles.notificationText}>{rowNotification}</Text>
         </View>
       )}
     </View>
@@ -444,7 +425,7 @@ const styles = StyleSheet.create({
     bottom: 30,
     left: 20,
     right: 20,
-    backgroundColor: '#323232',
+    backgroundColor: '#5856D6',
     padding: 16,
     borderRadius: 30,
     alignItems: 'center',
@@ -453,10 +434,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 8,
-  },
-  rowNotificationBanner: {
-    bottom: 100, // Position higher to avoid overlapping with sync notification
-    backgroundColor: '#5856D6', // Purple color to distinguish from sync notification
   },
   notificationText: {
     color: '#fff',
