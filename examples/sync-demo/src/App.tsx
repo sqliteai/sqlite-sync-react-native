@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Text,
   View,
@@ -56,16 +56,22 @@ function TestApp() {
   // Uses op-sqlite's reactiveExecute to automatically re-run when the table changes
   // Changes are detected at the transaction level
   const {
-    data: rows,
+    data: allRows,
     isLoading,
     error,
   } = useSqliteSyncQuery<{ id: string; value: string; created_at: string }>({
-    query: searchText.trim()
-      ? `SELECT * FROM ${TABLE_NAME} WHERE value LIKE ? ORDER BY created_at DESC`
-      : `SELECT * FROM ${TABLE_NAME} ORDER BY created_at DESC`,
-    arguments: searchText.trim() ? [`%${searchText}%`] : [],
+    query: `SELECT * FROM ${TABLE_NAME} ORDER BY created_at DESC`,
+    arguments: [],
     fireOn: [{ table: TABLE_NAME }],
   });
+
+  const rows = useMemo(() => {
+    if (!searchText.trim()) return allRows;
+    const searchLower = searchText.toLowerCase();
+    return allRows.filter((row) =>
+      row.value.toLowerCase().includes(searchLower)
+    );
+  }, [allRows, searchText]);
 
   // Hook 2: useOnTableUpdate - Row-level update notifications
   // Fires for individual row changes with automatic row data fetching
@@ -149,14 +155,16 @@ function TestApp() {
           )}
         </View>
 
-        {/* SEARCH BAR (New) */}
+        {/* SEARCH BAR */}
         <View style={styles.searchContainer}>
-          <Text style={styles.sectionLabel}>🔍 Search (Live Filter)</Text>
+          <Text style={styles.sectionLabel}>
+            🔍 Search (Client-side Filter)
+          </Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Type to filter list..."
             value={searchText}
-            onChangeText={setSearchText} // No debounce! Testing concurrency.
+            onChangeText={setSearchText}
             autoCapitalize="none"
           />
         </View>
