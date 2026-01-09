@@ -32,13 +32,18 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace @sqliteai/sqlite-sync-react-native-example-sync-demo",
+    "expo:example": "yarn workspace @sqliteai/sqlite-sync-react-native-example-sync-demo-expo",
+    "bare:example": "yarn workspace @sqliteai/sqlite-sync-react-native-example-sync-demo-bare",
     "clean": "del-cli lib",
-    "clean:all": "del-cli lib && yarn clean && yarn example clean && rm -rf node_modules examples/sync-demo/node_modules",
-    "clean:ios": "yarn example clean:ios",
-    "clean:android": "yarn example clean:android",
-    "ios": "yarn install && yarn prepare && yarn example ios",
-    "android": "yarn install && yarn prepare && yarn example android",
+    "clean:all": "del-cli lib && yarn clean && yarn expo:example clean && yarn bare:example clean && rm -rf node_modules examples/sync-demo-expo/node_modules examples/sync-demo-bare/node_modules",
+    "clean:expo:ios": "yarn expo:example clean:ios",
+    "clean:expo:android": "yarn expo:example clean:android",
+    "clean:bare:ios": "yarn bare:example clean:ios",
+    "clean:bare:android": "yarn bare:example clean:android",
+    "expo:ios": "yarn install && yarn prepare && yarn expo:example ios",
+    "expo:android": "yarn install && yarn prepare && yarn expo:example android",
+    "bare:ios": "yarn install && yarn prepare && yarn bare:example ios",
+    "bare:android": "yarn install && yarn prepare && yarn bare:example android",
     "prepare": "bob build",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -96,7 +101,8 @@
     "react-native": "*"
   },
   "workspaces": [
-    "examples/sync-demo"
+    "examples/sync-demo-expo",
+    "examples/sync-demo-bare"
   ],
   "packageManager": "yarn@4.11.0",
   "react-native-builder-bob": {
@@ -146,7 +152,8 @@
   "jest": {
     "preset": "react-native",
     "modulePathIgnorePatterns": [
-      "<rootDir>/examples/sync-demo/node_modules",
+      "<rootDir>/examples/sync-demo-expo/node_modules",
+      "<rootDir>/examples/sync-demo-bare/node_modules",
       "<rootDir>/lib/"
     ]
   },

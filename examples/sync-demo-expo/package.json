@@ -1,5 +1,5 @@
 {
-  "name": "@sqliteai/sqlite-sync-react-native-example-sync-demo",
+  "name": "@sqliteai/sqlite-sync-react-native-example-sync-demo-expo",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {

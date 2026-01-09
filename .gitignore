@@ -44,9 +44,11 @@ android.iml
 # Cocoapods
 #
 example/ios/Pods
+examples/*/ios/Pods
 
 # Ruby
 example/vendor/
+examples/*/vendor/
 
 # node.js
 #
@@ -84,3 +86,6 @@ android/generated
 
 # React Native Nitro Modules
 nitrogen/
+
+# Example app environment files
+examples/*/.env
