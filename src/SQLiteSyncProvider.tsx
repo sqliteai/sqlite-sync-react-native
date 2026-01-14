@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import {
   open,
   getDylibPath,
@@ -10,11 +10,26 @@ import NetInfo from '@react-native-community/netinfo';
 import { SQLiteDbContext } from './SQLiteDbContext';
 import { SQLiteSyncStatusContext } from './SQLiteSyncStatusContext';
 import { SQLiteSyncActionsContext } from './SQLiteSyncActionsContext';
-import type { SQLiteSyncProviderProps } from './types/SQLiteSyncProviderProps';
+import type {
+  SQLiteSyncProviderProps,
+  AdaptivePollingConfig,
+} from './types/SQLiteSyncProviderProps';
 import type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
 import type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusContextValue';
 import type { SQLiteSyncActionsContextValue } from './types/SQLiteSyncActionsContextValue';
 import { createLogger } from './utils/logger';
+
+/**
+ * Default base interval for adaptive polling (30 seconds)
+ */
+const DEFAULT_BASE_INTERVAL = 10000;
+
+/**
+ * Hardcoded adaptive polling constants
+ * These are sensible defaults that work for most apps
+ */
+const ERROR_BACKOFF_MULTIPLIER = 2; // Errors: 2x backoff
+const FOREGROUND_DEBOUNCE_MS = 2000; // 5s between foreground syncs
 
 /**
  * SQLiteSyncProvider
@@ -53,7 +68,7 @@ export function SQLiteSyncProvider({
   connectionString,
   databaseName,
   tablesToBeSynced,
-  syncInterval,
+  adaptivePolling,
   debug = false,
   children,
   ...authProps
@@ -68,10 +83,29 @@ export function SQLiteSyncProvider({
   const [initError, setInitError] = useState<Error | null>(null);
   const [syncError, setSyncError] = useState<Error | null>(null);
 
+  /** ADAPTIVE POLLING STATE - Tracks polling behavior and lifecycle */
+  const [appState, setAppState] = useState<string>('active');
+  const [isNetworkAvailable, setIsNetworkAvailable] = useState<boolean>(true);
+  const [currentInterval, setCurrentInterval] = useState<number>(
+    adaptivePolling?.baseInterval ?? DEFAULT_BASE_INTERVAL
+  );
+  const [consecutiveEmptySyncs, setConsecutiveEmptySyncs] = useState<number>(0);
+  const [consecutiveSyncErrors, setConsecutiveErrors] = useState<number>(0);
+
   /** REFS - Used for internal async logic to avoid closure staleness **/
   const writeDbRef = useRef<DB | null>(null);
   const readDbRef = useRef<DB | null>(null);
   const isSyncingRef = useRef(false);
+
+  /** ADAPTIVE POLLING REFS - Track state without causing re-renders */
+  const lastForegroundSyncRef = useRef<number>(0);
+  const currentIntervalRef = useRef<number>(
+    adaptivePolling?.baseInterval ?? DEFAULT_BASE_INTERVAL
+  );
+  const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const appStateRef = useRef<string>('active');
+  const performSyncRef = useRef<(() => Promise<void>) | null>(null);
+  const isPollingActiveRef = useRef<boolean>(false);
 
   /** EXTRACT AUTH CREDENTIALS **/
   const apiKey = 'apiKey' in authProps ? authProps.apiKey : undefined;
@@ -81,6 +115,20 @@ export function SQLiteSyncProvider({
   /** CREATE LOGGER **/
   const logger = useMemo(() => createLogger(debug), [debug]);
 
+  /** ADAPTIVE POLLING CONFIGURATION - Merge user config with defaults **/
+  const adaptiveConfig = useMemo<Required<AdaptivePollingConfig>>(() => {
+    const defaults: Required<AdaptivePollingConfig> = {
+      baseInterval: 30000, // 30s base interval
+      maxInterval: 300000, // 5min maximum backoff
+      emptyThreshold: 3, // Back off after 3 empty syncs
+    };
+
+    return {
+      ...defaults,
+      ...adaptivePolling, // User overrides
+    };
+  }, [adaptivePolling]);
+
   /** CONFIG SERIALIZATION - Stabilizes dependency array to prevent infinite loops **/
   const serializedConfig = JSON.stringify({
     connectionString,
@@ -89,6 +137,40 @@ export function SQLiteSyncProvider({
     apiKey,
     accessToken,
   });
+
+  /** ADAPTIVE INTERVAL CALCULATOR - Determines next sync interval based on activity **/
+  const calculateAdaptiveInterval = useCallback(
+    (params: {
+      lastSyncChanges: number;
+      consecutiveEmptySyncs: number;
+      consecutiveSyncErrors: number;
+    }): number => {
+      const {
+        consecutiveEmptySyncs: emptySyncs,
+        consecutiveSyncErrors: errors,
+      } = params;
+      const { baseInterval, maxInterval, emptyThreshold } = adaptiveConfig;
+
+      // Priority 1: Error backoff (exponential with 2x multiplier)
+      if (errors > 0) {
+        const errorInterval =
+          baseInterval * Math.pow(ERROR_BACKOFF_MULTIPLIER, errors);
+        return Math.min(errorInterval, maxInterval);
+      }
+
+      // Priority 2: Consecutive empty syncs - back off gradually
+      if (emptySyncs >= emptyThreshold) {
+        // Linear backoff: add 15s for each empty sync beyond threshold
+        const backoffMs = (emptySyncs - emptyThreshold + 1) * 15000;
+        const idleInterval = baseInterval + backoffMs;
+        return Math.min(idleInterval, maxInterval);
+      }
+
+      // Default: base interval
+      return baseInterval;
+    },
+    [adaptiveConfig]
+  );
 
   /** SYNC FUNCTION - used for both manual and automatic sync **/
   const performSync = useCallback(async () => {
@@ -145,17 +227,96 @@ export function SQLiteSyncProvider({
       setLastSyncTime(Date.now());
       setLastSyncChanges(changes);
 
-      logger.info(`✅ Sync completed: ${changes} changes synced`);
+      // Update adaptive counters
+      if (changes > 0) {
+        setConsecutiveEmptySyncs(0);
+        setConsecutiveErrors(0);
+        logger.info(`✅ Sync completed: ${changes} changes synced`);
+      } else {
+        setConsecutiveEmptySyncs((prev) => prev + 1);
+        setConsecutiveErrors(0);
+        logger.info(`✅ Sync completed: no changes`);
+      }
+
+      // Recalculate interval based on activity
+      const newInterval = calculateAdaptiveInterval({
+        lastSyncChanges: changes,
+        consecutiveEmptySyncs: changes === 0 ? consecutiveEmptySyncs + 1 : 0,
+        consecutiveSyncErrors: 0,
+      });
+
+      currentIntervalRef.current = newInterval;
+      setCurrentInterval(newInterval);
+
+      logger.info(`🔄 Next sync in ${newInterval / 1000}s`);
 
       setSyncError(null);
     } catch (err) {
       logger.error('❌ Sync failed:', err);
       setSyncError(err instanceof Error ? err : new Error('Sync failed'));
+
+      // Increment error counter for backoff
+      setConsecutiveErrors((prev) => prev + 1);
+
+      // Recalculate interval with error backoff
+      const newInterval = calculateAdaptiveInterval({
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 0,
+        consecutiveSyncErrors: consecutiveSyncErrors + 1,
+      });
+
+      currentIntervalRef.current = newInterval;
+      setCurrentInterval(newInterval);
+
+      logger.info(`🔄 Next sync in ${newInterval / 1000}s (after error)`);
     } finally {
       setIsSyncing(false);
       isSyncingRef.current = false;
     }
-  }, [logger, isSyncReady]);
+  }, [
+    logger,
+    isSyncReady,
+    calculateAdaptiveInterval,
+    consecutiveEmptySyncs,
+    consecutiveSyncErrors,
+  ]);
+
+  /** Keep performSync ref updated **/
+  useEffect(() => {
+    performSyncRef.current = performSync;
+  }, [performSync]);
+
+  /** LIFECYCLE TRANSITION HANDLERS **/
+  const handleForegroundTransition = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastForegroundSync = now - lastForegroundSyncRef.current;
+
+    // Debounce rapid foreground transitions (5s)
+    if (timeSinceLastForegroundSync < FOREGROUND_DEBOUNCE_MS) {
+      logger.info('⏭️ Foreground sync debounced (too soon after last sync)');
+      return;
+    }
+
+    logger.info('📱 App foregrounded - triggering immediate sync');
+    lastForegroundSyncRef.current = now;
+
+    // Reset to base interval and clear empty sync counter
+    setConsecutiveEmptySyncs(0);
+    currentIntervalRef.current = adaptiveConfig.baseInterval;
+    setCurrentInterval(adaptiveConfig.baseInterval);
+
+    performSyncRef.current?.();
+  }, [logger, adaptiveConfig]);
+
+  const handleBackgroundTransition = useCallback(() => {
+    logger.info('📱 App backgrounded - pausing sync polling');
+
+    // Clear any pending sync timer
+    if (syncTimerRef.current !== null) {
+      clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+  }, [logger]);
 
   /** INITIALIZATION EFFECT **/
   useEffect(() => {
@@ -362,20 +523,119 @@ export function SQLiteSyncProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serializedConfig, logger]);
 
-  /** SYNC INTERVAL **/
+  /** APP STATE LISTENER - Detect foreground/background transitions **/
   useEffect(() => {
     if (!isSyncReady) {
       return;
     }
 
-    performSync();
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      const previousState = appStateRef.current;
+      appStateRef.current = nextAppState;
+      setAppState(nextAppState);
 
-    const intervalId = setInterval(performSync, syncInterval);
+      // Transitioning from background to foreground
+      if (
+        previousState.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        handleForegroundTransition();
+      }
+
+      // Transitioning to background
+      if (
+        previousState === 'active' &&
+        nextAppState.match(/inactive|background/)
+      ) {
+        handleBackgroundTransition();
+      }
+    });
 
     return () => {
-      clearInterval(intervalId);
+      subscription.remove();
     };
-  }, [isSyncReady, syncInterval, performSync]);
+  }, [isSyncReady, handleForegroundTransition, handleBackgroundTransition]);
+
+  /** NETWORK LISTENER - Detect connectivity changes **/
+  useEffect(() => {
+    if (!isSyncReady) {
+      return;
+    }
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const wasOffline = !isNetworkAvailable;
+      const isNowOnline =
+        (state.isConnected ?? false) && (state.isInternetReachable ?? true);
+
+      setIsNetworkAvailable(isNowOnline);
+
+      // Network reconnected - trigger immediate sync
+      if (wasOffline && isNowOnline && appStateRef.current === 'active') {
+        logger.info('🌐 Network reconnected - triggering sync');
+        performSyncRef.current?.();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isSyncReady, isNetworkAvailable, logger]);
+
+  /** ADAPTIVE SYNC POLLING - Dynamic interval with foreground/background awareness **/
+  useEffect(() => {
+    if (!isSyncReady) {
+      isPollingActiveRef.current = false;
+      return;
+    }
+
+    // Pause polling if app is in background
+    if (appState !== 'active') {
+      if (syncTimerRef.current !== null) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+      isPollingActiveRef.current = false;
+      return;
+    }
+
+    // Prevent multiple polling loops from starting
+    if (isPollingActiveRef.current) {
+      return;
+    }
+
+    isPollingActiveRef.current = true;
+
+    // Schedule next sync with recursive setTimeout
+    const scheduleNextSync = () => {
+      if (syncTimerRef.current !== null) {
+        clearTimeout(syncTimerRef.current);
+      }
+
+      syncTimerRef.current = setTimeout(() => {
+        performSyncRef.current?.().finally(() => {
+          // Reschedule after sync completes
+          if (isPollingActiveRef.current) {
+            scheduleNextSync();
+          }
+        });
+      }, currentIntervalRef.current);
+    };
+
+    // Initial sync on mount
+    performSyncRef.current?.().finally(() => {
+      if (isPollingActiveRef.current) {
+        scheduleNextSync();
+      }
+    });
+
+    return () => {
+      if (syncTimerRef.current !== null) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+      isPollingActiveRef.current = false;
+    };
+  }, [isSyncReady, appState]);
 
   /** SPLIT CONTEXT VALUES - for optimized rendering */
   const dbContextValue = useMemo<SQLiteDbContextValue>(
@@ -393,8 +653,24 @@ export function SQLiteSyncProvider({
       lastSyncTime,
       lastSyncChanges,
       syncError,
+      currentSyncInterval: currentInterval,
+      consecutiveEmptySyncs,
+      consecutiveSyncErrors,
+      isAppInBackground: appState !== 'active',
+      isNetworkAvailable,
     }),
-    [isSyncReady, isSyncing, lastSyncTime, lastSyncChanges, syncError]
+    [
+      isSyncReady,
+      isSyncing,
+      lastSyncTime,
+      lastSyncChanges,
+      syncError,
+      currentInterval,
+      consecutiveEmptySyncs,
+      consecutiveSyncErrors,
+      appState,
+      isNetworkAvailable,
+    ]
   );
   const syncActionsContextValue = useMemo<SQLiteSyncActionsContextValue>(
     () => ({

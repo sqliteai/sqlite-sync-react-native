@@ -29,4 +29,34 @@ export interface SQLiteSyncStatusContextValue {
    * Occurs during sync initialization or periodic sync operations
    */
   syncError: Error | null;
+
+  /**
+   * Current adaptive polling interval in milliseconds
+   * Shows the currently active interval based on sync activity
+   */
+  currentSyncInterval: number;
+
+  /**
+   * Number of consecutive syncs that found no changes
+   * Used to determine when to back off polling frequency
+   */
+  consecutiveEmptySyncs: number;
+
+  /**
+   * Number of consecutive sync errors
+   * Used for exponential backoff on failures
+   */
+  consecutiveSyncErrors: number;
+
+  /**
+   * Whether the app is currently in background
+   * When true, polling is paused
+   */
+  isAppInBackground: boolean;
+
+  /**
+   * Whether network is currently available
+   * Based on NetInfo connectivity state
+   */
+  isNetworkAvailable: boolean;
 }

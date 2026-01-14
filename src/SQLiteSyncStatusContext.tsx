@@ -10,6 +10,11 @@ const defaultContextValue: SQLiteSyncStatusContextValue = {
   lastSyncTime: null,
   lastSyncChanges: 0,
   syncError: null,
+  currentSyncInterval: 30000,
+  consecutiveEmptySyncs: 0,
+  consecutiveSyncErrors: 0,
+  isAppInBackground: false,
+  isNetworkAvailable: true,
 };
 
 /**
