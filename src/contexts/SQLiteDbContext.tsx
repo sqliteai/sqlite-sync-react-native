@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
+import type { SQLiteDbContextValue } from '../types/SQLiteDbContextValue';
 
 /**
  * Default context value used before SQLiteSyncProvider initializes

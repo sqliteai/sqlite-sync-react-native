@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef } from 'react';
-import { SQLiteDbContext } from '../../SQLiteDbContext';
+import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
 import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
 
 /**

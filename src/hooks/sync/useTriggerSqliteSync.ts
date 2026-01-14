@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { SQLiteSyncActionsContext } from '../../SQLiteSyncActionsContext';
+import { SQLiteSyncActionsContext } from '../../contexts/SQLiteSyncActionsContext';
 
 /**
  * Convenience hook to trigger a manual sync operation.

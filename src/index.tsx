@@ -1,7 +1,7 @@
-export { SQLiteSyncProvider } from './SQLiteSyncProvider';
-export { SQLiteDbContext } from './SQLiteDbContext';
-export { SQLiteSyncStatusContext } from './SQLiteSyncStatusContext';
-export { SQLiteSyncActionsContext } from './SQLiteSyncActionsContext';
+export { SQLiteSyncProvider } from './provider/SQLiteSyncProvider';
+export { SQLiteDbContext } from './contexts/SQLiteDbContext';
+export { SQLiteSyncStatusContext } from './contexts/SQLiteSyncStatusContext';
+export { SQLiteSyncActionsContext } from './contexts/SQLiteSyncActionsContext';
 // Context hooks
 export { useSqliteDb } from './hooks/context/useSqliteDb';
 export { useSyncStatus } from './hooks/context/useSyncStatus';

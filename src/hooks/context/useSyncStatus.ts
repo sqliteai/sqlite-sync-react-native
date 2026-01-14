@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { SQLiteSyncStatusContext } from '../../SQLiteSyncStatusContext';
+import { SQLiteSyncStatusContext } from '../../contexts/SQLiteSyncStatusContext';
 
 /**
  * Hook to access sync status information.

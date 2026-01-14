@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusContextValue';
+import type { SQLiteSyncStatusContextValue } from '../types/SQLiteSyncStatusContextValue';
 
 /**
  * Default context value used before SQLiteSyncProvider initializes

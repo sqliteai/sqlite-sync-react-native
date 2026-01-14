@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState, useRef } from 'react';
-import { SQLiteDbContext } from '../../SQLiteDbContext';
+import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
 import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
 
 /**

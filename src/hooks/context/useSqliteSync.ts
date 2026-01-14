@@ -1,7 +1,7 @@
 import { useContext } from 'react';
-import { SQLiteDbContext } from '../../SQLiteDbContext';
-import { SQLiteSyncStatusContext } from '../../SQLiteSyncStatusContext';
-import { SQLiteSyncActionsContext } from '../../SQLiteSyncActionsContext';
+import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
+import { SQLiteSyncStatusContext } from '../../contexts/SQLiteSyncStatusContext';
+import { SQLiteSyncActionsContext } from '../../contexts/SQLiteSyncActionsContext';
 
 /**
  * Hook to access all SQLite sync functionality.

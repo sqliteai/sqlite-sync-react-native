@@ -1,6 +1,6 @@
 import { useContext, useState, useCallback } from 'react';
 import type { QueryResult } from '@op-engineering/op-sqlite';
-import { SQLiteDbContext } from '../../SQLiteDbContext';
+import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
 import type { ExecuteOptions } from '../../types/ExecuteOptions';
 
 /**

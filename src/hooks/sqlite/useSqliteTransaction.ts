@@ -1,6 +1,6 @@
 import { useContext, useState, useCallback } from 'react';
 import type { Transaction } from '@op-engineering/op-sqlite';
-import { SQLiteDbContext } from '../../SQLiteDbContext';
+import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
 
 /**
  * Hook for executing SQL commands within a transaction.

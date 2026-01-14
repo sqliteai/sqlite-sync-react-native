@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { SQLiteDbContext } from '../../SQLiteDbContext';
+import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
 
 /**
  * Hook to access the SQLite database instance and initialization errors.
