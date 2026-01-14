@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Text,
   View,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   FlatList,
 } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import {
   SQLiteSyncProvider,
   useTriggerSqliteSync,
@@ -24,6 +25,17 @@ import {
   DATABASE_NAME,
   TABLE_NAME,
 } from '@env';
+
+// Configure how notifications are displayed when app is in foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 /**
  * Demo app showcasing the reactive hooks and dual connection architecture:
@@ -51,6 +63,43 @@ function TestApp() {
   const [rowNotification, setRowNotification] = useState<string | null>(null);
   const { triggerSync } = useTriggerSqliteSync();
   const { executeTransaction } = useSqliteTransaction();
+  const notificationListener = useRef<
+    ReturnType<typeof Notifications.addNotificationReceivedListener> | undefined
+  >(undefined);
+  const responseListener = useRef<
+    | ReturnType<typeof Notifications.addNotificationResponseReceivedListener>
+    | undefined
+  >(undefined);
+
+  // Set up notification listeners
+  useEffect(() => {
+    // Listener for when notification is received while app is foregrounded
+    notificationListener.current =
+      Notifications.addNotificationReceivedListener((notification) => {
+        console.log('📬 Notification received!', notification);
+        setRowNotification(
+          `📬 Notification: ${
+            notification.request.content.title || 'New notification'
+          }`
+        );
+        setTimeout(() => setRowNotification(null), 3000);
+      });
+
+    // Listener for when user taps on notification
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log('👆 Notification tapped!', response);
+      });
+
+    return () => {
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, []);
 
   // Hook 1: useSqliteSyncQuery - Reactive query with table-level granularity
   // Uses op-sqlite's reactiveExecute to automatically re-run when the table changes
@@ -378,6 +427,9 @@ const styles = StyleSheet.create({
   },
   syncButton: {
     backgroundColor: '#007AFF',
+  },
+  notificationButton: {
+    backgroundColor: '#34C759',
   },
   buttonText: {
     color: '#fff',

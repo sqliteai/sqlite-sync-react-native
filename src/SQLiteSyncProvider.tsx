@@ -16,6 +16,20 @@ import type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusConte
 import type { SQLiteSyncActionsContextValue } from './types/SQLiteSyncActionsContextValue';
 import { createLogger } from './utils/logger';
 
+// Optional Expo notifications support (for push tokens)
+let ExpoNotifications: any = null;
+let ExpoConstants: any = null;
+//let ExpoDevice: any = null;
+try {
+  ExpoNotifications = require('expo-notifications');
+  //ExpoDevice = require('expo-device');
+  const constantsModule = require('expo-constants');
+  // Handle both default export and named export
+  ExpoConstants = constantsModule.default || constantsModule;
+} catch {
+  // Expo not available - will skip push token
+}
+
 /**
  * SQLiteSyncProvider
  *
@@ -223,6 +237,42 @@ export function SQLiteSyncProvider({
 
         if (isMounted) {
           setInitError(null);
+        }
+
+        /** GET EXPO PUSH TOKEN (Optional - non-blocking) **/
+        if (ExpoNotifications && ExpoConstants) {
+          try {
+            const { status: existingStatus } =
+              await ExpoNotifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
+
+            if (existingStatus !== 'granted') {
+              const { status } =
+                await ExpoNotifications.requestPermissionsAsync();
+              finalStatus = status;
+            }
+
+            if (finalStatus === 'granted') {
+              const projectId =
+                ExpoConstants?.expoConfig?.extra?.eas?.projectId ??
+                ExpoConstants?.manifest?.extra?.eas?.projectId ??
+                ExpoConstants?.easConfig?.projectId;
+
+              const token = await ExpoNotifications.getExpoPushTokenAsync({
+                projectId,
+              });
+
+              if (token?.data) {
+                logger.info('📱 Expo Push Token:', token.data);
+                if (projectId) {
+                  logger.info('📱 Project ID:', projectId);
+                }
+              }
+            }
+          } catch (pushTokenError) {
+            // Non-critical - don't block initialization
+            logger.warn('⚠️ Failed to get Expo push token:', pushTokenError);
+          }
         }
 
         /** PHASE 2: SYNC INITIALIZATION **/
