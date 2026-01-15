@@ -7,6 +7,20 @@ import type { Logger } from '../../utils/logger';
 import { calculateAdaptiveInterval } from '../utils/calculateAdaptiveInterval';
 
 /**
+ * Helper function to delay execution
+ */
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Extracts the number of changes from a CloudSync query result
+ */
+const extractChanges = (result: QueryResult | undefined): number => {
+  const firstRow = result?.rows?.[0];
+  const value = firstRow ? Object.values(firstRow)[0] : 0;
+  return typeof value === 'number' ? value : 0;
+};
+
+/**
  * Parameters for useSyncManager hook
  */
 export interface SyncManagerParams {
@@ -189,11 +203,29 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
        */
       await writeDbRef.current.transaction(async (tx) => {
         syncResult = await tx.execute('SELECT cloudsync_network_sync();');
+
+        let changes = extractChanges(syncResult);
+
+        if (changes > 0) {
+          return;
+        }
+
+        await delay(1000);
+
+        syncResult = await tx.execute('SELECT cloudsync_network_sync();');
+
+        changes = extractChanges(syncResult);
+
+        if (changes > 0) {
+          return;
+        }
+
+        await delay(1000);
+
+        syncResult = await tx.execute('SELECT cloudsync_network_sync();');
       });
 
-      const firstRow = syncResult?.rows?.[0];
-      const result = firstRow ? Object.values(firstRow)[0] : 0;
-      const changes = typeof result === 'number' ? result : 0;
+      const changes = extractChanges(syncResult);
 
       setLastSyncTime(Date.now());
       setLastSyncChanges(changes);
