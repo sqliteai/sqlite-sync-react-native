@@ -15,7 +15,11 @@ export { useSqliteTransaction } from './hooks/sqlite/useSqliteTransaction';
 // Sync hooks
 export { useTriggerSqliteSync } from './hooks/sync/useTriggerSqliteSync';
 export { useSqliteSyncQuery } from './hooks/sync/useSqliteSyncQuery';
-export type { SQLiteSyncProviderProps } from './types/SQLiteSyncProviderProps';
+export type {
+  SQLiteSyncProviderProps,
+  SyncMode,
+  AdaptivePollingConfig,
+} from './types/SQLiteSyncProviderProps';
 export type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
 export type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusContextValue';
 export type { SQLiteSyncActionsContextValue } from './types/SQLiteSyncActionsContextValue';

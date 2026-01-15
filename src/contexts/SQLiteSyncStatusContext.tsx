@@ -5,6 +5,7 @@ import type { SQLiteSyncStatusContextValue } from '../types/SQLiteSyncStatusCont
  * Default context value used before SQLiteSyncProvider initializes
  */
 const defaultContextValue: SQLiteSyncStatusContextValue = {
+  syncMode: 'polling',
   isSyncReady: false,
   isSyncing: false,
   lastSyncTime: null,

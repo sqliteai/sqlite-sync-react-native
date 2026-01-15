@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { SyncMode } from '../../types/SQLiteSyncProviderProps';
 
 /**
  * Parameters for useAdaptivePolling hook
@@ -23,6 +24,11 @@ export interface AdaptivePollingParams {
    * Ref to current polling interval in milliseconds
    */
   currentIntervalRef: React.RefObject<number>;
+
+  /**
+   * Sync mode - polling is only enabled when set to 'polling'
+   */
+  syncMode: SyncMode;
 }
 
 /**
@@ -34,6 +40,7 @@ export interface AdaptivePollingParams {
  * - Prevents multiple polling loops from starting
  * - Uses dynamic interval from currentIntervalRef
  * - Performs initial sync on mount
+ * - Only runs when syncMode is 'polling'
  *
  * @param params - Adaptive polling parameters
  *
@@ -43,12 +50,19 @@ export interface AdaptivePollingParams {
  *   isSyncReady,
  *   appState,
  *   performSyncRef,
- *   currentIntervalRef
+ *   currentIntervalRef,
+ *   syncMode: 'polling'
  * });
  * ```
  */
 export function useAdaptivePolling(params: AdaptivePollingParams): void {
-  const { isSyncReady, appState, performSyncRef, currentIntervalRef } = params;
+  const {
+    isSyncReady,
+    appState,
+    performSyncRef,
+    currentIntervalRef,
+    syncMode,
+  } = params;
 
   /** REFS */
   const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -56,7 +70,8 @@ export function useAdaptivePolling(params: AdaptivePollingParams): void {
 
   /** ADAPTIVE SYNC POLLING - Dynamic interval with foreground/background awareness */
   useEffect(() => {
-    if (!isSyncReady) {
+    // Only enable polling when syncMode is 'polling'
+    if (!isSyncReady || syncMode !== 'polling') {
       isPollingActiveRef.current = false;
       return;
     }
@@ -108,5 +123,5 @@ export function useAdaptivePolling(params: AdaptivePollingParams): void {
       }
       isPollingActiveRef.current = false;
     };
-  }, [isSyncReady, appState, performSyncRef, currentIntervalRef]);
+  }, [isSyncReady, appState, performSyncRef, currentIntervalRef, syncMode]);
 }

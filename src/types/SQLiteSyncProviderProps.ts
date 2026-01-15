@@ -1,6 +1,11 @@
 import type { TableConfig } from './TableConfig';
 
 /**
+ * Sync mode determines how the provider checks for remote changes
+ */
+export type SyncMode = 'polling' | 'push';
+
+/**
  * Configuration for adaptive polling behavior
  */
 export interface AdaptivePollingConfig {
@@ -24,9 +29,9 @@ export interface AdaptivePollingConfig {
 }
 
 /**
- * The base properties required for SQLiteSyncProvider
+ * Common properties shared across all provider configurations
  */
-interface BaseSQLiteSyncProviderProps {
+interface CommonProviderProps {
   /**
    * SQLite Cloud connection string
    */
@@ -44,12 +49,6 @@ interface BaseSQLiteSyncProviderProps {
   tablesToBeSynced: TableConfig[];
 
   /**
-   * Adaptive polling configuration (optional)
-   * When not provided, uses sensible defaults
-   */
-  adaptivePolling?: AdaptivePollingConfig;
-
-  /**
    * Enable debug logging (default: false)
    * When true, logs detailed sync operations to console
    */
@@ -62,10 +61,9 @@ interface BaseSQLiteSyncProviderProps {
 }
 
 /**
- * Provider props with API key authentication (for apps without RLS)
+ * Authentication with API key (for apps without RLS)
  */
-interface SQLiteSyncProviderPropsWithApiKey
-  extends BaseSQLiteSyncProviderProps {
+interface WithApiKey {
   /**
    * API key for simple authentication (if not using RLS)
    */
@@ -74,10 +72,9 @@ interface SQLiteSyncProviderPropsWithApiKey
 }
 
 /**
- * Provider props with access token authentication (for apps with RLS)
+ * Authentication with access token (for apps with RLS)
  */
-interface SQLiteSyncProviderPropsWithAccessToken
-  extends BaseSQLiteSyncProviderProps {
+interface WithAccessToken {
   /**
    * Access token for user-level authentication (when using RLS)
    */
@@ -86,8 +83,44 @@ interface SQLiteSyncProviderPropsWithAccessToken
 }
 
 /**
- * SQLiteSyncProvider accepts either apiKey or accessToken for authentication
+ * Polling mode configuration
+ * Adaptive polling is required when using polling mode
  */
-export type SQLiteSyncProviderProps =
-  | SQLiteSyncProviderPropsWithApiKey
-  | SQLiteSyncProviderPropsWithAccessToken;
+interface PollingMode {
+  /**
+   * Sync mode: polling (default)
+   * Uses adaptive polling to periodically check for changes
+   */
+  syncMode?: 'polling';
+
+  /**
+   * Adaptive polling configuration (required in polling mode)
+   * Controls polling intervals and backoff behavior
+   */
+  adaptivePolling: AdaptivePollingConfig;
+}
+
+/**
+ * Push mode configuration
+ * Adaptive polling is not used in push mode
+ */
+interface PushMode {
+  /**
+   * Sync mode: push
+   * Relies on push notifications from SQLite Cloud (still syncs on foreground/network)
+   */
+  syncMode: 'push';
+
+  /**
+   * Adaptive polling is not used in push mode
+   */
+  adaptivePolling?: never;
+}
+
+/**
+ * SQLiteSyncProvider props
+ * Combines common props with authentication and sync mode variants
+ */
+export type SQLiteSyncProviderProps = CommonProviderProps &
+  (WithApiKey | WithAccessToken) &
+  (PollingMode | PushMode);

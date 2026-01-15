@@ -1,7 +1,15 @@
+import type { SyncMode } from './SQLiteSyncProviderProps';
+
 /**
  * Sync status context value - changes frequently (on every sync)
  */
 export interface SQLiteSyncStatusContextValue {
+  /**
+   * Current sync mode ('polling' or 'push')
+   * Determines how the provider checks for remote changes
+   */
+  syncMode: SyncMode;
+
   /**
    * Whether sync is configured and ready
    * true = CloudSync extension loaded and network configured
