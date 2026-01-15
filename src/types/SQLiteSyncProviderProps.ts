@@ -107,7 +107,7 @@ interface PollingMode {
    * Sync mode: polling (default)
    * Uses adaptive polling to periodically check for changes
    */
-  syncMode?: 'polling';
+  syncMode: 'polling';
 
   /**
    * Adaptive polling configuration (required in polling mode)

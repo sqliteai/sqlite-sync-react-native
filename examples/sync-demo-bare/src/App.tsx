@@ -286,6 +286,7 @@ export default function App() {
           `,
         },
       ]}
+      syncMode="polling"
       adaptivePolling={{ baseInterval: 3000 }}
       apiKey={SQLITE_CLOUD_API_KEY}
       debug={true}

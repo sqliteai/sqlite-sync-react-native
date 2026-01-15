@@ -3,6 +3,17 @@ import type { DB } from '@op-engineering/op-sqlite';
 import type { SyncMode } from '../../types/SQLiteSyncProviderProps';
 import type { Logger } from '../../utils/logger';
 
+// Optional Expo Notifications and Constants support
+let ExpoNotifications: any = null;
+let ExpoConstants: any = null;
+try {
+  ExpoNotifications = require('expo-notifications');
+  const constantsModule = require('expo-constants');
+  ExpoConstants = constantsModule.default || constantsModule;
+} catch {
+  // Expo not available - push mode will not work
+}
+
 /**
  * Parameters for useSqliteSyncPush hook
  */
@@ -31,6 +42,11 @@ export interface SqliteSyncPushParams {
    * Logger instance for logging
    */
   logger: Logger;
+
+  /**
+   * Callback when push permissions are denied - triggers fallback to polling
+   */
+  onPermissionsDenied?: () => void;
 }
 
 /**
@@ -55,7 +71,14 @@ export interface SqliteSyncPushParams {
  * ```
  */
 export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
-  const { isSyncReady, performSyncRef, writeDbRef, syncMode, logger } = params;
+  const {
+    isSyncReady,
+    performSyncRef,
+    writeDbRef,
+    syncMode,
+    logger,
+    onPermissionsDenied,
+  } = params;
 
   /** PUSH NOTIFICATION LISTENER */
   useEffect(() => {
@@ -64,21 +87,103 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
       return;
     }
 
-    // TODO: Implement SQLite Sync push notification listener
-    // This will depend on the SQLite Sync extension's push notification API
-    // For now, we'll log that push mode is enabled
+    // Check if Expo Notifications is available
+    if (!ExpoNotifications) {
+      logger.warn(
+        '⚠️ Push mode enabled but expo-notifications not found. Install it with: npx expo install expo-notifications'
+      );
+      return;
+    }
+
     logger.info('📲 SQLite Sync push mode enabled');
 
-    // Placeholder for push notification setup
-    // Example (actual implementation depends on SQLite Sync API):
-    // const unsubscribe = writeDbRef.current.setupPushListener((notification) => {
-    //   logger.info('📲 SQLite Sync push notification received - triggering sync');
-    //   performSyncRef.current?.();
-    // });
+    // Request permissions and get push token
+    const registerForPushNotifications = async () => {
+      try {
+        const { status: existingStatus } =
+          await ExpoNotifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== 'granted') {
+          const { status } = await ExpoNotifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+          logger.warn(
+            '⚠️ Push notification permissions denied - falling back to polling mode'
+          );
+          onPermissionsDenied?.();
+          return;
+        }
+
+        const projectId =
+          ExpoConstants?.expoConfig?.extra?.eas?.projectId ??
+          ExpoConstants?.manifest?.extra?.eas?.projectId ??
+          ExpoConstants?.easConfig?.projectId;
+
+        const token = await ExpoNotifications.getExpoPushTokenAsync({
+          projectId,
+        });
+
+        if (token?.data) {
+          logger.info('📱 Expo Push Token:', token.data);
+          // TODO: Send token to backend
+        }
+      } catch (error) {
+        logger.warn(
+          '⚠️ Failed to get push token - falling back to polling mode:',
+          error
+        );
+        onPermissionsDenied?.();
+      }
+    };
+
+    registerForPushNotifications();
+
+    // Set up notification handler for silent sync (no user-facing alerts)
+    ExpoNotifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }),
+    });
+
+    // Listen for notifications received while app is in foreground
+    const foregroundSubscription =
+      ExpoNotifications.addNotificationReceivedListener(
+        (_notification: any) => {
+          logger.info(
+            '📲 Push notification received (foreground) - triggering sync'
+          );
+          performSyncRef.current?.();
+        }
+      );
+
+    // Listen for notification responses (user tapped notification)
+    const responseSubscription =
+      ExpoNotifications.addNotificationResponseReceivedListener(
+        (_response: any) => {
+          logger.info(
+            '📲 Push notification response received - triggering sync'
+          );
+          performSyncRef.current?.();
+        }
+      );
 
     return () => {
-      // TODO: Cleanup push notification listener
-      // unsubscribe?.();
+      // Cleanup subscriptions
+      foregroundSubscription.remove();
+      responseSubscription.remove();
+      logger.info('📲 Push notification listeners removed');
     };
-  }, [isSyncReady, syncMode, writeDbRef, performSyncRef, logger]);
+  }, [
+    isSyncReady,
+    syncMode,
+    writeDbRef,
+    performSyncRef,
+    logger,
+    onPermissionsDenied,
+  ]);
 }

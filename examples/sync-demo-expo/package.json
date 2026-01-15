@@ -10,7 +10,9 @@
     "prebuild:android": "npx expo prebuild --platform android --clean",
     "clean": "rm -rf node_modules .expo ios android",
     "clean:ios": "rm -rf ios",
-    "clean:android": "rm -rf android"
+    "clean:android": "rm -rf android",
+    "clean:gradle": "cd android && ./gradlew clean && cd ..",
+    "deep-clean:android": "rm -rf android && npx expo prebuild --platform android --clean && cd android && ./gradlew clean --no-daemon && cd .."
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -19,6 +21,9 @@
     "@sqliteai/sqlite-sync-react-native": "*",
     "expo": "~54.0.25",
     "expo-build-properties": "~1.0.0",
+    "expo-constants": "~18.0.13",
+    "expo-device": "~8.0.10",
+    "expo-notifications": "~0.32.16",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",
     "react-dom": "19.1.0",

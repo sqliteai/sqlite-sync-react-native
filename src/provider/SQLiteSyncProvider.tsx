@@ -69,23 +69,31 @@ export function SQLiteSyncProvider({
   /** CREATE LOGGER */
   const logger = useMemo(() => createLogger(debug), [debug]);
 
+  /** EFFECTIVE SYNC MODE - can fallback to polling if push permissions denied */
+  const [effectiveSyncMode, setEffectiveSyncMode] = useState(syncMode);
+
+  // Reset effective mode when prop changes
+  useEffect(() => {
+    setEffectiveSyncMode(syncMode);
+  }, [syncMode]);
+
   /** ADAPTIVE POLLING CONFIGURATION (only used in polling mode) */
   const adaptiveConfig = useMemo(() => {
     const defaults = {
-      baseInterval: 5000, // 5s base interval
-      maxInterval: 300000, // 5min maximum backoff
-      emptyThreshold: 5, // Back off after 5 empty syncs
-      idleBackoffMultiplier: 1.5, // 1.5x multiplier for idle backoff (gentle)
-      errorBackoffMultiplier: 2.0, // 2x multiplier for error backoff (aggressive)
+      baseInterval: 5000,
+      maxInterval: 300000,
+      emptyThreshold: 5,
+      idleBackoffMultiplier: 1.5,
+      errorBackoffMultiplier: 2.0,
     };
-    return syncMode === 'polling'
+    return effectiveSyncMode === 'polling'
       ? { ...defaults, ...adaptivePolling }
       : defaults;
-  }, [adaptivePolling, syncMode]);
+  }, [adaptivePolling, effectiveSyncMode]);
 
   /** CURRENT INTERVAL STATE (only used in polling mode) */
   const initialInterval =
-    syncMode === 'polling' ? adaptiveConfig.baseInterval : null;
+    effectiveSyncMode === 'polling' ? adaptiveConfig.baseInterval : null;
 
   const [currentInterval, setCurrentInterval] = useState<number | null>(
     initialInterval
@@ -200,7 +208,7 @@ export function SQLiteSyncProvider({
     appState,
     performSyncRef,
     currentIntervalRef,
-    syncMode,
+    syncMode: effectiveSyncMode,
   });
 
   /** PUSH NOTIFICATIONS - Only active when syncMode is 'push' */
@@ -208,8 +216,14 @@ export function SQLiteSyncProvider({
     isSyncReady,
     performSyncRef,
     writeDbRef,
-    syncMode,
+    syncMode: effectiveSyncMode,
     logger,
+    onPermissionsDenied: () => {
+      logger.warn(
+        '⚠️ Falling back to polling mode due to denied push permissions'
+      );
+      setEffectiveSyncMode('polling');
+    },
   });
 
   /** CONTEXT VALUES */
@@ -224,7 +238,7 @@ export function SQLiteSyncProvider({
 
   const syncStatusContextValue = useMemo<SQLiteSyncStatusContextValue>(
     () => ({
-      syncMode,
+      syncMode: effectiveSyncMode,
       isSyncReady,
       isSyncing,
       lastSyncTime,
@@ -237,7 +251,7 @@ export function SQLiteSyncProvider({
       isNetworkAvailable,
     }),
     [
-      syncMode,
+      effectiveSyncMode,
       isSyncReady,
       isSyncing,
       lastSyncTime,
