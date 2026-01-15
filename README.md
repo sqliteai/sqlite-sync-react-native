@@ -54,6 +54,10 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 - [`@op-engineering/op-sqlite`](https://github.com/OP-Engineering/op-sqlite) **^15.1.14**
 - [`@react-native-community/netinfo`](https://github.com/react-native-netinfo/react-native-netinfo) **^11.0.0**
 - [SQLite Cloud](https://sqlitecloud.io/) account
+- **Optional (for push mode):**
+  - [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/)
+  - [`expo-constants`](https://docs.expo.dev/versions/latest/sdk/constants/)
+  - Expo projects only
 
 > **⚠️ Note:** This library is **native-only** (iOS/Android).
 
@@ -65,6 +69,12 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 npm install @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-native-community/netinfo
 # or
 yarn add @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-native-community/netinfo
+```
+
+**Optional: For push mode (Expo projects only)**
+
+```bash
+npx expo install expo-notifications expo-constants
 ```
 
 ### 2. Platform Setup
@@ -125,7 +135,8 @@ export default function App() {
       connectionString="sqlitecloud://your-host.sqlite.cloud:8860/your-database"
       databaseName="myapp.db"
       apiKey="your-api-key"
-      syncInterval={5000}
+      syncMode="polling"
+      adaptivePolling={{ baseInterval: 5000 }}
       tablesToBeSynced={[
         {
           name: 'tasks',
@@ -226,6 +237,67 @@ function TaskList() {
 }
 ```
 
+## 🔄 Sync Behavior
+
+The library provides intelligent, lifecycle-aware synchronization that adapts to app state, network conditions, and sync activity.
+
+### Sync Triggers
+
+Synchronization happens automatically in response to meaningful events:
+
+**Primary Triggers:**
+
+- **App start** → immediate sync
+- **App resume from background** → immediate sync (debounced to 5s)
+- **Network reconnection** → immediate sync
+
+**Secondary Trigger (Polling Mode):**
+
+- **Periodic polling while foreground** → interval adapts based on activity
+- **No polling when backgrounded**
+
+### Adaptive Polling Algorithm
+
+In polling mode, the sync interval intelligently adjusts based on activity:
+
+1. **Default State:** Uses `baseInterval` (default: 5s)
+2. **Idle Backoff:** After `emptyThreshold` consecutive empty syncs (default: 5), interval increases gradually
+   - Example: 5s → 7.5s → 11.25s → ... (capped at `maxInterval`)
+3. **Error Backoff:** On sync failures, interval doubles exponentially
+   - Example: 5s → 10s → 20s → 40s → ... (capped at `maxInterval`)
+4. **Reset on Activity:** Any sync with changes resets interval to `baseInterval`
+5. **Foreground Priority:** App resume triggers immediate sync and resets interval
+
+**Example Timeline:**
+
+```
+App Start:        Sync (0 changes) → Next in 5s
+5s later:         Sync (0 changes) → Next in 5s
+10s later:        Sync (0 changes) → Next in 5s
+15s later:        Sync (0 changes) → Next in 5s
+20s later:        Sync (0 changes) → Next in 5s
+25s later:        Sync (0 changes) → Next in 7.5s (idle backoff started)
+32.5s later:      Sync (0 changes) → Next in 11.25s
+43.75s later:     Sync (5 changes) → Next in 5s (reset to base)
+App backgrounded: Polling paused
+App foregrounded: Sync immediately → Next in 5s
+```
+
+### Push Mode (Expo Only)
+
+Push notifications from SQLite Cloud trigger sync when there are changes to be synced. Sync still happens on foreground/network reconnect for reliability.
+
+**Requirements:**
+
+- `expo-notifications` - for push notification handling
+- `expo-constants` - for EAS project ID required by push tokens
+
+**Graceful Degradation:**
+
+- If packages not installed → warning logged, push mode disabled
+- If permissions denied → automatic fallback to polling mode
+- If token retrieval fails → automatic fallback to polling mode
+
 ## 🎯 API Reference
 
 ### `SQLiteSyncProvider`
@@ -234,18 +306,101 @@ Main provider component that enables sync functionality.
 
 #### Props
 
-| Prop               | Type            | Required | Description                             |
-| ------------------ | --------------- | -------- | --------------------------------------- |
-| `connectionString` | `string`        | ✅       | SQLite Cloud connection string          |
-| `databaseName`     | `string`        | ✅       | Local database file name                |
-| `tablesToBeSynced` | `TableConfig[]` | ✅       | Array of tables to sync                 |
-| `syncInterval`     | `number`        | ✅       | Sync interval in milliseconds           |
-| `apiKey`           | `string`        | \*       | API key for authentication              |
-| `accessToken`      | `string`        | \*       | Access token for RLS authentication     |
-| `debug`            | `boolean`       | ❌       | Enable debug logging (default: `false`) |
-| `children`         | `ReactNode`     | ✅       | Child components                        |
+| Prop               | Type                    | Required | Description                                        |
+| ------------------ | ----------------------- | -------- | -------------------------------------------------- |
+| `connectionString` | `string`                | ✅       | SQLite Cloud connection string                     |
+| `databaseName`     | `string`                | ✅       | Local database file name                           |
+| `tablesToBeSynced` | `TableConfig[]`         | ✅       | Array of tables to sync                            |
+| `syncMode`         | `'polling' \| 'push'`   | ❌       | Sync mode (default: `'polling'`)                   |
+| `adaptivePolling`  | `AdaptivePollingConfig` | ❌       | Adaptive polling configuration (polling mode only) |
+| `apiKey`           | `string`                | \*       | API key for authentication                         |
+| `accessToken`      | `string`                | \*       | Access token for RLS authentication                |
+| `debug`            | `boolean`               | ❌       | Enable debug logging (default: `false`)            |
+| `children`         | `ReactNode`             | ✅       | Child components                                   |
 
 \* Either `apiKey` or `accessToken` is required
+
+#### Sync Modes
+
+The library supports two sync modes:
+
+**Polling Mode (Default)**
+Adaptive polling with intelligent interval adjustments:
+
+- Syncs on app foreground, network reconnect
+- Backs off when idle (no changes detected)
+- Exponential backoff on errors
+- Pauses when app is backgrounded
+
+**Push Mode (Expo only)**
+Uses push notifications from SQLite Cloud:
+
+- Automatically falls back to polling if permissions denied
+- Still syncs on foreground/network reconnect for reliability
+
+**Example configurations:**
+
+```typescript
+// Polling mode with default settings (recommended)
+<SQLiteSyncProvider
+  syncMode="polling"
+  // Uses defaults: baseInterval=5s, maxInterval=5min, emptyThreshold=5
+>
+
+// Polling mode with custom intervals
+<SQLiteSyncProvider
+  syncMode="polling"
+  adaptivePolling={{
+    baseInterval: 3000,    // 3s base interval
+    maxInterval: 60000,    // 1min maximum backoff
+    emptyThreshold: 3      // Back off after 3 empty syncs
+  }}
+>
+
+// Push mode (requires expo-notifications)
+<SQLiteSyncProvider
+  syncMode="push"
+  // Automatically falls back to polling if permissions denied
+>
+```
+
+#### `AdaptivePollingConfig`
+
+Configuration for adaptive polling behavior (polling mode only).
+
+```typescript
+interface AdaptivePollingConfig {
+  /**
+   * Base sync interval in milliseconds
+   * Default: 5000 (5 seconds)
+   */
+  baseInterval?: number;
+
+  /**
+   * Maximum interval during backoff in milliseconds
+   * Default: 300000 (5 minutes)
+   */
+  maxInterval?: number;
+
+  /**
+   * Number of consecutive empty syncs before backing off
+   * Default: 5
+   */
+  emptyThreshold?: number;
+
+  /**
+   * Multiplier for idle backoff (when no changes detected)
+   * Default: 1.5 (gentle backoff)
+   */
+  idleBackoffMultiplier?: number;
+
+  /**
+   * Multiplier for error backoff (when sync fails)
+   * Default: 2.0 (aggressive backoff)
+   */
+  errorBackoffMultiplier?: number;
+}
+```
 
 #### `TableConfig`
 
@@ -402,20 +557,25 @@ Provides sync status information. **Changes frequently** (on every sync).
 import { useContext } from 'react';
 import { SQLiteSyncStatusContext } from '@sqliteai/sqlite-sync-react-native';
 
-const { isSyncing, lastSyncTime, syncError } = useContext(
-  SQLiteSyncStatusContext
-);
+const { isSyncing, lastSyncTime, syncError, syncMode, currentSyncInterval } =
+  useContext(SQLiteSyncStatusContext);
 ```
 
 **Values:**
 
-| Property          | Type             | Description                                    |
-| ----------------- | ---------------- | ---------------------------------------------- |
-| `isSyncReady`     | `boolean`        | Whether sync is configured and ready           |
-| `isSyncing`       | `boolean`        | Whether sync is currently in progress          |
-| `lastSyncTime`    | `number \| null` | Timestamp of last successful sync              |
-| `lastSyncChanges` | `number`         | Number of changes in last sync                 |
-| `syncError`       | `Error \| null`  | Recoverable sync error (db works offline-only) |
+| Property                | Type                  | Description                                                          |
+| ----------------------- | --------------------- | -------------------------------------------------------------------- |
+| `syncMode`              | `'polling' \| 'push'` | Current sync mode (may differ from prop if push fallback to polling) |
+| `isSyncReady`           | `boolean`             | Whether sync is configured and ready                                 |
+| `isSyncing`             | `boolean`             | Whether sync is currently in progress                                |
+| `lastSyncTime`          | `number \| null`      | Timestamp of last successful sync                                    |
+| `lastSyncChanges`       | `number`              | Number of changes in last sync                                       |
+| `syncError`             | `Error \| null`       | Recoverable sync error (db works offline-only)                       |
+| `currentSyncInterval`   | `number \| null`      | Current polling interval in ms (null in push mode)                   |
+| `consecutiveEmptySyncs` | `number`              | Number of consecutive syncs with no changes                          |
+| `consecutiveSyncErrors` | `number`              | Number of consecutive sync errors                                    |
+| `isAppInBackground`     | `boolean`             | Whether app is currently in background                               |
+| `isNetworkAvailable`    | `boolean`             | Whether network connection is available                              |
 
 #### `SQLiteSyncActionsContext`
 
@@ -430,8 +590,8 @@ const { triggerSync } = useContext(SQLiteSyncActionsContext);
 
 **Values:**
 
-| Property      | Type                  | Description                               |
-| ------------- | --------------------- | ----------------------------------------- |
+| Property      | Type                  | Description                                   |
+| ------------- | --------------------- | --------------------------------------------- |
 | `triggerSync` | `() => Promise<void>` | Function to manually trigger a sync operation |
 
 **Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
@@ -472,14 +632,18 @@ Both `writeDb` and `readDb` are `DB` instances from [`@op-engineering/op-sqlite`
 Access sync status information, use this when you need to display sync state in your UI.
 
 ```typescript
-const { isSyncing, lastSyncTime, syncError, isSyncReady, lastSyncChanges } =
+const { syncMode, isSyncing, lastSyncTime, syncError, currentSyncInterval } =
   useSyncStatus();
 
 return (
   <View>
+    <Text>Mode: {syncMode}</Text>
     <Text>{isSyncing ? 'Syncing...' : 'Idle'}</Text>
     {lastSyncTime && (
       <Text>Last sync: {new Date(lastSyncTime).toLocaleTimeString()}</Text>
+    )}
+    {currentSyncInterval && (
+      <Text>Next sync: {currentSyncInterval / 1000}s</Text>
     )}
     {syncError && <Text>Sync error: {syncError.message}</Text>}
   </View>
@@ -488,11 +652,17 @@ return (
 
 **Returns:**
 
+- `syncMode`: Current sync mode (`'polling'` or `'push'`)
 - `isSyncReady`: Whether sync is configured
 - `isSyncing`: Whether sync is in progress
 - `lastSyncTime`: Last successful sync timestamp
 - `lastSyncChanges`: Number of changes in last sync
 - `syncError`: Recoverable sync error
+- `currentSyncInterval`: Current polling interval (null in push mode)
+- `consecutiveEmptySyncs`: Number of consecutive syncs with no changes
+- `consecutiveSyncErrors`: Number of consecutive sync errors
+- `isAppInBackground`: Whether app is in background
+- `isNetworkAvailable`: Whether network is available
 
 **Best for:** Status displays, sync indicators, monitoring components.
 
