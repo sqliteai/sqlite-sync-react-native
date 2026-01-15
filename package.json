@@ -98,16 +98,12 @@
     "@op-engineering/op-sqlite": "^15.1.14",
     "@react-native-community/netinfo": "^11.0.0",
     "expo-constants": "*",
-    "expo-device": "*",
     "expo-notifications": "*",
     "react": "*",
     "react-native": "*"
   },
   "peerDependenciesMeta": {
     "expo-constants": {
-      "optional": true
-    },
-    "expo-device": {
       "optional": true
     },
     "expo-notifications": {
