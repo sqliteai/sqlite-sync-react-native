@@ -10,7 +10,7 @@ export type SyncMode = 'polling' | 'push';
  */
 export interface AdaptivePollingConfig {
   /**
-   * Base interval for polling in milliseconds (default: 30000ms / 30s)
+   * Base interval for polling in milliseconds (default: 5000ms / 5s)
    * Used when app is active and no special conditions apply
    */
   baseInterval?: number;
@@ -22,10 +22,26 @@ export interface AdaptivePollingConfig {
   maxInterval?: number;
 
   /**
-   * Number of consecutive empty syncs before backing off (default: 3)
+   * Number of consecutive empty syncs before backing off (default: 5)
    * After this many syncs with no changes, interval will increase
    */
   emptyThreshold?: number;
+
+  /**
+   * Idle backoff multiplier for exponential backoff (default: 1.5)
+   * When consecutive empty syncs exceed threshold, interval multiplies by this factor
+   * Gentler backoff assumes quiet periods are temporary
+   * Example: 5s → 7.5s → 11s → 17s → 25s ... (caps at maxInterval)
+   */
+  idleBackoffMultiplier?: number;
+
+  /**
+   * Error backoff multiplier for exponential backoff (default: 2.0)
+   * When sync errors occur, interval multiplies by this factor
+   * Aggressive backoff protects server and battery during persistent failures
+   * Example: 5s → 10s → 20s → 40s → 80s ... (caps at maxInterval)
+   */
+  errorBackoffMultiplier?: number;
 }
 
 /**

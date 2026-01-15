@@ -1,5 +1,4 @@
 import type { AdaptivePollingConfig } from '../../types/SQLiteSyncProviderProps';
-import { ERROR_BACKOFF_MULTIPLIER } from '../constants';
 
 /**
  * Parameters for calculating the next adaptive sync interval
@@ -25,8 +24,8 @@ export interface AdaptiveIntervalParams {
  * Calculates the next sync interval based on sync activity
  *
  * **Algorithm:**
- * 1. **Error backoff (exponential)**: If errors detected → baseInterval × (2 ^ errorCount), capped at maxInterval
- * 2. **Idle backoff (linear)**: If 3+ consecutive empty syncs → baseInterval + (emptyCount × 15s), capped at maxInterval
+ * 1. **Error backoff (exponential)**: If errors detected → baseInterval × (errorBackoffMultiplier ^ errorCount), capped at maxInterval
+ * 2. **Idle backoff (exponential)**: If emptySyncs >= emptyThreshold → baseInterval × (idleBackoffMultiplier ^ (emptySyncs - threshold + 1)), capped at maxInterval
  * 3. **Default**: baseInterval
  *
  * @param params - Sync activity parameters
@@ -35,11 +34,19 @@ export interface AdaptiveIntervalParams {
  *
  * @example
  * ```typescript
+ * Idle backoff example
  * const interval = calculateAdaptiveInterval(
- *   { lastSyncChanges: 0, consecutiveEmptySyncs: 5, consecutiveSyncErrors: 0 },
- *   { baseInterval: 30000, maxInterval: 300000, emptyThreshold: 3 }
+ *   { lastSyncChanges: 0, consecutiveEmptySyncs: 7, consecutiveSyncErrors: 0 },
+ *   { baseInterval: 5000, maxInterval: 300000, emptyThreshold: 5, idleBackoffMultiplier: 1.5 }
  * );
- * Returns: 60000 (baseInterval + 2 * 15000)
+ * Returns: 16875 (5000 × 1.5^3)
+ *
+ * Error backoff example
+ * const interval = calculateAdaptiveInterval(
+ *   { lastSyncChanges: 0, consecutiveEmptySyncs: 0, consecutiveSyncErrors: 3 },
+ *   { baseInterval: 5000, maxInterval: 300000, errorBackoffMultiplier: 2.0 }
+ * );
+ * Returns: 40000 (5000 × 2^3)
  * ```
  */
 export function calculateAdaptiveInterval(
@@ -48,20 +55,26 @@ export function calculateAdaptiveInterval(
 ): number {
   const { consecutiveEmptySyncs: emptySyncs, consecutiveSyncErrors: errors } =
     params;
-  const { baseInterval, maxInterval, emptyThreshold } = config;
+  const {
+    baseInterval,
+    maxInterval,
+    emptyThreshold,
+    idleBackoffMultiplier,
+    errorBackoffMultiplier,
+  } = config;
 
-  // Priority 1: Error backoff (exponential with 2x multiplier)
+  // Priority 1: Error backoff (exponential)
   if (errors > 0) {
     const errorInterval =
-      baseInterval * Math.pow(ERROR_BACKOFF_MULTIPLIER, errors);
+      baseInterval * Math.pow(errorBackoffMultiplier, errors);
     return Math.min(errorInterval, maxInterval);
   }
 
-  // Priority 2: Consecutive empty syncs - back off gradually
+  // Priority 2: Idle backoff (exponential)
   if (emptySyncs >= emptyThreshold) {
-    // Linear backoff: add 15s for each empty sync beyond threshold
-    const backoffMs = (emptySyncs - emptyThreshold + 1) * 15000;
-    const idleInterval = baseInterval + backoffMs;
+    const backoffPower = emptySyncs - emptyThreshold + 1;
+    const idleInterval =
+      baseInterval * Math.pow(idleBackoffMultiplier, backoffPower);
     return Math.min(idleInterval, maxInterval);
   }
 

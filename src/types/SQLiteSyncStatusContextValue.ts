@@ -41,8 +41,9 @@ export interface SQLiteSyncStatusContextValue {
   /**
    * Current adaptive polling interval in milliseconds
    * Shows the currently active interval based on sync activity
+   * null when syncMode is 'push' (no polling active)
    */
-  currentSyncInterval: number;
+  currentSyncInterval: number | null;
 
   /**
    * Number of consecutive syncs that found no changes

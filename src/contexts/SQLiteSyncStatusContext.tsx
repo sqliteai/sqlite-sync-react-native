@@ -11,7 +11,7 @@ const defaultContextValue: SQLiteSyncStatusContextValue = {
   lastSyncTime: null,
   lastSyncChanges: 0,
   syncError: null,
-  currentSyncInterval: 30000,
+  currentSyncInterval: null,
   consecutiveEmptySyncs: 0,
   consecutiveSyncErrors: 0,
   isAppInBackground: false,

@@ -7,7 +7,6 @@ import type { SQLiteDbContextValue } from '../types/SQLiteDbContextValue';
 import type { SQLiteSyncStatusContextValue } from '../types/SQLiteSyncStatusContextValue';
 import type { SQLiteSyncActionsContextValue } from '../types/SQLiteSyncActionsContextValue';
 import { createLogger } from '../utils/logger';
-import { DEFAULT_BASE_INTERVAL } from './constants';
 import { useDatabaseInitialization } from './hooks/useDatabaseInitialization';
 import { useSyncManager } from './hooks/useSyncManager';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
@@ -75,7 +74,9 @@ export function SQLiteSyncProvider({
     const defaults = {
       baseInterval: 5000, // 5s base interval
       maxInterval: 300000, // 5min maximum backoff
-      emptyThreshold: 5, // Back off after 3 empty syncs
+      emptyThreshold: 5, // Back off after 5 empty syncs
+      idleBackoffMultiplier: 1.5, // 1.5x multiplier for idle backoff (gentle)
+      errorBackoffMultiplier: 2.0, // 2x multiplier for error backoff (aggressive)
     };
     return syncMode === 'polling'
       ? { ...defaults, ...adaptivePolling }
@@ -84,12 +85,12 @@ export function SQLiteSyncProvider({
 
   /** CURRENT INTERVAL STATE (only used in polling mode) */
   const initialInterval =
-    syncMode === 'polling'
-      ? adaptivePolling?.baseInterval ?? DEFAULT_BASE_INTERVAL
-      : DEFAULT_BASE_INTERVAL;
+    syncMode === 'polling' ? adaptiveConfig.baseInterval : null;
 
-  const [currentInterval, setCurrentInterval] = useState(initialInterval);
-  const currentIntervalRef = useRef(initialInterval);
+  const [currentInterval, setCurrentInterval] = useState<number | null>(
+    initialInterval
+  );
+  const currentIntervalRef = useRef<number | null>(initialInterval);
 
   /** INITIALIZE DATABASE */
   const {

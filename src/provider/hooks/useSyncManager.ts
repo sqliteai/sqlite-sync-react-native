@@ -45,14 +45,14 @@ export interface SyncManagerParams {
   adaptiveConfig: Required<AdaptivePollingConfig>;
 
   /**
-   * Ref to current polling interval
+   * Ref to current polling interval (null in push mode)
    */
-  currentIntervalRef: React.RefObject<number>;
+  currentIntervalRef: React.RefObject<number | null>;
 
   /**
-   * Setter for current interval state
+   * Setter for current interval state (null in push mode)
    */
-  setCurrentInterval: React.Dispatch<React.SetStateAction<number>>;
+  setCurrentInterval: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
 /**
