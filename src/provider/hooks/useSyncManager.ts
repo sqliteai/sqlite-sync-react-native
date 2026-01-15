@@ -195,37 +195,32 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
       isSyncingRef.current = true;
 
       let syncResult: QueryResult | undefined;
+      let changes = 0;
 
       /**
-       * Wrap the sync command in a transaction. It ensures compatibility with op-sqlite's
-       * `db.reactiveExecute`. Reactive queries are designed to re-run only
-       * after a transaction successfully commits, providing a single, efficient update.
+       * We wrap each call in a transaction for compatibility with op-sqlite's
+       * `db.reactiveExecute`. Reactive queries re-run only after a transaction
+       * commits, providing a single, efficient update.
        */
-      await writeDbRef.current.transaction(async (tx) => {
-        syncResult = await tx.execute('SELECT cloudsync_network_sync();');
+      const maxSyncAttempts = 4;
 
-        let changes = extractChanges(syncResult);
-
-        if (changes > 0) {
-          return;
-        }
-
-        await delay(1000);
-
-        syncResult = await tx.execute('SELECT cloudsync_network_sync();');
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await writeDbRef.current.transaction(async (tx) => {
+          syncResult = await tx.execute('SELECT cloudsync_network_sync();');
+        });
 
         changes = extractChanges(syncResult);
 
         if (changes > 0) {
-          return;
+          // Changes detected - sync complete, no need to continue
+          break;
         }
 
-        await delay(1000);
-
-        syncResult = await tx.execute('SELECT cloudsync_network_sync();');
-      });
-
-      const changes = extractChanges(syncResult);
+        // Wait before next attempt (except after last attempt)
+        if (attempt < maxSyncAttempts - 1) {
+          await delay(1000);
+        }
+      }
 
       setLastSyncTime(Date.now());
       setLastSyncChanges(changes);
