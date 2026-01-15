@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { SQLiteDbContext } from '../contexts/SQLiteDbContext';
 import { SQLiteSyncStatusContext } from '../contexts/SQLiteSyncStatusContext';
 import { SQLiteSyncActionsContext } from '../contexts/SQLiteSyncActionsContext';
@@ -127,6 +127,53 @@ export function SQLiteSyncProvider({
     currentIntervalRef,
     setCurrentInterval,
   });
+
+  /** RESET INTERVAL ON CONFIG CHANGE */
+  const prevSyncModeRef = useRef(syncMode);
+  const prevIdleMultiplierRef = useRef(adaptiveConfig.idleBackoffMultiplier);
+  const prevErrorMultiplierRef = useRef(adaptiveConfig.errorBackoffMultiplier);
+
+  useEffect(() => {
+    const syncModeChanged = prevSyncModeRef.current !== syncMode;
+    const idleChanged =
+      prevIdleMultiplierRef.current !== adaptiveConfig.idleBackoffMultiplier;
+    const errorChanged =
+      prevErrorMultiplierRef.current !== adaptiveConfig.errorBackoffMultiplier;
+
+    if (syncModeChanged || idleChanged || errorChanged) {
+      if (syncModeChanged) {
+        logger.info(
+          `🔄 Sync mode changed to '${syncMode}' - resetting interval state`
+        );
+      } else {
+        logger.info(
+          `🔄 Backoff multiplier changed - resetting to base interval (${adaptiveConfig.baseInterval}ms)`
+        );
+      }
+
+      setConsecutiveEmptySyncs(0);
+
+      if (syncMode === 'polling') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCurrentInterval(adaptiveConfig.baseInterval);
+        currentIntervalRef.current = adaptiveConfig.baseInterval;
+      } else {
+        setCurrentInterval(null);
+        currentIntervalRef.current = null;
+      }
+
+      prevSyncModeRef.current = syncMode;
+      prevIdleMultiplierRef.current = adaptiveConfig.idleBackoffMultiplier;
+      prevErrorMultiplierRef.current = adaptiveConfig.errorBackoffMultiplier;
+    }
+  }, [
+    syncMode,
+    adaptiveConfig.idleBackoffMultiplier,
+    adaptiveConfig.errorBackoffMultiplier,
+    adaptiveConfig.baseInterval,
+    setConsecutiveEmptySyncs,
+    logger,
+  ]);
 
   /** APP LIFECYCLE */
   const { appState, isInBackground } = useAppLifecycle({
