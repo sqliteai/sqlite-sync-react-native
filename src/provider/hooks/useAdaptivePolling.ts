@@ -39,8 +39,9 @@ export interface AdaptivePollingParams {
  * - Pauses polling when app is backgrounded
  * - Prevents multiple polling loops from starting
  * - Uses dynamic interval from currentIntervalRef
- * - Performs initial sync on mount
  * - Only runs when syncMode is 'polling'
+ *
+ * Note: Initial sync is handled by SQLiteSyncProvider, not this hook.
  *
  * @param params - Adaptive polling parameters
  *
@@ -120,12 +121,7 @@ export function useAdaptivePolling(params: AdaptivePollingParams): void {
       }, interval);
     };
 
-    // Initial sync on mount
-    performSyncRef.current?.().finally(() => {
-      if (isPollingActiveRef.current) {
-        scheduleNextSync();
-      }
-    });
+    scheduleNextSync();
 
     return () => {
       if (syncTimerRef.current !== null) {

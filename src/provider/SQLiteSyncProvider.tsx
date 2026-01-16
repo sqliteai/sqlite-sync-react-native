@@ -202,6 +202,16 @@ export function SQLiteSyncProvider({
     logger,
   });
 
+  /** INITIAL SYNC - Trigger sync on app start */
+  const hasInitialSyncedRef = useRef(false);
+  useEffect(() => {
+    if (isSyncReady && !hasInitialSyncedRef.current) {
+      hasInitialSyncedRef.current = true;
+      performSyncRef.current?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSyncReady]);
+
   /** ADAPTIVE POLLING - Only active when syncMode is 'polling' */
   useAdaptivePolling({
     isSyncReady,

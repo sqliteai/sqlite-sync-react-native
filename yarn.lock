@@ -3770,7 +3770,6 @@ __metadata:
     expo: "npm:~54.0.25"
     expo-build-properties: "npm:~1.0.0"
     expo-constants: "npm:~18.0.13"
-    expo-device: "npm:~8.0.10"
     expo-notifications: "npm:~0.32.16"
     expo-status-bar: "npm:~3.0.8"
     react: "npm:19.1.0"
@@ -3812,14 +3811,11 @@ __metadata:
     "@op-engineering/op-sqlite": ^15.1.14
     "@react-native-community/netinfo": ^11.0.0
     expo-constants: "*"
-    expo-device: "*"
     expo-notifications: "*"
     react: "*"
     react-native: "*"
   peerDependenciesMeta:
     expo-constants:
-      optional: true
-    expo-device:
       optional: true
     expo-notifications:
       optional: true
@@ -7104,17 +7100,6 @@ __metadata:
     expo: "*"
     react-native: "*"
   checksum: 10c0/bbe33c0611b8085ecd965434d71d27f065427146fe23f3162d170812f8c917b032604c79e0cd129f39147f58f7dc581ee3c6b64a84bf865dd325595289dc77e6
-  languageName: node
-  linkType: hard
-
-"expo-device@npm:~8.0.10":
-  version: 8.0.10
-  resolution: "expo-device@npm:8.0.10"
-  dependencies:
-    ua-parser-js: "npm:^0.7.33"
-  peerDependencies:
-    expo: "*"
-  checksum: 10c0/5e18593cd5589687fb26dab37bcad03bbbd76c3cbd54a0c7f894736530b8802ffe5492731d9356a5204aea18a802f7ccf1f0fa6e17b613b4869ded0fc9fa2262
   languageName: node
   linkType: hard
 
@@ -13293,15 +13278,6 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10c0/ad09fdf7a756814dce65bc60c1657b40d44451346858eea230e10f2e95a289d9183b6e32e5c11e95acc0ccc214b4f36289dcad4bf1886b0adb84d711d336a430
-  languageName: node
-  linkType: hard
-
-"ua-parser-js@npm:^0.7.33":
-  version: 0.7.41
-  resolution: "ua-parser-js@npm:0.7.41"
-  bin:
-    ua-parser-js: script/cli.js
-  checksum: 10c0/b134bc0d8da10c76e07740a0ade61c193fd4c4d120ba2cb2530e26931f6b550dd60b6e801d8891f6d9c23dfebadf5590294739069edff94396f173cc8cc5767e
   languageName: node
   linkType: hard
 
