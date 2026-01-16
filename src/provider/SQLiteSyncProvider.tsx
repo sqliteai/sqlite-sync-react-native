@@ -2,6 +2,10 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { SQLiteDbContext } from '../contexts/SQLiteDbContext';
 import { SQLiteSyncStatusContext } from '../contexts/SQLiteSyncStatusContext';
 import { SQLiteSyncActionsContext } from '../contexts/SQLiteSyncActionsContext';
+import {
+  SQLiteInternalContext,
+  type SQLiteInternalContextValue,
+} from '../contexts/SQLiteInternalContext';
 import type { SQLiteSyncProviderProps } from '../types/SQLiteSyncProviderProps';
 import type { SQLiteDbContextValue } from '../types/SQLiteDbContextValue';
 import type { SQLiteSyncStatusContextValue } from '../types/SQLiteSyncStatusContextValue';
@@ -164,7 +168,6 @@ export function SQLiteSyncProvider({
       setConsecutiveEmptySyncs(0);
 
       if (syncMode === 'polling') {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCurrentInterval(adaptiveConfig.baseInterval);
         currentIntervalRef.current = adaptiveConfig.baseInterval;
       } else {
@@ -286,13 +289,22 @@ export function SQLiteSyncProvider({
     [performSyncRef]
   );
 
+  const internalContextValue = useMemo<SQLiteInternalContextValue>(
+    () => ({
+      logger,
+    }),
+    [logger]
+  );
+
   return (
-    <SQLiteDbContext.Provider value={dbContextValue}>
-      <SQLiteSyncStatusContext.Provider value={syncStatusContextValue}>
-        <SQLiteSyncActionsContext.Provider value={syncActionsContextValue}>
-          {children}
-        </SQLiteSyncActionsContext.Provider>
-      </SQLiteSyncStatusContext.Provider>
-    </SQLiteDbContext.Provider>
+    <SQLiteInternalContext.Provider value={internalContextValue}>
+      <SQLiteDbContext.Provider value={dbContextValue}>
+        <SQLiteSyncStatusContext.Provider value={syncStatusContextValue}>
+          <SQLiteSyncActionsContext.Provider value={syncActionsContextValue}>
+            {children}
+          </SQLiteSyncActionsContext.Provider>
+        </SQLiteSyncStatusContext.Provider>
+      </SQLiteDbContext.Provider>
+    </SQLiteInternalContext.Provider>
   );
 }

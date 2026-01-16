@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef } from 'react';
 import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
+import { useInternalLogger } from '../internal/useInternalLogger';
 import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
 
 /**
@@ -58,6 +59,7 @@ import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
  */
 export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
   const { writeDb } = useContext(SQLiteDbContext);
+  const logger = useInternalLogger();
 
   // Store callback in ref to allow inline functions without causing infinite loops
   const savedCallback = useRef(config.onUpdate);
@@ -91,7 +93,11 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
             [hookData.rowId]
           );
           row = (result.rows?.[0] as T) || null;
-        } catch {
+        } catch (err) {
+          logger.warn(
+            `⚠️ Failed to fetch row data for table "${hookData.table}" (rowId: ${hookData.rowId}):`,
+            err
+          );
           row = null;
         }
       }
@@ -109,5 +115,5 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
     return () => {
       writeDb.updateHook(null);
     };
-  }, [writeDb]);
+  }, [writeDb, logger]);
 }

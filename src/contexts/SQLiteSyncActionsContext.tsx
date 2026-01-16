@@ -5,12 +5,7 @@ import type { SQLiteSyncActionsContextValue } from '../types/SQLiteSyncActionsCo
  * Default context value used before SQLiteSyncProvider initializes
  */
 const defaultContextValue: SQLiteSyncActionsContextValue = {
-  triggerSync: async () => {
-    console.warn(
-      '[SQLiteSync]',
-      '⚠️ triggerSync called before SQLiteSyncProvider is mounted'
-    );
-  },
+  triggerSync: async () => {},
 };
 
 /**

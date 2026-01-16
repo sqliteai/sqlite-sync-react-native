@@ -1,24 +1,11 @@
 import { useContext, useState, useCallback } from 'react';
 import type { QueryResult } from '@op-engineering/op-sqlite';
 import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
+import { useInternalLogger } from '../internal/useInternalLogger';
 import type { ExecuteOptions } from '../../types/ExecuteOptions';
 
 /**
  * Hook for executing SQL commands with configurable connection selection.
- *
- * **Connection Selection:**
- * - By default, uses the WRITE connection (sees sync changes, can write)
- * - Pass `{ readOnly: true }` to use the READ connection (read-only queries)
- *
- * Unlike useSqliteSyncQuery (which is declarative and "Last Request Wins"),
- * this hook is imperative and ensures ALL requests are processed by SQLite.
- *
- * Concurrency Strategy:
- * - "Queue/Serial": We send requests to SQLite immediately.
- * - We do NOT debounce or cancel requests. If the user clicks "Save" 3 times,
- *   we execute 3 INSERTs (SQLite handles the ACID serialization internally).
- * - For high-frequency inputs (e.g. typing), debouncing should be handled
- *   at the UI component level before calling this hook.
  *
  * @returns Object containing the execute function and execution state
  *
@@ -26,15 +13,19 @@ import type { ExecuteOptions } from '../../types/ExecuteOptions';
  * ```typescript
  * const { execute, isExecuting, error } = useSqliteExecute();
  *
- * // Write operation (uses writeDb by default)
+ * Write operation (uses writeDb, auto-syncs by default)
  * await execute('INSERT INTO todos (text) VALUES (?)', ['New Item']);
  *
- * // Read operation (explicitly use readDb)
+ * Read operation (explicitly use readDb)
  * await execute('SELECT * FROM todos WHERE id = ?', [id], { readOnly: true });
+ *
+ * Write without auto-sync (for local-only tables)
+ * await execute('INSERT INTO _cache (key, value) VALUES (?, ?)', [key, val], { autoSync: false });
  * ```
  */
 export function useSqliteExecute() {
   const { writeDb, readDb } = useContext(SQLiteDbContext);
+  const logger = useInternalLogger();
 
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -67,6 +58,24 @@ export function useSqliteExecute() {
 
       try {
         const result = await db.execute(sql, params);
+
+        // Auto-sync local changes to cloud after write operations
+        // Only if:
+        // 1. It's a write operation (not readOnly)
+        // 2. Auto-sync is not explicitly disabled
+        const shouldAutoSync =
+          !options?.readOnly && options?.autoSync !== false;
+
+        if (shouldAutoSync) {
+          try {
+            await db.execute('SELECT cloudsync_network_send_changes();');
+          } catch (syncErr) {
+            // Don't fail the original operation if sync fails
+            // The changes are still local and will sync later
+            logger.warn('⚠️ Failed to auto-sync changes:', syncErr);
+          }
+        }
+
         return result;
       } catch (err) {
         const errorObj =
@@ -79,7 +88,7 @@ export function useSqliteExecute() {
         setIsExecuting(false);
       }
     },
-    [writeDb, readDb]
+    [writeDb, readDb, logger]
   );
 
   return {
