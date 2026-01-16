@@ -131,11 +131,8 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
           // TODO: Send token to backend
         }
       } catch (error) {
-        logger.warn(
-          '⚠️ Failed to get push token - falling back to polling mode:',
-          error
-        );
-        onPermissionsDenied?.();
+        // Network errors and other temporary failures - don't fallback
+        logger.warn('⚠️ Failed to get push token (will retry):', error);
       }
     };
 
@@ -152,30 +149,17 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
 
     // Listen for notifications received while app is in foreground
     const foregroundSubscription =
-      ExpoNotifications.addNotificationReceivedListener(
-        (_notification: any) => {
-          logger.info(
-            '📲 Push notification received (foreground) - triggering sync'
-          );
-          performSyncRef.current?.();
-        }
-      );
-
-    // Listen for notification responses (user tapped notification)
-    const responseSubscription =
-      ExpoNotifications.addNotificationResponseReceivedListener(
-        (_response: any) => {
-          logger.info(
-            '📲 Push notification response received - triggering sync'
-          );
-          performSyncRef.current?.();
-        }
-      );
+      ExpoNotifications.addNotificationReceivedListener((notification: any) => {
+        logger.info(
+          '📲 Push notification received (foreground) - triggering sync'
+        );
+        logger.info('📲 Notification data:', JSON.stringify(notification));
+        performSyncRef.current?.();
+      });
 
     return () => {
       // Cleanup subscriptions
       foregroundSubscription.remove();
-      responseSubscription.remove();
       logger.info('📲 Push notification listeners removed');
     };
   }, [

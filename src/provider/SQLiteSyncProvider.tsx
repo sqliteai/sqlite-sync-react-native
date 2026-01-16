@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { SQLiteDbContext } from '../contexts/SQLiteDbContext';
 import { SQLiteSyncStatusContext } from '../contexts/SQLiteSyncStatusContext';
 import { SQLiteSyncActionsContext } from '../contexts/SQLiteSyncActionsContext';
@@ -9,6 +9,7 @@ import type { SQLiteSyncActionsContextValue } from '../types/SQLiteSyncActionsCo
 import { createLogger } from '../utils/logger';
 import { useDatabaseInitialization } from './hooks/useDatabaseInitialization';
 import { useSyncManager } from './hooks/useSyncManager';
+import { useInitialSync } from './hooks/useInitialSync';
 import { useAppLifecycle } from './hooks/useAppLifecycle';
 import { useNetworkListener } from './hooks/useNetworkListener';
 import { useAdaptivePolling } from './hooks/useAdaptivePolling';
@@ -134,6 +135,7 @@ export function SQLiteSyncProvider({
     adaptiveConfig,
     currentIntervalRef,
     setCurrentInterval,
+    syncMode: effectiveSyncMode,
   });
 
   /** RESET INTERVAL ON CONFIG CHANGE */
@@ -202,15 +204,12 @@ export function SQLiteSyncProvider({
     logger,
   });
 
-  /** INITIAL SYNC - Trigger sync on app start */
-  const hasInitialSyncedRef = useRef(false);
-  useEffect(() => {
-    if (isSyncReady && !hasInitialSyncedRef.current) {
-      hasInitialSyncedRef.current = true;
-      performSyncRef.current?.();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSyncReady]);
+  /** INITIAL SYNC - Trigger sync on app start (both polling and push modes) */
+  useInitialSync({
+    isSyncReady,
+    performSyncRef,
+    logger,
+  });
 
   /** ADAPTIVE POLLING - Only active when syncMode is 'polling' */
   useAdaptivePolling({
@@ -221,6 +220,14 @@ export function SQLiteSyncProvider({
     syncMode: effectiveSyncMode,
   });
 
+  /** PUSH PERMISSIONS DENIED HANDLER */
+  const handlePermissionsDenied = useCallback(() => {
+    logger.warn(
+      '⚠️ Falling back to polling mode due to denied push permissions'
+    );
+    setEffectiveSyncMode('polling');
+  }, [logger]);
+
   /** PUSH NOTIFICATIONS - Only active when syncMode is 'push' */
   useSqliteSyncPush({
     isSyncReady,
@@ -228,12 +235,7 @@ export function SQLiteSyncProvider({
     writeDbRef,
     syncMode: effectiveSyncMode,
     logger,
-    onPermissionsDenied: () => {
-      logger.warn(
-        '⚠️ Falling back to polling mode due to denied push permissions'
-      );
-      setEffectiveSyncMode('polling');
-    },
+    onPermissionsDenied: handlePermissionsDenied,
   });
 
   /** CONTEXT VALUES */

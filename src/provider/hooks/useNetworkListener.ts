@@ -67,6 +67,7 @@ export function useNetworkListener(
 
   /** REFS */
   const appStateRef = useRef<string>('active');
+  const isNetworkAvailableRef = useRef<boolean>(true);
 
   // Keep appStateRef in sync
   useEffect(() => {
@@ -80,10 +81,11 @@ export function useNetworkListener(
     }
 
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const wasOffline = !isNetworkAvailable;
+      const wasOffline = !isNetworkAvailableRef.current;
       const isNowOnline =
         (state.isConnected ?? false) && (state.isInternetReachable ?? true);
 
+      isNetworkAvailableRef.current = isNowOnline;
       setIsNetworkAvailable(isNowOnline);
 
       // Network reconnected - trigger immediate sync (only when app is active)
@@ -96,7 +98,9 @@ export function useNetworkListener(
     return () => {
       unsubscribe();
     };
-  }, [isSyncReady, isNetworkAvailable, logger, performSyncRef]);
+    // performSyncRef is a stable ref, logger is memoized
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSyncReady]);
 
   return {
     isNetworkAvailable,

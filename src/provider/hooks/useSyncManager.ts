@@ -53,6 +53,11 @@ export interface SyncManagerParams {
    * Setter for current interval state (null in push mode)
    */
   setCurrentInterval: React.Dispatch<React.SetStateAction<number | null>>;
+
+  /**
+   * Sync mode - intervals only updated in polling mode
+   */
+  syncMode: 'polling' | 'push';
 }
 
 /**
@@ -110,9 +115,12 @@ export interface SyncManagerResult {
  *
  * Handles:
  * - Sync execution with guards (network, concurrency, sync ready)
- * - Adaptive interval calculation based on sync results
+ * - Adaptive interval calculation based on sync results (polling mode only)
  * - Sync state management (isSyncing, lastSyncTime, changes, errors)
  * - performSyncRef pattern to avoid closure issues
+ *
+ * Note: Interval updates only occur in polling mode. In push mode, intervals
+ * remain null and are not recalculated after syncs.
  *
  * @param params - Sync manager parameters
  * @returns Sync functions and state
@@ -130,7 +138,8 @@ export interface SyncManagerResult {
  *   logger,
  *   adaptiveConfig,
  *   currentIntervalRef,
- *   setCurrentInterval
+ *   setCurrentInterval,
+ *   syncMode: 'polling'
  * });
  * ```
  */
@@ -142,6 +151,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
     adaptiveConfig,
     currentIntervalRef,
     setCurrentInterval,
+    syncMode,
   } = params;
 
   /** SYNC STATE */
@@ -236,20 +246,23 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
         logger.info(`✅ Sync completed: no changes`);
       }
 
-      // Recalculate interval based on activity
-      const newInterval = calculateAdaptiveInterval(
-        {
-          lastSyncChanges: changes,
-          consecutiveEmptySyncs: changes === 0 ? consecutiveEmptySyncs + 1 : 0,
-          consecutiveSyncErrors: 0,
-        },
-        adaptiveConfig
-      );
+      // Recalculate interval based on activity (polling mode only)
+      if (syncMode === 'polling') {
+        const newInterval = calculateAdaptiveInterval(
+          {
+            lastSyncChanges: changes,
+            consecutiveEmptySyncs:
+              changes === 0 ? consecutiveEmptySyncs + 1 : 0,
+            consecutiveSyncErrors: 0,
+          },
+          adaptiveConfig
+        );
 
-      currentIntervalRef.current = newInterval;
-      setCurrentInterval(newInterval);
+        currentIntervalRef.current = newInterval;
+        setCurrentInterval(newInterval);
 
-      logger.info(`🔄 Next sync in ${newInterval / 1000}s`);
+        logger.info(`🔄 Next sync in ${newInterval / 1000}s`);
+      }
 
       setSyncError(null);
     } catch (err) {
@@ -259,20 +272,22 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
       // Increment error counter for backoff
       setConsecutiveErrors((prev) => prev + 1);
 
-      // Recalculate interval with error backoff
-      const newInterval = calculateAdaptiveInterval(
-        {
-          lastSyncChanges: 0,
-          consecutiveEmptySyncs: 0,
-          consecutiveSyncErrors: consecutiveSyncErrors + 1,
-        },
-        adaptiveConfig
-      );
+      // Recalculate interval with error backoff (polling mode only)
+      if (syncMode === 'polling') {
+        const newInterval = calculateAdaptiveInterval(
+          {
+            lastSyncChanges: 0,
+            consecutiveEmptySyncs: 0,
+            consecutiveSyncErrors: consecutiveSyncErrors + 1,
+          },
+          adaptiveConfig
+        );
 
-      currentIntervalRef.current = newInterval;
-      setCurrentInterval(newInterval);
+        currentIntervalRef.current = newInterval;
+        setCurrentInterval(newInterval);
 
-      logger.info(`🔄 Next sync in ${newInterval / 1000}s (after error)`);
+        logger.info(`🔄 Next sync in ${newInterval / 1000}s (after error)`);
+      }
     } finally {
       setIsSyncing(false);
       isSyncingRef.current = false;
@@ -286,6 +301,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
     setCurrentInterval,
     consecutiveEmptySyncs,
     consecutiveSyncErrors,
+    syncMode,
   ]);
 
   /** Keep performSyncRef updated */
