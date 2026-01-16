@@ -193,6 +193,7 @@ export function SQLiteSyncProvider({
     currentIntervalRef,
     setCurrentInterval,
     adaptiveConfig,
+    syncMode: effectiveSyncMode,
     logger,
   });
 

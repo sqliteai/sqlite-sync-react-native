@@ -39,6 +39,11 @@ export interface AppLifecycleParams {
   adaptiveConfig: Required<AdaptivePollingConfig>;
 
   /**
+   * Sync mode - intervals only updated in polling mode
+   */
+  syncMode: 'polling' | 'push';
+
+  /**
    * Logger instance for logging
    */
   logger: Logger;
@@ -65,7 +70,10 @@ export interface AppLifecycleResult {
  * Handles:
  * - AppState listener for foreground/background transitions
  * - Foreground sync trigger with debouncing
- * - Resetting to base interval when foregrounded
+ * - Resetting to base interval when foregrounded (polling mode only)
+ *
+ * Note: Interval updates and polling-specific logging only occur in polling mode.
+ * In push mode, only syncs are triggered without interval management.
  *
  * @param params - App lifecycle parameters
  * @returns App state information
@@ -79,6 +87,7 @@ export interface AppLifecycleResult {
  *   currentIntervalRef,
  *   setCurrentInterval,
  *   adaptiveConfig,
+ *   syncMode: 'polling',
  *   logger
  * });
  * ```
@@ -93,6 +102,7 @@ export function useAppLifecycle(
     currentIntervalRef,
     setCurrentInterval,
     adaptiveConfig,
+    syncMode,
     logger,
   } = params;
 
@@ -117,10 +127,12 @@ export function useAppLifecycle(
     logger.info('📱 App foregrounded - triggering immediate sync');
     lastForegroundSyncRef.current = now;
 
-    // Reset to base interval and clear empty sync counter
-    setConsecutiveEmptySyncs(0);
-    currentIntervalRef.current = adaptiveConfig.baseInterval;
-    setCurrentInterval(adaptiveConfig.baseInterval);
+    // Reset to base interval and clear empty sync counter (polling mode only)
+    if (syncMode === 'polling') {
+      setConsecutiveEmptySyncs(0);
+      currentIntervalRef.current = adaptiveConfig.baseInterval;
+      setCurrentInterval(adaptiveConfig.baseInterval);
+    }
 
     performSyncRef.current?.();
   }, [
@@ -130,11 +142,16 @@ export function useAppLifecycle(
     setConsecutiveEmptySyncs,
     currentIntervalRef,
     setCurrentInterval,
+    syncMode,
   ]);
 
   const handleBackgroundTransition = useCallback(() => {
-    logger.info('📱 App backgrounded - pausing sync polling');
-  }, [logger]);
+    if (syncMode === 'polling') {
+      logger.info('📱 App backgrounded - pausing sync polling');
+    } else {
+      logger.info('📱 App backgrounded');
+    }
+  }, [logger, syncMode]);
 
   /** APP STATE LISTENER - Detect foreground/background transitions */
   useEffect(() => {
