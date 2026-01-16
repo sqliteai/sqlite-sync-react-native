@@ -150,11 +150,11 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
     // Listen for notifications received while app is in foreground
     const foregroundSubscription =
       ExpoNotifications.addNotificationReceivedListener((notification: any) => {
-        logger.info(
-          '📲 Push notification received (foreground) - triggering sync'
-        );
-        logger.info('📲 Notification data:', JSON.stringify(notification));
-        performSyncRef.current?.();
+        const artifactURI = notification?.request?.content?.data?.artifactURI;
+        if (artifactURI === 'https://sqlite.ai') {
+          logger.info('📲 SQLite Cloud notification - triggering sync');
+          performSyncRef.current?.();
+        }
       });
 
     return () => {
