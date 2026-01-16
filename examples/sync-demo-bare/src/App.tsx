@@ -155,9 +155,7 @@ function TestApp() {
 
         {/* SEARCH BAR */}
         <View style={styles.searchContainer}>
-          <Text style={styles.sectionLabel}>
-            🔍 Search (Client-side Filter)
-          </Text>
+          <Text style={styles.sectionLabel}>🔍 Search</Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Type to filter list..."
