@@ -5,7 +5,9 @@
   "scripts": {
     "start": "expo start",
     "android": "yarn install && npx expo prebuild --platform android --clean && npx expo run:android",
+    "android:device": "yarn install && npx expo prebuild --platform android --clean && npx expo run:android --device",
     "ios": "yarn install && npx expo prebuild --platform ios --clean && cd ios && pod install && cd .. && npx expo run:ios",
+    "ios:device": "yarn install && npx expo prebuild --platform ios --clean && cd ios && pod install && cd .. && npx expo run:ios --device",
     "prebuild:ios": "npx expo prebuild --platform ios --clean",
     "prebuild:android": "npx expo prebuild --platform android --clean",
     "clean": "rm -rf node_modules .expo ios android",
