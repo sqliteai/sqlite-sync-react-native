@@ -5,13 +5,15 @@
 
 const PREFIX = '[SQLiteSync]';
 
+const getTimestamp = () => new Date().toISOString();
+
 export const createLogger = (debug: boolean = false) => ({
   /**
    * Log informational messages (only in debug mode)
    */
   info: (...args: any[]) => {
     if (debug) {
-      console.log(PREFIX, ...args);
+      console.log(getTimestamp(), PREFIX, ...args);
     }
   },
 
@@ -20,7 +22,7 @@ export const createLogger = (debug: boolean = false) => ({
    */
   warn: (...args: any[]) => {
     if (debug) {
-      console.warn(PREFIX, ...args);
+      console.warn(getTimestamp(), PREFIX, ...args);
     }
   },
 
@@ -28,7 +30,7 @@ export const createLogger = (debug: boolean = false) => ({
    * Log error messages (always logged, regardless of debug mode)
    */
   error: (...args: any[]) => {
-    console.error(PREFIX, ...args);
+    console.error(getTimestamp(), PREFIX, ...args);
   },
 });
 
