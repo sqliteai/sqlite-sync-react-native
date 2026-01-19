@@ -54,6 +54,12 @@ import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
  * The library automatically wraps sync operations in transactions, so reactive queries
  * will fire when cloud changes arrive.
  */
+/**
+ * Debounce delay before setting up reactive subscription.
+ * Prevents rapid subscription churn when query parameters change quickly.
+ */
+const SUBSCRIPTION_DEBOUNCE_MS = 1000;
+
 export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
   const { readDb, writeDb } = useContext(SQLiteDbContext);
 
@@ -107,7 +113,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
     subscriptionUpdateTimerRef.current = setTimeout(() => {
       // Trigger Effect 2 by changing the signature
       setInternalSubscriptionSignature(currentSubscriptionSignature);
-    }, 1000);
+    }, SUBSCRIPTION_DEBOUNCE_MS);
 
     return () => {
       if (subscriptionUpdateTimerRef.current)
