@@ -146,17 +146,11 @@ export function useDatabaseInitialization(
         logger.info('📂 Opening write connection...');
         const localWriteDb = await createDatabase(databaseName, 'write');
         writeDbRef.current = localWriteDb;
-        if (isMounted) {
-          setWriteDb(localWriteDb);
-        }
         logger.info('✅ Write connection opened and configured');
 
         logger.info('📂 Opening read connection...');
         const localReadDb = await createDatabase(databaseName, 'read');
         readDbRef.current = localReadDb;
-        if (isMounted) {
-          setReadDb(localReadDb);
-        }
         logger.info('✅ Read connection opened and configured (query_only)');
 
         /** CREATE TABLES (using write connection) */
@@ -181,7 +175,10 @@ export function useDatabaseInitialization(
 
         logger.info('✅ Databases ready for local use');
 
+        /** EXPOSE DATABASE CONNECTIONS - only after tables are created */
         if (isMounted) {
+          setWriteDb(localWriteDb);
+          setReadDb(localReadDb);
           setInitError(null);
         }
 
