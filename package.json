@@ -10,6 +10,11 @@
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
     },
+    "./backgroundSync": {
+      "source": "./src/core/backgroundSync.ts",
+      "types": "./lib/typescript/src/core/backgroundSync.d.ts",
+      "default": "./lib/module/core/backgroundSync.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -103,6 +108,8 @@
     "@react-native-community/netinfo": "^11.0.0",
     "expo-constants": "*",
     "expo-notifications": "*",
+    "expo-secure-store": "*",
+    "expo-task-manager": "*",
     "react": "*",
     "react-native": "*"
   },
@@ -111,6 +118,12 @@
       "optional": true
     },
     "expo-notifications": {
+      "optional": true
+    },
+    "expo-secure-store": {
+      "optional": true
+    },
+    "expo-task-manager": {
       "optional": true
     }
   },

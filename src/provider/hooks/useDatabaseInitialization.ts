@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
-import { getDylibPath, type DB } from '@op-engineering/op-sqlite';
+import type { DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../../utils/logger';
 import { createDatabase } from '../utils/createDatabase';
+import { initializeSyncExtension } from '../../core/initializeSyncExtension';
 
 /**
  * Parameters for useDatabaseInitialization hook
@@ -186,74 +186,11 @@ export function useDatabaseInitialization(
         try {
           logger.info('🔄 Starting sync initialization...');
 
-          /** CHECK SYNC CONFIGURATION */
-          if (!connectionString || (!apiKey && !accessToken)) {
-            throw new Error(
-              'Sync configuration incomplete. Database works offline-only.'
-            );
-          }
-
-          /** LOAD CLOUDSYNC EXTENSION */
-          let extensionPath: string;
-          if (Platform.OS === 'ios') {
-            extensionPath = getDylibPath('ai.sqlite.cloudsync', 'CloudSync');
-          } else {
-            extensionPath = 'cloudsync';
-          }
-
-          localWriteDb.loadExtension(extensionPath);
-          logger.info('✅ CloudSync extension loaded');
-
-          /** VERIFY CLOUDSYNC EXTENSION */
-          const versionResult = await localWriteDb.execute(
-            'SELECT cloudsync_version();'
+          await initializeSyncExtension(
+            localWriteDb,
+            { connectionString, tablesToBeSynced, apiKey, accessToken },
+            logger
           );
-          const version = versionResult.rows?.[0]?.['cloudsync_version()'];
-
-          if (!version) {
-            throw new Error('CloudSync extension not loaded properly');
-          }
-          logger.info('✅ CloudSync version:', version);
-
-          /** INITIALIZE CLOUDSYNC FOR TABLES */
-          for (const table of tablesToBeSynced) {
-            const initResult = await localWriteDb.execute(
-              'SELECT cloudsync_init(?);',
-              [table.name]
-            );
-
-            const firstRow = initResult.rows?.[0];
-            const result = firstRow ? Object.values(firstRow)[0] : undefined;
-
-            logger.info(
-              `✅ CloudSync initialized for table: ${table.name}${
-                result ? ` (site_id: ${result})` : ''
-              }`
-            );
-          }
-
-          /** INITIALIZE NETWORK CONNECTION */
-          await localWriteDb.execute('SELECT cloudsync_network_init(?);', [
-            connectionString,
-          ]);
-          logger.info('✅ Network initialized');
-
-          /** SET AUTHENTICATION */
-          if (apiKey) {
-            await localWriteDb.execute(
-              'SELECT cloudsync_network_set_apikey(?);',
-              [apiKey]
-            );
-            logger.info('✅ API key set');
-          } else if (accessToken) {
-            await localWriteDb.execute(
-              'SELECT cloudsync_network_set_token(?);',
-              [accessToken]
-            );
-            logger.info('✅ Access token set');
-          }
-
-          logger.info('✅ Sync initialization complete');
 
           if (isMounted) {
             setIsSyncReady(true);

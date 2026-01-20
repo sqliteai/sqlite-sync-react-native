@@ -1,24 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import type { DB, QueryResult } from '@op-engineering/op-sqlite';
+import type { DB } from '@op-engineering/op-sqlite';
 import type { AdaptivePollingConfig } from '../../types/SQLiteSyncProviderProps';
 import type { Logger } from '../../utils/logger';
 import { calculateAdaptiveInterval } from '../utils/calculateAdaptiveInterval';
-
-/**
- * Helper function to delay execution
- */
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Extracts the number of changes from a CloudSync query result
- */
-const extractChanges = (result: QueryResult | undefined): number => {
-  const firstRow = result?.rows?.[0];
-  const value = firstRow ? Object.values(firstRow)[0] : 0;
-  return typeof value === 'number' ? value : 0;
-};
+import { performSyncOperation } from '../../core/performSyncOperation';
 
 /**
  * Parameters for useSyncManager hook
@@ -204,33 +191,14 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
       setIsSyncing(true);
       isSyncingRef.current = true;
 
-      let syncResult: QueryResult | undefined;
-      let changes = 0;
-
       /**
        * We wrap each call in a transaction for compatibility with op-sqlite's
        * `db.reactiveExecute`. Reactive queries re-run only after a transaction
        * commits, providing a single, efficient update.
        */
-      const maxSyncAttempts = 4;
-
-      for (let attempt = 0; attempt < 4; attempt++) {
-        await writeDbRef.current.transaction(async (tx) => {
-          syncResult = await tx.execute('SELECT cloudsync_network_sync();');
-        });
-
-        changes = extractChanges(syncResult);
-
-        if (changes > 0) {
-          // Changes detected - sync complete, no need to continue
-          break;
-        }
-
-        // Wait before next attempt (except after last attempt)
-        if (attempt < maxSyncAttempts - 1) {
-          await delay(1000);
-        }
-      }
+      const changes = await performSyncOperation(writeDbRef.current, logger, {
+        useTransaction: true,
+      });
 
       setLastSyncTime(Date.now());
       setLastSyncChanges(changes);
@@ -239,11 +207,9 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
       if (changes > 0) {
         setConsecutiveEmptySyncs(0);
         setConsecutiveErrors(0);
-        logger.info(`✅ Sync completed: ${changes} changes synced`);
       } else {
         setConsecutiveEmptySyncs((prev) => prev + 1);
         setConsecutiveErrors(0);
-        logger.info(`✅ Sync completed: no changes`);
       }
 
       // Recalculate interval based on activity (polling mode only)

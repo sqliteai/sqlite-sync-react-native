@@ -1,7 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { DB } from '@op-engineering/op-sqlite';
-import type { SyncMode } from '../../types/SQLiteSyncProviderProps';
+import type {
+  SyncMode,
+  NotificationListeningMode,
+} from '../../types/SQLiteSyncProviderProps';
+import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../../utils/logger';
+import {
+  registerBackgroundSync,
+  unregisterBackgroundSync,
+  isBackgroundSyncAvailable,
+  setForegroundSyncCallback,
+} from '../../core/backgroundSync';
 
 // Optional Expo Notifications and Constants support
 let ExpoNotifications: any = null;
@@ -39,6 +49,13 @@ export interface SqliteSyncPushParams {
   syncMode: SyncMode;
 
   /**
+   * Controls when push notifications trigger sync
+   * - 'foreground': Only sync when app is in foreground
+   * - 'always': Sync in foreground, background, and when app was terminated
+   */
+  notificationListening: NotificationListeningMode;
+
+  /**
    * Logger instance for logging
    */
   logger: Logger;
@@ -47,6 +64,37 @@ export interface SqliteSyncPushParams {
    * Callback when push permissions are denied - triggers fallback to polling
    */
   onPermissionsDenied?: () => void;
+
+  // Background sync configuration (needed for background/terminated modes)
+  /**
+   * SQLite Cloud connection string
+   */
+  connectionString: string;
+
+  /**
+   * Local database file name
+   */
+  databaseName: string;
+
+  /**
+   * Tables to be synced
+   */
+  tablesToBeSynced: TableConfig[];
+
+  /**
+   * API key for authentication
+   */
+  apiKey?: string;
+
+  /**
+   * Access token for authentication
+   */
+  accessToken?: string;
+
+  /**
+   * Enable debug logging
+   */
+  debug?: boolean;
 }
 
 /**
@@ -70,15 +118,49 @@ export interface SqliteSyncPushParams {
  * });
  * ```
  */
+/**
+ * Check if a notification is from SQLite Cloud
+ */
+const isSqliteCloudNotification = (notification: any): boolean => {
+  const artifactURI = notification?.request?.content?.data?.artifactURI;
+  return artifactURI === 'https://sqlite.ai';
+};
+
 export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
   const {
     isSyncReady,
     performSyncRef,
     writeDbRef,
     syncMode,
+    notificationListening,
     logger,
     onPermissionsDenied,
+    connectionString,
+    databaseName,
+    tablesToBeSynced,
+    apiKey,
+    accessToken,
+    debug,
   } = params;
+
+  // Track previous syncMode to detect when switching away from push
+  const prevSyncModeRef = useRef<SyncMode>(syncMode);
+
+  // Unregister background sync when switching away from push mode
+  useEffect(() => {
+    const prevSyncMode = prevSyncModeRef.current;
+    prevSyncModeRef.current = syncMode;
+
+    // If we switched FROM push TO polling, unregister background sync
+    if (prevSyncMode === 'push' && syncMode !== 'push') {
+      logger.info(
+        '📲 Sync mode changed from push - unregistering background sync'
+      );
+      unregisterBackgroundSync().catch(() => {
+        // Ignore errors
+      });
+    }
+  }, [syncMode, logger]);
 
   /** PUSH NOTIFICATION LISTENER */
   useEffect(() => {
@@ -95,7 +177,9 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
       return;
     }
 
-    logger.info('📲 SQLite Sync push mode enabled');
+    logger.info(
+      `📲 SQLite Sync push mode enabled (listening: ${notificationListening})`
+    );
 
     // Request permissions and get push token
     const registerForPushNotifications = async () => {
@@ -147,27 +231,85 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
       }),
     });
 
-    // Listen for notifications received while app is in foreground
-    const foregroundSubscription =
-      ExpoNotifications.addNotificationReceivedListener((notification: any) => {
-        const artifactURI = notification?.request?.content?.data?.artifactURI;
-        if (artifactURI === 'https://sqlite.ai') {
-          logger.info('📲 SQLite Cloud notification - triggering sync');
-          performSyncRef.current?.();
-        }
-      });
+    const subscriptions: { remove: () => void }[] = [];
+
+    // BACKGROUND & TERMINATED: Register background task
+    // Enabled for 'always' mode
+    if (notificationListening === 'always') {
+      if (isBackgroundSyncAvailable()) {
+        // Register callback for foreground sync (uses existing DB connection)
+        setForegroundSyncCallback(
+          () => performSyncRef.current?.() ?? Promise.resolve()
+        );
+
+        registerBackgroundSync({
+          connectionString,
+          databaseName,
+          tablesToBeSynced,
+          apiKey,
+          accessToken,
+          debug,
+        })
+          .then(() => {
+            logger.info('📲 Background sync task registered');
+          })
+          .catch((error) => {
+            logger.warn('⚠️ Failed to register background sync:', error);
+          });
+      } else {
+        logger.warn(
+          '⚠️ Background sync not available. Install expo-task-manager and expo-secure-store for background/terminated notification handling.'
+        );
+        // Fallback to foreground-only listener
+        const foregroundSubscription =
+          ExpoNotifications.addNotificationReceivedListener(
+            (notification: any) => {
+              if (isSqliteCloudNotification(notification)) {
+                logger.info(
+                  '📲 SQLite Cloud notification (foreground) - triggering sync'
+                );
+                performSyncRef.current?.();
+              }
+            }
+          );
+        subscriptions.push(foregroundSubscription);
+      }
+    } else {
+      // FOREGROUND ONLY: Use traditional listener
+      const foregroundSubscription =
+        ExpoNotifications.addNotificationReceivedListener(
+          (notification: any) => {
+            if (isSqliteCloudNotification(notification)) {
+              logger.info(
+                '📲 SQLite Cloud notification (foreground) - triggering sync'
+              );
+              performSyncRef.current?.();
+            }
+          }
+        );
+      subscriptions.push(foregroundSubscription);
+    }
 
     return () => {
-      // Cleanup subscriptions
-      foregroundSubscription.remove();
+      // Cleanup foreground subscriptions
+      subscriptions.forEach((sub) => sub.remove());
+      // Clear foreground callback
+      setForegroundSyncCallback(null);
       logger.info('📲 Push notification listeners removed');
     };
   }, [
     isSyncReady,
     syncMode,
+    notificationListening,
     writeDbRef,
     performSyncRef,
     logger,
     onPermissionsDenied,
+    connectionString,
+    databaseName,
+    tablesToBeSynced,
+    apiKey,
+    accessToken,
+    debug,
   ]);
 }

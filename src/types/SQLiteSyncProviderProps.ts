@@ -6,6 +6,13 @@ import type { TableConfig } from './TableConfig';
 export type SyncMode = 'polling' | 'push';
 
 /**
+ * Controls when push notifications trigger sync
+ */
+export type NotificationListeningMode =
+  | 'foreground' // Only sync when app is in foreground
+  | 'always'; // Sync in foreground, background, and when app was terminated
+
+/**
  * Configuration for adaptive polling behavior
  */
 export interface AdaptivePollingConfig {
@@ -114,6 +121,11 @@ interface PollingMode {
    * Controls polling intervals and backoff behavior
    */
   adaptivePolling: AdaptivePollingConfig;
+
+  /**
+   * Not available in polling mode
+   */
+  notificationListening?: never;
 }
 
 /**
@@ -131,6 +143,13 @@ interface PushMode {
    * Adaptive polling is not used in push mode
    */
   adaptivePolling?: never;
+
+  /**
+   * Controls when push notifications trigger sync (default: 'foreground')
+   * - 'foreground': Only sync when app is in foreground
+   * - 'always': Sync in foreground, background, and when app was terminated
+   */
+  notificationListening?: NotificationListeningMode;
 }
 
 /**

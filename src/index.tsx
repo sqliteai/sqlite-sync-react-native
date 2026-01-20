@@ -1,7 +1,14 @@
+// Side-effect import: defines background task at module level
+// This ensures the task is defined when app is terminated
+import './core/backgroundSync';
+
 export { SQLiteSyncProvider } from './provider/SQLiteSyncProvider';
+
+// Contexts
 export { SQLiteDbContext } from './contexts/SQLiteDbContext';
 export { SQLiteSyncStatusContext } from './contexts/SQLiteSyncStatusContext';
 export { SQLiteSyncActionsContext } from './contexts/SQLiteSyncActionsContext';
+
 // Context hooks
 export { useSqliteDb } from './hooks/context/useSqliteDb';
 export { useSyncStatus } from './hooks/context/useSyncStatus';
@@ -15,9 +22,12 @@ export { useSqliteTransaction } from './hooks/sqlite/useSqliteTransaction';
 // Sync hooks
 export { useTriggerSqliteSync } from './hooks/sync/useTriggerSqliteSync';
 export { useSqliteSyncQuery } from './hooks/sync/useSqliteSyncQuery';
+
+// Types
 export type {
   SQLiteSyncProviderProps,
   SyncMode,
+  NotificationListeningMode,
   AdaptivePollingConfig,
 } from './types/SQLiteSyncProviderProps';
 export type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';

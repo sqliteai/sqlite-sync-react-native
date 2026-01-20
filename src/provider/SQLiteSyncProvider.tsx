@@ -62,6 +62,7 @@ export function SQLiteSyncProvider({
   tablesToBeSynced,
   adaptivePolling,
   syncMode = 'polling',
+  notificationListening = 'foreground',
   debug = false,
   children,
   ...authProps
@@ -238,8 +239,15 @@ export function SQLiteSyncProvider({
     performSyncRef,
     writeDbRef,
     syncMode: effectiveSyncMode,
+    notificationListening,
     logger,
     onPermissionsDenied: handlePermissionsDenied,
+    connectionString,
+    databaseName,
+    tablesToBeSynced,
+    apiKey,
+    accessToken,
+    debug,
   });
 
   /** CONTEXT VALUES */

@@ -287,6 +287,7 @@ export default function App() {
         },
       ]}
       syncMode="push"
+      notificationListening="always"
       apiKey={SQLITE_CLOUD_API_KEY}
       debug={true}
     >
