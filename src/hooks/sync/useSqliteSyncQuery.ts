@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState, useRef } from 'react';
 import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
+import { SQLiteSyncStatusContext } from '../../contexts/SQLiteSyncStatusContext';
 import type { ReactiveQueryConfig } from '../../types/ReactiveQueryConfig';
 
 /**
@@ -62,6 +63,7 @@ const SUBSCRIPTION_DEBOUNCE_MS = 1000;
 
 export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
   const { readDb, writeDb } = useContext(SQLiteDbContext);
+  const { isAppInBackground } = useContext(SQLiteSyncStatusContext);
 
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,7 +87,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
 
   // Effect 1: Immediate Async Read + Debounce Trigger
   useEffect(() => {
-    if (!readDb) return;
+    if (!readDb || isAppInBackground) return;
 
     activeQuerySignatureRef.current = currentSubscriptionSignature;
     setIsLoading(true);
@@ -120,7 +122,12 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
         clearTimeout(subscriptionUpdateTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readDb, serializedFireOn, currentSubscriptionSignature]);
+  }, [
+    readDb,
+    serializedFireOn,
+    currentSubscriptionSignature,
+    isAppInBackground,
+  ]);
 
   // Effect 2: Reactive Subscription logic
   useEffect(() => {
