@@ -95,29 +95,15 @@ export interface SqliteSyncPushParams {
    * Enable debug logging
    */
   debug?: boolean;
+
+  /**
+   * Callback invoked before requesting push notification permissions.
+   * Use this to show a custom UI explaining why permissions are needed.
+   * @returns Promise<boolean> - true to proceed with system permission request, false to skip
+   */
+  onBeforePushPermissionRequest?: () => Promise<boolean>;
 }
 
-/**
- * Custom hook for handling SQLite Sync push notifications
- *
- * Handles:
- * - Setting up push notification listener via SQLite Sync
- * - Triggering sync when push notification is received
- * - Only runs when syncMode is 'push'
- *
- * @param params - Push notification parameters
- *
- * @example
- * ```typescript
- * useSqliteSyncPush({
- *   isSyncReady,
- *   performSyncRef,
- *   writeDbRef,
- *   syncMode: 'push',
- *   logger
- * });
- * ```
- */
 /**
  * Check if a notification is from SQLite Cloud
  */
@@ -135,6 +121,7 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
     notificationListening,
     logger,
     onPermissionsDenied,
+    onBeforePushPermissionRequest,
     connectionString,
     databaseName,
     tablesToBeSynced,
@@ -143,8 +130,33 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
     debug,
   } = params;
 
+  // Serialize config to detect actual changes (avoids re-runs from unstable references like tablesToBeSynced)
+  const serializedBackgroundConfig = JSON.stringify({
+    connectionString,
+    databaseName,
+    tablesToBeSynced,
+    apiKey,
+    accessToken,
+    debug,
+  });
+
   // Track previous syncMode to detect when switching away from push
   const prevSyncModeRef = useRef<SyncMode>(syncMode);
+  const hasRequestedPermissionsRef = useRef(false);
+  const permissionsGrantedRef = useRef(false);
+
+  const onBeforePushPermissionRequestRef = useRef(
+    onBeforePushPermissionRequest
+  );
+  const onPermissionsDeniedRef = useRef(onPermissionsDenied);
+
+  useEffect(() => {
+    onBeforePushPermissionRequestRef.current = onBeforePushPermissionRequest;
+  }, [onBeforePushPermissionRequest]);
+
+  useEffect(() => {
+    onPermissionsDeniedRef.current = onPermissionsDenied;
+  }, [onPermissionsDenied]);
 
   // Unregister background sync when switching away from push mode
   useEffect(() => {
@@ -156,39 +168,50 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
       logger.info(
         '📲 Sync mode changed from push - unregistering background sync'
       );
+      // Reset permission tracking when switching away from push
+      hasRequestedPermissionsRef.current = false;
+      permissionsGrantedRef.current = false;
       unregisterBackgroundSync().catch(() => {
         // Ignore errors
       });
     }
   }, [syncMode, logger]);
 
-  /** PUSH NOTIFICATION LISTENER */
+  /** PERMISSION REQUEST */
   useEffect(() => {
-    // Only enable push when syncMode is 'push'
-    if (!isSyncReady || syncMode !== 'push' || !writeDbRef.current) {
+    if (
+      !isSyncReady ||
+      syncMode !== 'push' ||
+      !writeDbRef.current ||
+      !ExpoNotifications ||
+      hasRequestedPermissionsRef.current
+    ) {
       return;
     }
 
-    // Check if Expo Notifications is available
-    if (!ExpoNotifications) {
-      logger.warn(
-        '⚠️ Push mode enabled but expo-notifications not found. Install it with: npx expo install expo-notifications'
-      );
-      return;
-    }
+    // Mark that we're requesting permissions
+    hasRequestedPermissionsRef.current = true;
 
-    logger.info(
-      `📲 SQLite Sync push mode enabled (listening: ${notificationListening})`
-    );
-
-    // Request permissions and get push token
-    const registerForPushNotifications = async () => {
+    const requestPermissions = async () => {
       try {
         const { status: existingStatus } =
           await ExpoNotifications.getPermissionsAsync();
         let finalStatus = existingStatus;
 
         if (existingStatus !== 'granted') {
+          // Call custom UI callback before system permission request
+          if (onBeforePushPermissionRequestRef.current) {
+            const shouldProceed =
+              await onBeforePushPermissionRequestRef.current();
+            if (!shouldProceed) {
+              logger.info(
+                '📲 User declined push permissions from custom UI - falling back to polling mode'
+              );
+              onPermissionsDeniedRef.current?.();
+              return;
+            }
+          }
+
           const { status } = await ExpoNotifications.requestPermissionsAsync();
           finalStatus = status;
         }
@@ -197,10 +220,15 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
           logger.warn(
             '⚠️ Push notification permissions denied - falling back to polling mode'
           );
-          onPermissionsDenied?.();
+          onPermissionsDeniedRef.current?.();
           return;
         }
 
+        // Permissions granted
+        permissionsGrantedRef.current = true;
+        logger.info('📲 Push notification permissions granted');
+
+        // Get push token
         const projectId =
           ExpoConstants?.expoConfig?.extra?.eas?.projectId ??
           ExpoConstants?.manifest?.extra?.eas?.projectId ??
@@ -220,7 +248,27 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
       }
     };
 
-    registerForPushNotifications();
+    requestPermissions();
+  }, [isSyncReady, syncMode, writeDbRef, logger]);
+
+  /** NOTIFICATION LISTENERS */
+  useEffect(() => {
+    // Only enable push when syncMode is 'push'
+    if (!isSyncReady || syncMode !== 'push' || !writeDbRef.current) {
+      return;
+    }
+
+    // Check if Expo Notifications is available
+    if (!ExpoNotifications) {
+      logger.warn(
+        '⚠️ Push mode enabled but expo-notifications not found. Install it with: npx expo install expo-notifications'
+      );
+      return;
+    }
+
+    logger.info(
+      `📲 SQLite Sync push mode enabled (listening: ${notificationListening})`
+    );
 
     // Set up notification handler for silent sync (no user-facing alerts)
     ExpoNotifications.setNotificationHandler({
@@ -249,13 +297,7 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
           apiKey,
           accessToken,
           debug,
-        })
-          .then(() => {
-            logger.info('📲 Background sync task registered');
-          })
-          .catch((error) => {
-            logger.warn('⚠️ Failed to register background sync:', error);
-          });
+        });
       } else {
         logger.warn(
           '⚠️ Background sync not available. Install expo-task-manager and expo-secure-store for background/terminated notification handling.'
@@ -291,12 +333,11 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
     }
 
     return () => {
-      // Cleanup foreground subscriptions
       subscriptions.forEach((sub) => sub.remove());
-      // Clear foreground callback
       setForegroundSyncCallback(null);
       logger.info('📲 Push notification listeners removed');
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- serializedBackgroundConfig contains all background sync config values
   }, [
     isSyncReady,
     syncMode,
@@ -304,12 +345,6 @@ export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
     writeDbRef,
     performSyncRef,
     logger,
-    onPermissionsDenied,
-    connectionString,
-    databaseName,
-    tablesToBeSynced,
-    apiKey,
-    accessToken,
-    debug,
+    serializedBackgroundConfig,
   ]);
 }

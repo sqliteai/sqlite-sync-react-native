@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Text,
   View,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   FlatList,
+  Modal,
 } from 'react-native';
 import {
   SQLiteSyncProvider,
@@ -250,7 +251,81 @@ function TestApp() {
   );
 }
 
+/**
+ * Full-page permission request dialog
+ */
+function PermissionDialog({
+  visible,
+  onAllow,
+  onDeny,
+}: {
+  visible: boolean;
+  onAllow: () => void;
+  onDeny: () => void;
+}) {
+  return (
+    <Modal visible={visible} animationType="fade" transparent>
+      <View style={styles.permissionOverlay}>
+        <View style={styles.permissionDialog}>
+          <Text style={styles.permissionIcon}>🔔</Text>
+          <Text style={styles.permissionTitle}>Enable Real-time Sync</Text>
+          <Text style={styles.permissionMessage}>
+            Allow notifications to get instant updates when your data changes on
+            other devices. This ensures you always have the latest information.
+          </Text>
+          <View style={styles.permissionFeatures}>
+            <Text style={styles.permissionFeature}>
+              ✓ Instant sync when data changes
+            </Text>
+            <Text style={styles.permissionFeature}>
+              ✓ Background updates while app is open
+            </Text>
+            <Text style={styles.permissionFeature}>
+              ✓ No manual refresh needed
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.permissionAllowButton}
+            onPress={onAllow}
+          >
+            <Text style={styles.permissionAllowText}>Enable Notifications</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.permissionDenyButton}
+            onPress={onDeny}
+          >
+            <Text style={styles.permissionDenyText}>Not Now</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function App() {
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const permissionResolverRef = useRef<((value: boolean) => void) | null>(null);
+
+  // Callback to show custom UI before system permission request
+  const handleBeforePushPermissionRequest = useCallback(async () => {
+    return new Promise<boolean>((resolve) => {
+      permissionResolverRef.current = resolve;
+      setShowPermissionDialog(true);
+    });
+  }, []);
+
+  const handlePermissionAllow = useCallback(() => {
+    setShowPermissionDialog(false);
+    permissionResolverRef.current?.(true);
+    permissionResolverRef.current = null;
+  }, []);
+
+  const handlePermissionDeny = useCallback(() => {
+    setShowPermissionDialog(false);
+    permissionResolverRef.current?.(false);
+    permissionResolverRef.current = null;
+  }, []);
+
   if (
     !SQLITE_CLOUD_CONNECTION_STRING ||
     !SQLITE_CLOUD_API_KEY ||
@@ -271,28 +346,36 @@ export default function App() {
   }
 
   return (
-    <SQLiteSyncProvider
-      connectionString={SQLITE_CLOUD_CONNECTION_STRING}
-      databaseName={DATABASE_NAME}
-      tablesToBeSynced={[
-        {
-          name: TABLE_NAME,
-          createTableSql: `
-            CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-              id TEXT PRIMARY KEY NOT NULL,
-              value TEXT,
-              created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            );
-          `,
-        },
-      ]}
-      syncMode="push"
-      notificationListening="always"
-      apiKey={SQLITE_CLOUD_API_KEY}
-      debug={true}
-    >
-      <TestApp />
-    </SQLiteSyncProvider>
+    <>
+      <PermissionDialog
+        visible={showPermissionDialog}
+        onAllow={handlePermissionAllow}
+        onDeny={handlePermissionDeny}
+      />
+      <SQLiteSyncProvider
+        connectionString={SQLITE_CLOUD_CONNECTION_STRING}
+        databaseName={DATABASE_NAME}
+        tablesToBeSynced={[
+          {
+            name: TABLE_NAME,
+            createTableSql: `
+              CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+                id TEXT PRIMARY KEY NOT NULL,
+                value TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+              );
+            `,
+          },
+        ]}
+        syncMode="push"
+        notificationListening="always"
+        onBeforePushPermissionRequest={handleBeforePushPermissionRequest}
+        apiKey={SQLITE_CLOUD_API_KEY}
+        debug={true}
+      >
+        <TestApp />
+      </SQLiteSyncProvider>
+    </>
   );
 }
 
@@ -498,5 +581,77 @@ const styles = StyleSheet.create({
   },
   listErrorMessage: {
     color: '#333',
+  },
+  // Permission dialog styles
+  permissionOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  permissionDialog: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  permissionIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  permissionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  permissionMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  permissionFeatures: {
+    alignSelf: 'stretch',
+    marginBottom: 24,
+  },
+  permissionFeature: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+    paddingLeft: 8,
+  },
+  permissionAllowButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  permissionAllowText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  permissionDenyButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+  },
+  permissionDenyText: {
+    color: '#666',
+    fontSize: 16,
   },
 });

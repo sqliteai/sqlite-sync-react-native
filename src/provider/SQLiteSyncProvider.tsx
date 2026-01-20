@@ -63,6 +63,7 @@ export function SQLiteSyncProvider({
   adaptivePolling,
   syncMode = 'polling',
   notificationListening = 'foreground',
+  onBeforePushPermissionRequest,
   debug = false,
   children,
   ...authProps
@@ -242,6 +243,7 @@ export function SQLiteSyncProvider({
     notificationListening,
     logger,
     onPermissionsDenied: handlePermissionsDenied,
+    onBeforePushPermissionRequest,
     connectionString,
     databaseName,
     tablesToBeSynced,

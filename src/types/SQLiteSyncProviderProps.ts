@@ -126,6 +126,7 @@ interface PollingMode {
    * Not available in polling mode
    */
   notificationListening?: never;
+  onBeforePushPermissionRequest?: never;
 }
 
 /**
@@ -140,16 +141,35 @@ interface PushMode {
   syncMode: 'push';
 
   /**
-   * Adaptive polling is not used in push mode
-   */
-  adaptivePolling?: never;
-
-  /**
    * Controls when push notifications trigger sync (default: 'foreground')
    * - 'foreground': Only sync when app is in foreground
    * - 'always': Sync in foreground, background, and when app was terminated
    */
   notificationListening?: NotificationListeningMode;
+
+  /**
+   * Callback invoked before requesting push notification permissions (push mode only).
+   * Use this to show a custom UI explaining why permissions are needed.
+   *
+   * @returns Promise<boolean> - true to proceed with system permission request, false to skip
+   *
+   * @example
+   * ```tsx
+   * onBeforePushPermissionRequest={async () => {
+   *   const userWantsToEnable = await showCustomAlert({
+   *     title: "Enable Real-time Sync",
+   *     message: "Allow notifications to get instant updates"
+   *   });
+   *   return userWantsToEnable;
+   * }}
+   * ```
+   */
+  onBeforePushPermissionRequest?: () => Promise<boolean>;
+
+  /**
+   * Not available in push mode
+   */
+  adaptivePolling?: never;
 }
 
 /**
