@@ -1,4 +1,5 @@
 import type { TableConfig } from './TableConfig';
+import type { DB } from '@op-engineering/op-sqlite';
 
 /**
  * Sync mode determines how the provider checks for remote changes
@@ -76,6 +77,27 @@ interface CommonProviderProps {
    * When true, logs detailed sync operations to console
    */
   debug?: boolean;
+
+  /**
+   * Callback invoked after database is opened but before sync initialization.
+   * Use this to run migrations or other database setup.
+   *
+   * @param db - The write database connection
+   *
+   * @example
+   * ```tsx
+   * onDatabaseReady={async (db) => {
+   *   const { rows } = await db.execute('PRAGMA user_version');
+   *   const version = rows?.[0]?.user_version ?? 0;
+   *
+   *   if (version < 1) {
+   *     await db.execute('ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 0');
+   *     await db.execute('PRAGMA user_version = 1');
+   *   }
+   * }}
+   * ```
+   */
+  onDatabaseReady?: (db: DB) => Promise<void>;
 
   /**
    * Children components

@@ -64,6 +64,7 @@ export function SQLiteSyncProvider({
   syncMode = 'polling',
   notificationListening = 'foreground',
   onBeforePushPermissionRequest,
+  onDatabaseReady,
   debug = false,
   children,
   ...authProps
@@ -122,6 +123,7 @@ export function SQLiteSyncProvider({
     apiKey,
     accessToken,
     logger,
+    onDatabaseReady,
   });
 
   /** SYNC MANAGER */

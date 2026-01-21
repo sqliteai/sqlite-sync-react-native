@@ -38,6 +38,12 @@ export interface DatabaseInitializationParams {
    * Logger instance for logging
    */
   logger: Logger;
+
+  /**
+   * Callback invoked after database is opened but before sync initialization.
+   * Use this to run migrations or other database setup.
+   */
+  onDatabaseReady?: (db: DB) => Promise<void>;
 }
 
 /**
@@ -107,6 +113,7 @@ export function useDatabaseInitialization(
     apiKey,
     accessToken,
     logger,
+    onDatabaseReady,
   } = params;
 
   /** PUBLIC STATE */
@@ -174,6 +181,22 @@ export function useDatabaseInitialization(
         }
 
         logger.info('✅ Databases ready for local use');
+
+        /** RUN onDatabaseReady CALLBACK (e.g., migrations) */
+        if (onDatabaseReady) {
+          logger.info('🔄 Running onDatabaseReady callback...');
+          try {
+            await onDatabaseReady(localWriteDb);
+            logger.info('✅ onDatabaseReady callback completed');
+          } catch (err) {
+            logger.error('❌ onDatabaseReady callback failed:', err);
+            throw new Error(
+              `onDatabaseReady callback failed: ${
+                err instanceof Error ? err.message : err
+              }`
+            );
+          }
+        }
 
         /** EXPOSE DATABASE CONNECTIONS - only after tables are created */
         if (isMounted) {
