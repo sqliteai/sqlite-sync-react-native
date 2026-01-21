@@ -18,13 +18,50 @@ import {
   useSqliteDb,
   useSyncStatus,
   useSqliteTransaction,
+  registerBackgroundSyncHandler,
+  type BackgroundSyncResult,
 } from '@sqliteai/sqlite-sync-react-native';
+import * as Notifications from 'expo-notifications';
 import {
   SQLITE_CLOUD_CONNECTION_STRING,
   SQLITE_CLOUD_API_KEY,
   DATABASE_NAME,
   TABLE_NAME,
 } from '@env';
+
+/**
+ * Register background sync handler at module level (outside components).
+ * This is called when new data is synced while app is in background/terminated.
+ */
+registerBackgroundSyncHandler(async ({ changes, db }: BackgroundSyncResult) => {
+  const newRowIds = changes
+    .filter((c) => c.table === TABLE_NAME && c.operation === 'INSERT')
+    .map((c) => c.rowId);
+
+  if (newRowIds.length === 0) return;
+
+  const result = await db.execute(
+    `SELECT * FROM ${TABLE_NAME} WHERE rowid IN (${newRowIds.join(
+      ','
+    )}) ORDER BY created_at DESC LIMIT 1`
+  );
+
+  const newestRow = result.rows?.[0] as
+    | { id: string; value: string; created_at: string }
+    | undefined;
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title:
+        newRowIds.length === 1
+          ? 'New item synced'
+          : `${newRowIds.length} new items synced`,
+      body: newestRow?.value || 'New data is available',
+      data: { rowId: newestRow?.id },
+    },
+    trigger: null,
+  });
+});
 
 /**
  * Demo app showcasing the reactive hooks and dual connection architecture:

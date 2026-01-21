@@ -4,6 +4,9 @@ import './core/backgroundSync';
 
 export { SQLiteSyncProvider } from './provider/SQLiteSyncProvider';
 
+// Background sync handler registration
+export { registerBackgroundSyncHandler } from './core/backgroundSync';
+
 // Contexts
 export { SQLiteDbContext } from './contexts/SQLiteDbContext';
 export { SQLiteSyncStatusContext } from './contexts/SQLiteSyncStatusContext';
@@ -40,3 +43,8 @@ export type {
   TableUpdateConfig,
 } from './types/TableUpdateConfig';
 export type { ExecuteOptions } from './types/ExecuteOptions';
+export type {
+  ChangeRecord,
+  BackgroundSyncResult,
+  BackgroundSyncHandler,
+} from './types/BackgroundSyncHandler';
