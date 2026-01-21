@@ -1,23 +1,14 @@
 import type { DB } from '@op-engineering/op-sqlite';
-import type { TableConfig } from '../types/TableConfig';
 import type { ChangeRecord } from '../types/BackgroundSyncHandler';
+import type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
 import { createDatabase } from '../provider/utils/createDatabase';
 import { createLogger } from '../utils/logger';
 import { initializeSyncExtension } from './initializeSyncExtension';
 import { performSyncOperation } from './performSyncOperation';
-import { getBackgroundSyncHandler } from './backgroundSync';
+import { getBackgroundSyncHandler } from './backgroundSyncHandler';
 
-/**
- * Configuration for background sync
- */
-export interface BackgroundSyncConfig {
-  connectionString: string;
-  databaseName: string;
-  tablesToBeSynced: TableConfig[];
-  apiKey?: string;
-  accessToken?: string;
-  debug?: boolean;
-}
+// Re-export for backwards compatibility
+export type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
 
 /**
  * Run a complete background sync cycle

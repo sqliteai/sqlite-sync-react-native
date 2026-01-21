@@ -1,4 +1,4 @@
-import type { BackgroundSyncConfig } from './runBackgroundSync';
+import type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
 import { createLogger } from '../utils/logger';
 
 // Storage key for persisted config
