@@ -1,11 +1,11 @@
 // Side-effect import: defines background task at module level
 // This ensures the task is defined when app is terminated
-import './core/background/syncTask';
+import './core/pushNotifications/pushNotificationSyncTask';
 
-export { SQLiteSyncProvider } from './provider/SQLiteSyncProvider';
+export { SQLiteSyncProvider } from './core/SQLiteSyncProvider';
 
 // Background sync callback registration
-export { registerBackgroundSyncCallback } from './core/background/syncCallbacks';
+export { registerBackgroundSyncCallback } from './core/pushNotifications/pushNotificationSyncCallbacks';
 
 // Contexts
 export { SQLiteDbContext } from './contexts/SQLiteDbContext';
@@ -42,7 +42,7 @@ export type {
   TableUpdateData,
   TableUpdateConfig,
 } from './types/TableUpdateConfig';
-export type { ExecuteOptions } from './types/ExecuteOptions';
+export type { SqliteExecuteOptions } from './types/SqliteExecuteOptions';
 export type {
   ChangeRecord,
   BackgroundSyncResult,

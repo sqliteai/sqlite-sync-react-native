@@ -1,6 +1,6 @@
 import type { TableConfig } from '../../types/TableConfig';
-import { createLogger } from '../logger';
-import { ExpoSecureStore } from '../optionalDependencies';
+import { createLogger } from '../common/logger';
+import { ExpoSecureStore } from '../common/optionalDependencies';
 
 /**
  * Configuration for background sync

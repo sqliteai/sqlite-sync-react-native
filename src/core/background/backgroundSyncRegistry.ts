@@ -1,11 +1,14 @@
-import { BACKGROUND_SYNC_TASK_NAME } from './syncTask';
-import { persistConfig, clearPersistedConfig } from './persistedSyncConfig';
-import type { BackgroundSyncConfig } from './persistedSyncConfig';
-import { createLogger } from '../logger';
 import {
   ExpoNotifications,
   isBackgroundSyncAvailable,
-} from '../optionalDependencies';
+} from '../common/optionalDependencies';
+import { createLogger } from '../common/logger';
+import { BACKGROUND_SYNC_TASK_NAME } from '../constants';
+import {
+  clearPersistedConfig,
+  persistConfig,
+  type BackgroundSyncConfig,
+} from './backgroundSyncConfig';
 
 /**
  * Register for background notification handling.

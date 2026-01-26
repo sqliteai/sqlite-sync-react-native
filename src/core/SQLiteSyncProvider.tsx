@@ -10,14 +10,14 @@ import type { SQLiteSyncProviderProps } from '../types/SQLiteSyncProviderProps';
 import type { SQLiteDbContextValue } from '../types/SQLiteDbContextValue';
 import type { SQLiteSyncStatusContextValue } from '../types/SQLiteSyncStatusContextValue';
 import type { SQLiteSyncActionsContextValue } from '../types/SQLiteSyncActionsContextValue';
-import { createLogger } from '../core/logger';
-import { useDatabaseInitialization } from './hooks/useDatabaseInitialization';
-import { useSyncManager } from './hooks/useSyncManager';
-import { useInitialSync } from './hooks/useInitialSync';
-import { useAppLifecycle } from './hooks/useAppLifecycle';
-import { useNetworkListener } from './hooks/useNetworkListener';
-import { useAdaptivePolling } from './hooks/useAdaptivePolling';
-import { useSqliteSyncPush } from './hooks/useSqliteSyncPush';
+import { createLogger } from './common/logger';
+import { useDatabaseInitialization } from './database/useDatabaseInitialization';
+import { useSyncManager } from './sync/useSyncManager';
+import { useInitialSync } from './sync/useInitialSync';
+import { useAppLifecycle } from './lifecycle/useAppLifecycle';
+import { useNetworkListener } from './lifecycle/useNetworkListener';
+import { useAdaptivePollingSync } from './polling/useAdaptivePollingSync';
+import { usePushNotificationSync } from './pushNotifications/usePushNotificationSync';
 
 /**
  * SQLiteSyncProvider
@@ -220,7 +220,7 @@ export function SQLiteSyncProvider({
   });
 
   /** ADAPTIVE POLLING - Only active when syncMode is 'polling' */
-  useAdaptivePolling({
+  useAdaptivePollingSync({
     isSyncReady,
     appState,
     performSyncRef,
@@ -237,7 +237,7 @@ export function SQLiteSyncProvider({
   }, [logger]);
 
   /** PUSH NOTIFICATIONS - Only active when syncMode is 'push' */
-  useSqliteSyncPush({
+  usePushNotificationSync({
     isSyncReady,
     performSyncRef,
     writeDbRef,

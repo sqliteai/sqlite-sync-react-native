@@ -1,8 +1,8 @@
 import { useContext, useState, useCallback } from 'react';
 import type { QueryResult } from '@op-engineering/op-sqlite';
 import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
-import { useInternalLogger } from '../internal/useInternalLogger';
-import type { ExecuteOptions } from '../../types/ExecuteOptions';
+import { useInternalLogger } from '../../core/common/useInternalLogger';
+import type { SqliteExecuteOptions } from '../../types/SqliteExecuteOptions';
 
 /**
  * Hook for executing SQL commands with configurable connection selection.
@@ -45,7 +45,7 @@ export function useSqliteExecute() {
     async (
       sql: string,
       params: any[] = [],
-      options?: ExecuteOptions
+      options?: SqliteExecuteOptions
     ): Promise<QueryResult | undefined> => {
       const db = options?.readOnly ? readDb : writeDb;
 

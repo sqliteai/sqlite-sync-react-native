@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef } from 'react';
 import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
-import { useInternalLogger } from '../internal/useInternalLogger';
 import type { TableUpdateConfig } from '../../types/TableUpdateConfig';
+import { useInternalLogger } from '../../core/common/useInternalLogger';
 
 /**
  * Hook that listens for row-level updates on specified tables using op-sqlite's updateHook.

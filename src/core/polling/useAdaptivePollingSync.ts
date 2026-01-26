@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { SyncMode } from '../../types/SQLiteSyncProviderProps';
 
 /**
- * Parameters for useAdaptivePolling hook
+ * Parameters for useAdaptivePollingSync hook
  */
 export interface AdaptivePollingParams {
   /**
@@ -47,7 +47,7 @@ export interface AdaptivePollingParams {
  *
  * @example
  * ```typescript
- * useAdaptivePolling({
+ * useAdaptivePollingSync({
  *   isSyncReady,
  *   appState,
  *   performSyncRef,
@@ -56,7 +56,7 @@ export interface AdaptivePollingParams {
  * });
  * ```
  */
-export function useAdaptivePolling(params: AdaptivePollingParams): void {
+export function useAdaptivePollingSync(params: AdaptivePollingParams): void {
   const {
     isSyncReady,
     appState,

@@ -1,17 +1,17 @@
 import type { DB } from '@op-engineering/op-sqlite';
 import type { ChangeRecord } from '../../types/BackgroundSyncCallback';
-import type { BackgroundSyncConfig } from './persistedSyncConfig';
-import { createDatabase } from '../../provider/utils/createDatabase';
-import { createLogger } from '../logger';
+import type { BackgroundSyncConfig } from './backgroundSyncConfig';
 import { initializeSyncExtension } from '../sync/initializeSyncExtension';
-import { performSyncOperation } from '../sync/performSyncOperation';
-import { getBackgroundSyncCallback } from './syncCallbacks';
+import { executeSync } from '../sync/executeSync';
+import { createDatabase } from '../database/createDatabase';
+import { createLogger } from '../common/logger';
+import { getBackgroundSyncCallback } from '../pushNotifications/pushNotificationSyncCallbacks';
 
 /**
  * Run a complete background sync cycle
  * Opens database, initializes sync, performs sync, closes database
  */
-export async function runBackgroundSync(
+export async function executeBackgroundSync(
   config: BackgroundSyncConfig
 ): Promise<void> {
   const logger = createLogger(config.debug ?? false);
@@ -50,7 +50,7 @@ export async function runBackgroundSync(
       logger.info('📲 Update hook registered for change tracking');
     }
 
-    await performSyncOperation(db, logger, {
+    await executeSync(db, logger, {
       useNativeRetry: true,
       maxAttempts: 3,
       attemptDelay: 500,

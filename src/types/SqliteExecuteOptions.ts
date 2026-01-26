@@ -1,7 +1,7 @@
 /**
  * Options for executing SQL commands with connection selection
  */
-export type ExecuteOptions =
+export type SqliteExecuteOptions =
   | {
       /**
        * Read-only mode - uses readDb connection

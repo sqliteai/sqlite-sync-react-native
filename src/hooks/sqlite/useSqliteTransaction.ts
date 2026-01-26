@@ -1,7 +1,7 @@
 import { useContext, useState, useCallback } from 'react';
 import type { Transaction } from '@op-engineering/op-sqlite';
 import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
-import { useInternalLogger } from '../internal/useInternalLogger';
+import { useInternalLogger } from '../../core/common/useInternalLogger';
 
 /**
  * Options for transaction execution

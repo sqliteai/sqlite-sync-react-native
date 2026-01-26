@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
-import type { Logger } from '../logger';
+import type { Logger } from '../common/logger';
 
 /**
  * Configuration for sync initialization
@@ -18,7 +18,7 @@ export interface SyncInitConfig {
  *
  * This is the core initialization logic used by both:
  * - useDatabaseInitialization hook (foreground)
- * - runBackgroundSync (background/terminated)
+ * - executeBackgroundSync (background/terminated)
  */
 export async function initializeSyncExtension(
   db: DB,

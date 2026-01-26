@@ -54,7 +54,7 @@ export function registerBackgroundSyncCallback(
 
 /**
  * Get the currently registered background sync callback.
- * Used internally by runBackgroundSync.
+ * Used internally by executeBackgroundSync.
  */
 export function getBackgroundSyncCallback(): BackgroundSyncCallback | null {
   return backgroundSyncCallback;

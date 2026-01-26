@@ -1,5 +1,5 @@
 import type { DB, QueryResult } from '@op-engineering/op-sqlite';
-import type { Logger } from '../logger';
+import type { Logger } from '../common/logger';
 
 /**
  * Extracts the number of changes from a CloudSync query result
@@ -11,9 +11,9 @@ const extractChangesFromResult = (result: QueryResult | undefined): number => {
 };
 
 /**
- * Options for performSyncOperation
+ * Options for executeSync
  */
-export interface PerformSyncOptions {
+export interface ExecuteSyncOptions {
   /** Whether to wrap sync in a transaction (needed for reactive queries) */
   useTransaction?: boolean;
   /** Maximum number of sync attempts */
@@ -33,7 +33,7 @@ export interface PerformSyncOptions {
  *
  * This is the core sync logic used by both:
  * - useSyncManager hook (foreground)
- * - runBackgroundSync (background/terminated)
+ * - executeBackgroundSync (background/terminated)
  *
  * @param db - Database instance
  * @param logger - Logger instance
@@ -41,10 +41,10 @@ export interface PerformSyncOptions {
  *
  * @returns Number of changes synced
  */
-export async function performSyncOperation(
+export async function executeSync(
   db: DB,
   logger: Logger,
-  options?: PerformSyncOptions
+  options?: ExecuteSyncOptions
 ): Promise<number> {
   const {
     useTransaction = false,

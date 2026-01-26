@@ -1,15 +1,10 @@
 import { AppState } from 'react-native';
-import { runBackgroundSync } from './runBackgroundSync';
-import { getPersistedConfig } from './persistedSyncConfig';
-import { createLogger } from '../logger';
-import { getForegroundSyncCallback } from './syncCallbacks';
-import { ExpoTaskManager } from '../optionalDependencies';
-
-/**
- * Task name for background notification handling.
- * Exported for use in registration functions.
- */
-export const BACKGROUND_SYNC_TASK_NAME = 'SQLITE_SYNC_BACKGROUND_TASK';
+import { getPersistedConfig } from '../background/backgroundSyncConfig';
+import { ExpoTaskManager } from '../common/optionalDependencies';
+import { createLogger } from '../common/logger';
+import { BACKGROUND_SYNC_TASK_NAME } from '../constants';
+import { executeBackgroundSync } from '../background/executeBackgroundSync';
+import { getForegroundSyncCallback } from './pushNotificationSyncCallbacks';
 
 /**
  * Check if task data is from SQLite Cloud.
@@ -83,7 +78,7 @@ if (ExpoTaskManager) {
         return;
       }
 
-      await runBackgroundSync(config);
+      await executeBackgroundSync(config);
     }
   );
 }

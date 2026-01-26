@@ -3,7 +3,7 @@ import type { AdaptivePollingConfig } from '../../types/SQLiteSyncProviderProps'
 /**
  * Parameters for calculating the next adaptive sync interval
  */
-export interface AdaptiveIntervalParams {
+export interface AdaptiveSyncIntervalParams {
   /**
    * Number of changes from the last sync operation
    */
@@ -35,22 +35,22 @@ export interface AdaptiveIntervalParams {
  * @example
  * ```typescript
  * Idle backoff example
- * const interval = calculateAdaptiveInterval(
+ * const interval = calculateAdaptiveSyncInterval(
  *   { lastSyncChanges: 0, consecutiveEmptySyncs: 7, consecutiveSyncErrors: 0 },
  *   { baseInterval: 5000, maxInterval: 300000, emptyThreshold: 5, idleBackoffMultiplier: 1.5 }
  * );
  * Returns: 16875 (5000 × 1.5^3)
  *
  * Error backoff example
- * const interval = calculateAdaptiveInterval(
+ * const interval = calculateAdaptiveSyncInterval(
  *   { lastSyncChanges: 0, consecutiveEmptySyncs: 0, consecutiveSyncErrors: 3 },
  *   { baseInterval: 5000, maxInterval: 300000, errorBackoffMultiplier: 2.0 }
  * );
  * Returns: 40000 (5000 × 2^3)
  * ```
  */
-export function calculateAdaptiveInterval(
-  params: AdaptiveIntervalParams,
+export function calculateAdaptiveSyncInterval(
+  params: AdaptiveSyncIntervalParams,
   config: Required<AdaptivePollingConfig>
 ): number {
   const { consecutiveEmptySyncs: emptySyncs, consecutiveSyncErrors: errors } =

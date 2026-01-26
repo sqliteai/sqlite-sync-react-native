@@ -3,9 +3,9 @@ import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import type { DB } from '@op-engineering/op-sqlite';
 import type { AdaptivePollingConfig } from '../../types/SQLiteSyncProviderProps';
-import type { Logger } from '../../core/logger';
-import { calculateAdaptiveInterval } from '../utils/calculateAdaptiveInterval';
-import { performSyncOperation } from '../../core/sync/performSyncOperation';
+import type { Logger } from '../common/logger';
+import { executeSync } from './executeSync';
+import { calculateAdaptiveSyncInterval } from '../polling/calculateAdaptiveSyncInterval';
 
 /**
  * Parameters for useSyncManager hook
@@ -196,7 +196,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
        * `db.reactiveExecute`. Reactive queries re-run only after a transaction
        * commits, providing a single, efficient update.
        */
-      const changes = await performSyncOperation(writeDbRef.current, logger, {
+      const changes = await executeSync(writeDbRef.current, logger, {
         useTransaction: true,
       });
 
@@ -214,7 +214,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
 
       // Recalculate interval based on activity (polling mode only)
       if (syncMode === 'polling') {
-        const newInterval = calculateAdaptiveInterval(
+        const newInterval = calculateAdaptiveSyncInterval(
           {
             lastSyncChanges: changes,
             consecutiveEmptySyncs:
@@ -240,7 +240,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
 
       // Recalculate interval with error backoff (polling mode only)
       if (syncMode === 'polling') {
-        const newInterval = calculateAdaptiveInterval(
+        const newInterval = calculateAdaptiveSyncInterval(
           {
             lastSyncChanges: 0,
             consecutiveEmptySyncs: 0,

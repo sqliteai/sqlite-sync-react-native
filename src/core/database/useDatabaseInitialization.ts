@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import type { DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
-import type { Logger } from '../../core/logger';
-import { createDatabase } from '../utils/createDatabase';
-import { initializeSyncExtension } from '../../core/sync/initializeSyncExtension';
+import type { Logger } from '../common/logger';
+import { createDatabase } from './createDatabase';
+import { initializeSyncExtension } from '../sync/initializeSyncExtension';
 
 /**
  * Parameters for useDatabaseInitialization hook

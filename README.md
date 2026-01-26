@@ -851,7 +851,7 @@ Execute SQL commands with configurable connection selection (write or read-only)
 **Parameters:**
 
 ```typescript
-interface ExecuteOptions {
+interface SqliteExecuteOptions {
   readOnly?: boolean; // Use read-only connection (default: false)
 }
 ```
@@ -860,7 +860,7 @@ interface ExecuteOptions {
 
 ```typescript
 {
-  execute: (sql: string, params?: any[], options?: ExecuteOptions) =>
+  execute: (sql: string, params?: any[], options?: SqliteExecuteOptions) =>
     Promise<QueryResult | undefined>;
   isExecuting: boolean; // True while executing
   error: Error | null; // Execution error

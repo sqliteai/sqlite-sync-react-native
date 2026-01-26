@@ -5,22 +5,22 @@ import type {
   NotificationListeningMode,
 } from '../../types/SQLiteSyncProviderProps';
 import type { TableConfig } from '../../types/TableConfig';
-import type { Logger } from '../../core/logger';
+import type { Logger } from '../common/logger';
+import {
+  ExpoConstants,
+  ExpoNotifications,
+  isBackgroundSyncAvailable,
+} from '../common/optionalDependencies';
 import {
   registerBackgroundSync,
   unregisterBackgroundSync,
-} from '../../core/background/backgroundSync';
-import { setForegroundSyncCallback } from '../../core/background/syncCallbacks';
-import {
-  ExpoNotifications,
-  ExpoConstants,
-  isBackgroundSyncAvailable,
-} from '../../core/optionalDependencies';
+} from '../background/backgroundSyncRegistry';
+import { setForegroundSyncCallback } from './pushNotificationSyncCallbacks';
 
 /**
- * Parameters for useSqliteSyncPush hook
+ * Parameters for usePushNotificationSync hook
  */
-export interface SqliteSyncPushParams {
+export interface PushNotificationSyncParams {
   /**
    * Whether sync is ready and configured
    */
@@ -105,7 +105,9 @@ const isSqliteCloudNotification = (notification: any): boolean => {
   return artifactURI === 'https://sqlite.ai';
 };
 
-export function useSqliteSyncPush(params: SqliteSyncPushParams): void {
+export function usePushNotificationSync(
+  params: PushNotificationSyncParams
+): void {
   const {
     isSyncReady,
     performSyncRef,
