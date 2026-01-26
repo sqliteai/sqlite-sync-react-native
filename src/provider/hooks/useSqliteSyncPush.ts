@@ -9,20 +9,13 @@ import type { Logger } from '../../core/logger';
 import {
   registerBackgroundSync,
   unregisterBackgroundSync,
-  isBackgroundSyncAvailable,
 } from '../../core/background/backgroundSync';
 import { setForegroundSyncCallback } from '../../core/background/syncCallbacks';
-
-// Optional Expo Notifications and Constants support
-let ExpoNotifications: any = null;
-let ExpoConstants: any = null;
-try {
-  ExpoNotifications = require('expo-notifications');
-  const constantsModule = require('expo-constants');
-  ExpoConstants = constantsModule.default || constantsModule;
-} catch {
-  // Expo not available - push mode will not work
-}
+import {
+  ExpoNotifications,
+  ExpoConstants,
+  isBackgroundSyncAvailable,
+} from '../../core/optionalDependencies';
 
 /**
  * Parameters for useSqliteSyncPush hook

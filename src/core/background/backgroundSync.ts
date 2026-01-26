@@ -1,27 +1,11 @@
 import { BACKGROUND_SYNC_TASK_NAME } from './syncTask';
-import {
-  isSecureStoreAvailable,
-  persistConfig,
-  clearPersistedConfig,
-} from './persistedSyncConfig';
+import { persistConfig, clearPersistedConfig } from './persistedSyncConfig';
 import type { BackgroundSyncConfig } from './persistedSyncConfig';
 import { createLogger } from '../logger';
-
-// Optional expo dependencies
-let ExpoNotifications: any = null;
-let TaskManager: any = null;
-
-try {
-  TaskManager = require('expo-task-manager');
-} catch {
-  // expo-task-manager not available
-}
-
-try {
-  ExpoNotifications = require('expo-notifications');
-} catch {
-  // expo-notifications not available
-}
+import {
+  ExpoNotifications,
+  isBackgroundSyncAvailable,
+} from '../optionalDependencies';
 
 /**
  * Register for background notification handling.
@@ -32,8 +16,10 @@ export async function registerBackgroundSync(
 ): Promise<void> {
   const logger = createLogger(config.debug ?? false);
 
-  if (!ExpoNotifications || !TaskManager) {
-    logger.warn('⚠️ ExpoNotifications or TaskManager not available');
+  if (!isBackgroundSyncAvailable()) {
+    logger.warn(
+      '⚠️ Background sync dependencies not available (expo-notifications, expo-task-manager, expo-secure-store)'
+    );
     return;
   }
 
@@ -59,16 +45,4 @@ export async function unregisterBackgroundSync(): Promise<void> {
   } catch {
     // Task might not be registered
   }
-}
-
-/**
- * Check if background sync is available.
- * Requires expo-task-manager, expo-notifications, and expo-secure-store.
- */
-export function isBackgroundSyncAvailable(): boolean {
-  return (
-    TaskManager !== null &&
-    ExpoNotifications !== null &&
-    isSecureStoreAvailable()
-  );
 }

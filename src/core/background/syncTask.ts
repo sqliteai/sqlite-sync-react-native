@@ -3,6 +3,7 @@ import { runBackgroundSync } from './runBackgroundSync';
 import { getPersistedConfig } from './persistedSyncConfig';
 import { createLogger } from '../logger';
 import { getForegroundSyncCallback } from './syncCallbacks';
+import { ExpoTaskManager } from '../optionalDependencies';
 
 /**
  * Task name for background notification handling.
@@ -37,21 +38,12 @@ const isSqliteCloudNotification = (taskData: any): boolean => {
   return false;
 };
 
-// Optional expo dependencies
-let TaskManager: any = null;
-
-try {
-  TaskManager = require('expo-task-manager');
-} catch {
-  // expo-task-manager not available
-}
-
 /**
  * Auto-define background task at module level.
  * This runs when the module is first imported (via the provider).
  */
-if (TaskManager) {
-  TaskManager.defineTask(
+if (ExpoTaskManager) {
+  ExpoTaskManager.defineTask(
     BACKGROUND_SYNC_TASK_NAME,
     async ({ data, error }: { data: any; error: any }) => {
       const config = await getPersistedConfig();

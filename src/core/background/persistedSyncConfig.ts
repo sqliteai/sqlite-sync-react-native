@@ -1,5 +1,6 @@
 import type { TableConfig } from '../../types/TableConfig';
 import { createLogger } from '../logger';
+import { ExpoSecureStore } from '../optionalDependencies';
 
 /**
  * Configuration for background sync
@@ -16,31 +17,16 @@ export interface BackgroundSyncConfig {
 // Storage key for persisted config
 const CONFIG_STORAGE_KEY = 'sqlite_sync_background_config';
 
-// Optional expo-secure-store
-let SecureStore: any = null;
-try {
-  SecureStore = require('expo-secure-store');
-} catch {
-  // expo-secure-store not available
-}
-
-/**
- * Check if SecureStore is available
- */
-export function isSecureStoreAvailable(): boolean {
-  return SecureStore !== null;
-}
-
 /**
  * Get persisted config from SecureStore
  */
 export async function getPersistedConfig(): Promise<BackgroundSyncConfig | null> {
-  if (!SecureStore) {
+  if (!ExpoSecureStore) {
     return null;
   }
 
   try {
-    const configJson = await SecureStore.getItemAsync(CONFIG_STORAGE_KEY);
+    const configJson = await ExpoSecureStore.getItemAsync(CONFIG_STORAGE_KEY);
     if (!configJson) {
       return null;
     }
@@ -58,7 +44,7 @@ export async function persistConfig(
 ): Promise<void> {
   const logger = createLogger(config.debug ?? false);
 
-  if (!SecureStore) {
+  if (!ExpoSecureStore) {
     logger.warn(
       '⚠️ expo-secure-store not found. Background/terminated sync will not work.'
     );
@@ -67,7 +53,7 @@ export async function persistConfig(
 
   try {
     const configJson = JSON.stringify(config);
-    await SecureStore.setItemAsync(CONFIG_STORAGE_KEY, configJson);
+    await ExpoSecureStore.setItemAsync(CONFIG_STORAGE_KEY, configJson);
     logger.info('✅ Background sync config saved');
   } catch (error) {
     logger.error('❌ Failed to persist config:', error);
@@ -78,12 +64,12 @@ export async function persistConfig(
  * Clear persisted config from SecureStore
  */
 export async function clearPersistedConfig(): Promise<void> {
-  if (!SecureStore) {
+  if (!ExpoSecureStore) {
     return;
   }
 
   try {
-    await SecureStore.deleteItemAsync(CONFIG_STORAGE_KEY);
+    await ExpoSecureStore.deleteItemAsync(CONFIG_STORAGE_KEY);
   } catch {
     // Ignore errors
   }
