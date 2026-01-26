@@ -1,14 +1,11 @@
 import type { DB } from '@op-engineering/op-sqlite';
 import type { ChangeRecord } from '../../types/BackgroundSyncCallback';
-import type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
+import type { BackgroundSyncConfig } from './persistedSyncConfig';
 import { createDatabase } from '../../provider/utils/createDatabase';
 import { createLogger } from '../logger';
 import { initializeSyncExtension } from '../sync/initializeSyncExtension';
 import { performSyncOperation } from '../sync/performSyncOperation';
 import { getBackgroundSyncCallback } from './syncCallbacks';
-
-// Re-export for backwards compatibility
-export type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
 
 /**
  * Run a complete background sync cycle

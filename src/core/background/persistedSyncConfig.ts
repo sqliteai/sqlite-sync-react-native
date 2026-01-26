@@ -1,5 +1,17 @@
-import type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
+import type { TableConfig } from '../../types/TableConfig';
 import { createLogger } from '../logger';
+
+/**
+ * Configuration for background sync
+ */
+export interface BackgroundSyncConfig {
+  connectionString: string;
+  databaseName: string;
+  tablesToBeSynced: TableConfig[];
+  apiKey?: string;
+  accessToken?: string;
+  debug?: boolean;
+}
 
 // Storage key for persisted config
 const CONFIG_STORAGE_KEY = 'sqlite_sync_background_config';

@@ -4,8 +4,8 @@ import {
   persistConfig,
   clearPersistedConfig,
 } from './persistedSyncConfig';
+import type { BackgroundSyncConfig } from './persistedSyncConfig';
 import { createLogger } from '../logger';
-import type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
 
 // Optional expo dependencies
 let ExpoNotifications: any = null;
