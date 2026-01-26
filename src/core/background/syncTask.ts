@@ -1,8 +1,8 @@
 import { AppState } from 'react-native';
 import { runBackgroundSync } from './runBackgroundSync';
-import { getPersistedConfig } from './backgroundSyncConfig';
-import { createLogger } from '../utils/logger';
-import { getForegroundSyncCallback } from './foregroundSyncCallback';
+import { getPersistedConfig } from './persistedSyncConfig';
+import { createLogger } from '../logger';
+import { getForegroundSyncCallback } from './syncCallbacks';
 
 /**
  * Task name for background notification handling.

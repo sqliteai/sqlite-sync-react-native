@@ -21,7 +21,7 @@ export interface ChangeRecord {
 }
 
 /**
- * Result passed to the background sync handler
+ * Result passed to the background sync callback
  */
 export interface BackgroundSyncResult {
   /**
@@ -31,14 +31,14 @@ export interface BackgroundSyncResult {
 
   /**
    * Database instance for querying the synced data
-   * Note: This connection will be closed after the handler completes
+   * Note: This connection will be closed after the callback completes
    */
   db: DB;
 }
 
 /**
- * Handler function called after background sync completes
+ * Callback function called after background sync completes
  */
-export type BackgroundSyncHandler = (
+export type BackgroundSyncCallback = (
   result: BackgroundSyncResult
 ) => Promise<void>;

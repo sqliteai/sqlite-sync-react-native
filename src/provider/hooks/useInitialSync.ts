@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Logger } from '../../utils/logger';
+import type { Logger } from '../../core/logger';
 
 /**
  * Delay before initial sync to allow components to set up reactive subscriptions.

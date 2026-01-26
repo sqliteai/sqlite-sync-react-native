@@ -1,11 +1,11 @@
 // Side-effect import: defines background task at module level
 // This ensures the task is defined when app is terminated
-import './core/backgroundSyncTask';
+import './core/background/syncTask';
 
 export { SQLiteSyncProvider } from './provider/SQLiteSyncProvider';
 
-// Background sync handler registration
-export { registerBackgroundSyncHandler } from './core/backgroundSyncHandler';
+// Background sync callback registration
+export { registerBackgroundSyncCallback } from './core/background/syncCallbacks';
 
 // Contexts
 export { SQLiteDbContext } from './contexts/SQLiteDbContext';
@@ -46,5 +46,5 @@ export type { ExecuteOptions } from './types/ExecuteOptions';
 export type {
   ChangeRecord,
   BackgroundSyncResult,
-  BackgroundSyncHandler,
-} from './types/BackgroundSyncHandler';
+  BackgroundSyncCallback,
+} from './types/BackgroundSyncCallback';

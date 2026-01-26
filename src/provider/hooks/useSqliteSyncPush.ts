@@ -5,13 +5,13 @@ import type {
   NotificationListeningMode,
 } from '../../types/SQLiteSyncProviderProps';
 import type { TableConfig } from '../../types/TableConfig';
-import type { Logger } from '../../utils/logger';
+import type { Logger } from '../../core/logger';
 import {
   registerBackgroundSync,
   unregisterBackgroundSync,
   isBackgroundSyncAvailable,
-  setForegroundSyncCallback,
-} from '../../core/backgroundSync';
+} from '../../core/background/backgroundSync';
+import { setForegroundSyncCallback } from '../../core/background/syncCallbacks';
 
 // Optional Expo Notifications and Constants support
 let ExpoNotifications: any = null;

@@ -18,7 +18,7 @@ import {
   useSqliteDb,
   useSyncStatus,
   useSqliteTransaction,
-  registerBackgroundSyncHandler,
+  registerBackgroundSyncCallback,
   type BackgroundSyncResult,
 } from '@sqliteai/sqlite-sync-react-native';
 import * as Notifications from 'expo-notifications';
@@ -33,7 +33,7 @@ import {
  * Register background sync handler at module level (outside components).
  * This is called when new data is synced while app is in background/terminated.
  */
-registerBackgroundSyncHandler(async ({ changes, db }: BackgroundSyncResult) => {
+registerBackgroundSyncCallback(async ({ changes, db }: BackgroundSyncResult) => {
   const newRowIds = changes
     .filter((c) => c.table === TABLE_NAME && c.operation === 'INSERT')
     .map((c) => c.rowId);

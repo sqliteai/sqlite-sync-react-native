@@ -1,6 +1,6 @@
 import { createContext } from 'react';
-import type { Logger } from '../utils/logger';
-import { createLogger } from '../utils/logger';
+import type { Logger } from '../core/logger';
+import { createLogger } from '../core/logger';
 
 /**
  * Internal context value for SQLiteSync implementation details

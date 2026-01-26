@@ -10,7 +10,7 @@ import type { SQLiteSyncProviderProps } from '../types/SQLiteSyncProviderProps';
 import type { SQLiteDbContextValue } from '../types/SQLiteDbContextValue';
 import type { SQLiteSyncStatusContextValue } from '../types/SQLiteSyncStatusContextValue';
 import type { SQLiteSyncActionsContextValue } from '../types/SQLiteSyncActionsContextValue';
-import { createLogger } from '../utils/logger';
+import { createLogger } from '../core/logger';
 import { useDatabaseInitialization } from './hooks/useDatabaseInitialization';
 import { useSyncManager } from './hooks/useSyncManager';
 import { useInitialSync } from './hooks/useInitialSync';

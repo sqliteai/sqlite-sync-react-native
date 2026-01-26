@@ -1,5 +1,5 @@
-import type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
-import { createLogger } from '../utils/logger';
+import type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
+import { createLogger } from '../logger';
 
 // Storage key for persisted config
 const CONFIG_STORAGE_KEY = 'sqlite_sync_background_config';

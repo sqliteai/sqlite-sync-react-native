@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { getDylibPath, type DB } from '@op-engineering/op-sqlite';
-import type { TableConfig } from '../types/TableConfig';
-import type { Logger } from '../utils/logger';
+import type { TableConfig } from '../../types/TableConfig';
+import type { Logger } from '../logger';
 
 /**
  * Configuration for sync initialization

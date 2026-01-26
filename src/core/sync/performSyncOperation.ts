@@ -1,5 +1,5 @@
 import type { DB, QueryResult } from '@op-engineering/op-sqlite';
-import type { Logger } from '../utils/logger';
+import type { Logger } from '../logger';
 
 /**
  * Extracts the number of changes from a CloudSync query result

@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { SQLiteInternalContext } from '../../contexts/SQLiteInternalContext';
-import type { Logger } from '../../utils/logger';
+import type { Logger } from '../../core/logger';
 
 /**
  * Internal hook to access the configured logger

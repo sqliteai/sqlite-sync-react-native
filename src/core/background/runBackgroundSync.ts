@@ -1,14 +1,14 @@
 import type { DB } from '@op-engineering/op-sqlite';
-import type { ChangeRecord } from '../types/BackgroundSyncHandler';
-import type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
-import { createDatabase } from '../provider/utils/createDatabase';
-import { createLogger } from '../utils/logger';
-import { initializeSyncExtension } from './initializeSyncExtension';
-import { performSyncOperation } from './performSyncOperation';
-import { getBackgroundSyncHandler } from './backgroundSyncHandler';
+import type { ChangeRecord } from '../../types/BackgroundSyncCallback';
+import type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
+import { createDatabase } from '../../provider/utils/createDatabase';
+import { createLogger } from '../logger';
+import { initializeSyncExtension } from '../sync/initializeSyncExtension';
+import { performSyncOperation } from '../sync/performSyncOperation';
+import { getBackgroundSyncCallback } from './syncCallbacks';
 
 // Re-export for backwards compatibility
-export type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
+export type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
 
 /**
  * Run a complete background sync cycle
@@ -41,8 +41,8 @@ export async function runBackgroundSync(
     );
 
     // Set up updateHook to capture changes during sync
-    const handler = getBackgroundSyncHandler();
-    if (handler) {
+    const callback = getBackgroundSyncCallback();
+    if (callback) {
       db.updateHook(({ operation, table, rowId }) => {
         changes.push({
           operation: operation as 'INSERT' | 'UPDATE' | 'DELETE',
@@ -61,18 +61,18 @@ export async function runBackgroundSync(
 
     logger.info('✅ Background sync completed successfully');
 
-    // Call the handler with changes (before closing db so handler can query)
-    if (handler && db) {
+    // Call the callback with changes (before closing db so callback can query)
+    if (callback && db) {
       logger.info(
-        `📲 Calling background sync handler with ${changes.length} changes`
+        `📲 Calling background sync callback with ${changes.length} changes`
       );
       try {
-        // Remove the hook before calling handler to avoid capturing handler's queries
+        // Remove the hook before calling callback to avoid capturing callback's queries
         db.updateHook(null);
-        await handler({ changes, db });
-        logger.info('✅ Background sync handler completed');
-      } catch (handlerError) {
-        logger.error('❌ Background sync handler failed:', handlerError);
+        await callback({ changes, db });
+        logger.info('✅ Background sync callback completed');
+      } catch (callbackError) {
+        logger.error('❌ Background sync callback failed:', callbackError);
       }
     }
   } catch (error) {

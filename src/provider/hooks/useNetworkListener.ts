@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import NetInfo from '@react-native-community/netinfo';
-import type { Logger } from '../../utils/logger';
+import type { Logger } from '../../core/logger';
 
 /**
  * Parameters for useNetworkListener hook

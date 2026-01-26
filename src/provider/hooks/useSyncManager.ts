@@ -3,9 +3,9 @@ import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import type { DB } from '@op-engineering/op-sqlite';
 import type { AdaptivePollingConfig } from '../../types/SQLiteSyncProviderProps';
-import type { Logger } from '../../utils/logger';
+import type { Logger } from '../../core/logger';
 import { calculateAdaptiveInterval } from '../utils/calculateAdaptiveInterval';
-import { performSyncOperation } from '../../core/performSyncOperation';
+import { performSyncOperation } from '../../core/sync/performSyncOperation';
 
 /**
  * Parameters for useSyncManager hook

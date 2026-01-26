@@ -1,23 +1,11 @@
-// Re-export handler registry functions
-export {
-  registerBackgroundSyncHandler,
-  getBackgroundSyncHandler,
-} from './backgroundSyncHandler';
-
-// Re-export foreground callback functions
-export { setForegroundSyncCallback } from './foregroundSyncCallback';
-
-// Re-export config type
-export type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
-
-import { BACKGROUND_SYNC_TASK_NAME } from './backgroundSyncTask';
+import { BACKGROUND_SYNC_TASK_NAME } from './syncTask';
 import {
   isSecureStoreAvailable,
   persistConfig,
   clearPersistedConfig,
-} from './backgroundSyncConfig';
-import { createLogger } from '../utils/logger';
-import type { BackgroundSyncConfig } from '../types/BackgroundSyncConfig';
+} from './persistedSyncConfig';
+import { createLogger } from '../logger';
+import type { BackgroundSyncConfig } from '../../types/BackgroundSyncConfig';
 
 // Optional expo dependencies
 let ExpoNotifications: any = null;

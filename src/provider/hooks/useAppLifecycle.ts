@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState } from 'react-native';
 import type { AdaptivePollingConfig } from '../../types/SQLiteSyncProviderProps';
-import type { Logger } from '../../utils/logger';
+import type { Logger } from '../../core/logger';
 import { FOREGROUND_DEBOUNCE_MS } from '../constants';
 
 /**
