@@ -301,6 +301,10 @@ export function usePushNotificationSync(
         const foregroundSubscription =
           ExpoNotifications.addNotificationReceivedListener(
             (notification: any) => {
+              logger.info(
+                '📬 RAW notification received:',
+                JSON.stringify(notification.request?.content)
+              );
               if (isSqliteCloudNotification(notification)) {
                 logger.info(
                   '📲 SQLite Cloud notification (foreground) - triggering sync'
@@ -316,6 +320,10 @@ export function usePushNotificationSync(
       const foregroundSubscription =
         ExpoNotifications.addNotificationReceivedListener(
           (notification: any) => {
+            logger.info(
+              '📬 RAW notification received:',
+              JSON.stringify(notification.request?.content)
+            );
             if (isSqliteCloudNotification(notification)) {
               logger.info(
                 '📲 SQLite Cloud notification (foreground) - triggering sync'
