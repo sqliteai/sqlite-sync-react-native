@@ -265,11 +265,11 @@ export function usePushNotificationSync(
       `📲 SQLite Sync push mode enabled (listening: ${notificationListening})`
     );
 
-    // Set up notification handler for silent sync (no user-facing alerts)
+    // Set up notification handler (temporarily showing alerts for debugging)
     ExpoNotifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: false,
-        shouldPlaySound: false,
+        shouldShowAlert: true,
+        shouldPlaySound: true,
         shouldSetBadge: false,
       }),
     });
