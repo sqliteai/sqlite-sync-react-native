@@ -1,6 +1,6 @@
-# SQLite Sync React Native - Sync Demo
+# SQLite Sync React Native - Expo Demo
 
-This is an example Expo app demonstrating the usage of `@sqliteai/sqlite-sync-react-native`.
+This is an example **Expo** app demonstrating the usage of `@sqliteai/sqlite-sync-react-native` with push notification sync mode.
 
 ## Setup Instructions
 
@@ -51,7 +51,7 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
 1. **Create a `.env` file**
 
    ```bash
-   cd examples/sync-demo
+   cd examples/sync-demo-expo
    cp .env.example .env
    ```
 
@@ -73,61 +73,38 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
 yarn install
 ```
 
-This will install dependencies for both the library and the example.
-
 ## Running the Example
 
-You can run the example from either the **repository root** or the **example directory**.
-
-### Option 1: Run from Root (Recommended)
-
-This automatically builds the library and runs the example:
+From the repository root:
 
 ```bash
-# From repository root
-yarn ios      # Build library + run iOS
-yarn android  # Build library + run Android
+yarn expo:ios:device      # Build library + run iOS
+yarn expo:android:device  # Build library + run Android
 ```
-
-### Option 2: Run from Example Directory
-
-If you prefer to run commands from the example directory:
-
-```bash
-# From repository root
-cd examples/sync-demo
-
-# iOS
-yarn ios
-
-# Android
-yarn android
-```
-
-These commands will:
-1. Run `expo prebuild --clean` to generate native folders
-2. For iOS: install CocoaPods dependencies
-3. Build and launch the app
 
 ## How It Works
 
-The demo app:
+The demo app demonstrates:
 
-1. Creates a local SQLite database that syncs with the cloud
-2. Allows you to add text entries that are automatically synced
-3. Displays sync status and last sync time
-4. Auto-reloads data when changes are received
+1. **SQLiteSyncProvider** - Creates a local SQLite database that syncs with the cloud
+2. **Push notification sync** - Uses `expo-notifications` for real-time sync triggers
+3. **Reactive queries** - Uses `useSqliteSyncQuery` for automatic UI updates
+4. **Row-level notifications** - Uses `useOnTableUpdate` for change tracking
+5. **Manual sync** - Uses `useTriggerSqliteSync` for on-demand sync
+6. **Background sync callback** - Uses `registerBackgroundSyncCallback` for background notifications
 
 ## Try It Out
 
-**Test Real-Time Sync:**
-- Open the app on multiple devices or alongside the SQLite Cloud dashboard to see real-time synchronization in action!
+**Test Push Notification Sync:**
+1. Run the app on a real device (push notifications don't work on simulators)
+2. Grant push notification permissions when prompted
+3. Add data from the SQLite Cloud dashboard
+4. Watch the app sync instantly via push notification
 
-**Test Offline Mode:**
-- Turn off your internet connection
-- Add entries in the app (they'll be saved locally)
-- Turn your internet back on
-- Watch the sync automatically happen and changes appear in the cloud!
+**Test Permission Denial Fallback:**
+1. Deny push notification permissions when prompted
+2. The app automatically falls back to polling mode
+3. Data still syncs, just on a polling interval instead of instantly
 
 ## Learn More
 
