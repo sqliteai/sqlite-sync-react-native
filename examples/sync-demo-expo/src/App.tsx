@@ -29,6 +29,16 @@ import {
   TABLE_NAME,
 } from '@env';
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 /**
  * Register background sync handler at module level (outside components).
  * This is called when new data is synced while app is in background/terminated.
@@ -242,7 +252,7 @@ function TestApp() {
               // Simulate a SQLite Cloud notification to test sync listener
               await Notifications.scheduleNotificationAsync({
                 content: {
-                  title: 'Test Sync Notification',
+                  title: 'Test Local Sync Notification',
                   body: 'This should trigger sync...',
                   data: { artifactURI: 'https://sqlite.ai' },
                 },
