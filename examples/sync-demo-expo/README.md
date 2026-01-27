@@ -48,23 +48,54 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
 
 ### 3. Configure Environment Variables
 
-1. **Create a `.env` file**
+1. **Create configuration files**
 
    ```bash
    cd examples/sync-demo-expo
    cp .env.example .env
+   cp eas.json.example eas.json
    ```
 
-2. **Fill in your credentials** in the `.env` file:
+2. **Set up an Expo project** (for push notifications)
+
+   - Go to [Expo Dashboard](https://expo.dev/)
+   - Create a new account or sign in
+   - Create a new project and copy your **Project ID**
+
+3. **Fill in your `.env` file**
 
    ```env
+   # SQLite Cloud credentials
    SQLITE_CLOUD_CONNECTION_STRING=sqlitecloud://your-host.sqlite.cloud:8860/your-database
    SQLITE_CLOUD_API_KEY=your-api-key-here
    DATABASE_NAME=sync-demo.db
    TABLE_NAME=test_table
+
+   # Expo/EAS configuration
+   EAS_PROJECT_ID=your-eas-project-id
+   IOS_BUNDLE_IDENTIFIER=com.yourcompany.sqlitesyncexample
+   ANDROID_PACKAGE=com.yourcompany.sqlitesyncexample
    ```
 
-   **Note**: The `TABLE_NAME` must match the table name you created in SQLite Cloud and enabled for OffSync.
+   **Note**: The `TABLE_NAME` must match the table you created in SQLite Cloud and enabled for OffSync.
+
+4. **Set up push notification credentials**
+
+   ```bash
+   # Configure iOS APNs credentials
+   eas credentials -p ios
+
+   # Configure Android FCM credentials (optional)
+   eas credentials -p android
+   ```
+
+5. **Configure Firebase for Android (optional)**
+
+   If you want push notifications on Android:
+
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - Add an Android app with your package name
+   - Download `google-services.json` and place it in this directory
 
 ### 4. Install Dependencies
 
