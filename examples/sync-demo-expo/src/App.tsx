@@ -33,35 +33,37 @@ import {
  * Register background sync handler at module level (outside components).
  * This is called when new data is synced while app is in background/terminated.
  */
-registerBackgroundSyncCallback(async ({ changes, db }: BackgroundSyncResult) => {
-  const newRowIds = changes
-    .filter((c) => c.table === TABLE_NAME && c.operation === 'INSERT')
-    .map((c) => c.rowId);
+registerBackgroundSyncCallback(
+  async ({ changes, db }: BackgroundSyncResult) => {
+    const newRowIds = changes
+      .filter((c) => c.table === TABLE_NAME && c.operation === 'INSERT')
+      .map((c) => c.rowId);
 
-  if (newRowIds.length === 0) return;
+    if (newRowIds.length === 0) return;
 
-  const result = await db.execute(
-    `SELECT * FROM ${TABLE_NAME} WHERE rowid IN (${newRowIds.join(
-      ','
-    )}) ORDER BY created_at DESC LIMIT 1`
-  );
+    const result = await db.execute(
+      `SELECT * FROM ${TABLE_NAME} WHERE rowid IN (${newRowIds.join(
+        ','
+      )}) ORDER BY created_at DESC LIMIT 1`
+    );
 
-  const newestRow = result.rows?.[0] as
-    | { id: string; value: string; created_at: string }
-    | undefined;
+    const newestRow = result.rows?.[0] as
+      | { id: string; value: string; created_at: string }
+      | undefined;
 
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title:
-        newRowIds.length === 1
-          ? 'New item synced'
-          : `${newRowIds.length} new items synced`,
-      body: newestRow?.value || 'New data is available',
-      data: { rowId: newestRow?.id },
-    },
-    trigger: null,
-  });
-});
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title:
+          newRowIds.length === 1
+            ? 'New item synced'
+            : `${newRowIds.length} new items synced`,
+        body: newestRow?.value || 'New data is available',
+        data: { rowId: newestRow?.id },
+      },
+      trigger: null,
+    });
+  }
+);
 
 /**
  * Demo app showcasing the reactive hooks and dual connection architecture:
@@ -232,6 +234,23 @@ function TestApp() {
             <Text style={styles.buttonText}>
               {isSyncing ? 'Syncing...' : 'Sync Now'}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.testNotificationButton]}
+            onPress={async () => {
+              // Simulate a SQLite Cloud notification to test sync listener
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: 'Test Sync Notification',
+                  body: 'This should trigger sync...',
+                  data: { artifactURI: 'https://sqlite.ai' },
+                },
+                trigger: null,
+              });
+            }}
+          >
+            <Text style={styles.buttonText}>Test Sync Notification</Text>
           </TouchableOpacity>
         </View>
 
@@ -405,7 +424,7 @@ export default function App() {
           },
         ]}
         syncMode="push"
-        notificationListening="always"
+        notificationListening="foreground"
         onBeforePushPermissionRequest={handleBeforePushPermissionRequest}
         apiKey={SQLITE_CLOUD_API_KEY}
         debug={true}
@@ -497,6 +516,10 @@ const styles = StyleSheet.create({
   },
   syncButton: {
     backgroundColor: '#007AFF',
+  },
+  testNotificationButton: {
+    backgroundColor: '#34C759',
+    marginTop: 8,
   },
   buttonText: {
     color: '#fff',
