@@ -229,6 +229,13 @@ export function usePushNotificationSync(
           ExpoConstants?.manifest?.extra?.eas?.projectId ??
           ExpoConstants?.easConfig?.projectId;
 
+        // Get native APNs device token
+        const deviceToken = await ExpoNotifications.getDevicePushTokenAsync();
+        if (deviceToken?.data) {
+          logger.info('📱 APNs Device Token:', deviceToken.data);
+        }
+
+        // Get Expo push token
         const token = await ExpoNotifications.getExpoPushTokenAsync({
           projectId,
         });
