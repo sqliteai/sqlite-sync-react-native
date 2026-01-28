@@ -38,7 +38,8 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier:
-        process.env.IOS_BUNDLE_IDENTIFIER || 'com.yourcompany.sqlitesyncexample',
+        process.env.IOS_BUNDLE_IDENTIFIER ||
+        'com.yourcompany.sqlitesyncexample',
       infoPlist: {
         UIBackgroundModes: ['remote-notification'],
         ITSAppUsesNonExemptEncryption: false,
