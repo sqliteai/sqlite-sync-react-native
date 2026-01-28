@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 buildscript {
   repositories {
     google()
@@ -10,6 +12,10 @@ buildscript {
 }
 
 apply plugin: 'com.android.library'
+
+// Read version from package.json
+def packageJson = new JsonSlurper().parse(file("$projectDir/../package.json"))
+def cloudsyncVersion = packageJson.version
 
 def safeExtGet(prop, fallback) {
   rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
@@ -37,5 +43,5 @@ repositories {
 dependencies {
   implementation 'com.facebook.react:react-native:+'
   // SQLite Cloud Sync from Maven Central
-  implementation 'ai.sqlite:sync:0.8.57'
+  implementation "ai.sqlite:sync.dev:${cloudsyncVersion}"
 }

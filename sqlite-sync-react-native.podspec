@@ -11,16 +11,11 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => "13.0" }
-  s.source       = { :git => package["repository"]["url"], :tag => "v#{s.version}" }
+  s.source       = { :http => "https://github.com/sqliteai/sqlite-sync-dev/releases/download/v#{s.version}/cloudsync-apple-xcframework-#{s.version}.zip" }
 
-  s.source_files = "ios/**/*.{h,m,mm,swift}"
-
-  # Vendor the CloudSync xcframework
-  s.vendored_frameworks = "ios/CloudSync.xcframework"
+  s.vendored_frameworks = "CloudSync.xcframework"
 
   # Dependencies
   s.dependency "React-Core"
-
-  # Required for op-sqlite integration
   s.dependency "React"
 end
