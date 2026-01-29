@@ -424,7 +424,7 @@ export default function App() {
           },
         ]}
         syncMode="push"
-        notificationListening="foreground"
+        notificationListening="always"
         onBeforePushPermissionRequest={handleBeforePushPermissionRequest}
         apiKey={SQLITE_CLOUD_API_KEY}
         debug={true}
