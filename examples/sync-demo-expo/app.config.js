@@ -1,8 +1,8 @@
-const IS_DEV = process.env.APP_VARIANT === 'development';
+require('dotenv').config();
 
 export default {
   expo: {
-    name: IS_DEV ? 'sync-demo-expo (Dev)' : 'sync-demo-expo',
+    name: 'sync-demo-expo',
     slug: 'sqlite-sync-demo',
     version: '1.0.0',
     orientation: 'portrait',
@@ -11,7 +11,7 @@ export default {
     newArchEnabled: true,
     extra: {
       eas: {
-        projectId: process.env.EAS_PROJECT_ID || 'YOUR_EAS_PROJECT_ID',
+        projectId: process.env.EAS_PROJECT_ID,
       },
     },
     plugins: [
@@ -37,9 +37,7 @@ export default {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier:
-        process.env.IOS_BUNDLE_IDENTIFIER ||
-        'com.yourcompany.sqlitesyncexample',
+      bundleIdentifier: process.env.IOS_BUNDLE_IDENTIFIER,
       infoPlist: {
         UIBackgroundModes: ['remote-notification'],
         ITSAppUsesNonExemptEncryption: false,
@@ -51,8 +49,7 @@ export default {
         backgroundColor: '#ffffff',
       },
       edgeToEdgeEnabled: true,
-      package:
-        process.env.ANDROID_PACKAGE || 'com.yourcompany.sqlitesyncexample',
+      package: process.env.ANDROID_PACKAGE,
       minSdkVersion: 26,
       googleServicesFile: './google-services.json',
     },
