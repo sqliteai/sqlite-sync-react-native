@@ -44,7 +44,10 @@ if (ExpoTaskManager) {
       const config = await getPersistedConfig();
       const logger = createLogger(config?.debug ?? false);
 
-      logger.info('📲 Background task triggered');
+      logger.info(
+        '📲 Background sync task triggered',
+        JSON.stringify(data, null, 2)
+      );
 
       if (error) {
         logger.error('❌ Background task error:', error);
