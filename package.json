@@ -1,6 +1,6 @@
 {
   "name": "@sqliteai/sqlite-sync-react-native",
-  "version": "0.9.99",
+  "version": "0.9.100",
   "description": "Offline-first React Native library with automatic sqlite-sync powered by SQLite Cloud",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
