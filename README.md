@@ -46,7 +46,6 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 - **Optional (for push mode):**
   - [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/)
   - [`expo-constants`](https://docs.expo.dev/versions/latest/sdk/constants/)
-  - Expo projects only
 
 > **⚠️ Note:** This library is **native-only** (iOS/Android).
 
@@ -817,13 +816,16 @@ return (
 Reactive queries **only fire on committed transactions**. When writing data, always use transactions:
 
 ```typescript
+const { execute } = useSqliteExecute();
+const { executeTransaction } = useSqliteTransaction();
+
 // ✅ This will trigger reactive queries
-await db.transaction(async (tx) => {
-  await tx.execute('INSERT INTO tasks (id, title) VALUES (?, ?);', [id, title]);
+await executeTransaction(async (tx) => {
+  await tx.execute('INSERT INTO tasks (id, title) VALUES (?, ?)', [id, title]);
 });
 
 // ❌ This will NOT trigger reactive queries
-await db.execute('INSERT INTO tasks (id, title) VALUES (?, ?);', [id, title]);
+await execute('INSERT INTO tasks (id, title) VALUES (?, ?)', [id, title]);
 ```
 
 The library automatically wraps sync operations in transactions, so reactive queries update when cloud changes arrive.
@@ -970,6 +972,8 @@ function TaskManager() {
 
 **Important:** Direct `execute()` calls do NOT trigger reactive queries. To trigger reactive queries, use `useSqliteTransaction()` instead.
 
+> **Note:** This hook automatically syncs changes to the cloud after each write, so your data is pushed immediately. If you use op-sqlite's `db.execute()` directly instead, changes will **not** be synced automatically — you would need to call `db.execute('SELECT cloudsync_network_send_changes()')` manually.
+
 #### `useSqliteTransaction()`
 
 Execute SQL commands within a transaction for atomic write operations.
@@ -1023,6 +1027,8 @@ function TaskManager() {
 ```
 
 **Important:** Transactions automatically trigger reactive queries when they commit successfully. This is the recommended way to write data when using `useSqliteSyncQuery`.
+
+> **Note:** This hook automatically syncs changes to the cloud after each transaction commits, so your data is pushed immediately. If you use op-sqlite's `db.transaction()` directly instead, changes will **not** be synced automatically — you would need to call `db.execute('SELECT cloudsync_network_send_changes()')` manually.
 
 ## 🚨 Error Handling
 
@@ -1109,6 +1115,6 @@ Check out the [examples](./examples) directory for complete working examples:
 
 ## 🔗 Links
 
-- [SQLite Sync Documentation](https://docs.sqlitecloud.io/docs/sqlite-sync) - Detailed sync docs with API references and best practices
+- [SQLite Sync Documentation](https://docs.sqlitecloud.io/docs/sqlite-sync-introduction) - Detailed sync docs with API references and best practices
 - [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/) - Manage your databases
 - [OP-SQLite API Reference](https://op-engineering.github.io/op-sqlite/docs/api)
