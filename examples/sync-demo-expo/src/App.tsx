@@ -235,23 +235,6 @@ function TestApp() {
               {isSyncing ? 'Syncing...' : 'Sync Now'}
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.testNotificationButton]}
-            onPress={async () => {
-              // Simulate a SQLite Cloud notification to test sync listener
-              await Notifications.scheduleNotificationAsync({
-                content: {
-                  title: 'Test Local Sync Notification',
-                  body: 'This should trigger sync...',
-                  data: { artifactURI: 'https://sqlite.ai' },
-                },
-                trigger: null,
-              });
-            }}
-          >
-            <Text style={styles.buttonText}>Test Sync Notification</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.listHeader}>
