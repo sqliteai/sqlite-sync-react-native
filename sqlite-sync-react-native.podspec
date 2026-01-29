@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => "13.0" }
-  s.source       = { :http => "https://github.com/sqliteai/sqlite-sync-dev/releases/download/v#{s.version}/cloudsync-apple-xcframework-#{s.version}.zip" }
+  s.source       = { :http => "https://github.com/sqliteai/sqlite-sync-dev/releases/download/#{s.version}/cloudsync-apple-xcframework-#{s.version}.zip" }
 
   s.vendored_frameworks = "CloudSync.xcframework"
 
