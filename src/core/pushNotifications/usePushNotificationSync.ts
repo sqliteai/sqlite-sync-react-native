@@ -272,6 +272,21 @@ export function usePushNotificationSync(
       `📲 SQLite Sync push mode enabled (listening: ${notificationListening})`
     );
 
+    const addForegroundListener = () =>
+      ExpoNotifications.addNotificationReceivedListener((notification: any) => {
+        logger.info(
+          '📬 Foreground notification received:',
+          JSON.stringify(notification, null, 2)
+        );
+
+        if (isSqliteCloudNotification(notification)) {
+          logger.info(
+            '📲 SQLite Cloud notification (foreground) - triggering sync'
+          );
+          performSyncRef.current?.();
+        }
+      });
+
     const subscriptions: { remove: () => void }[] = [];
 
     // BACKGROUND & TERMINATED: Register background task
@@ -296,41 +311,11 @@ export function usePushNotificationSync(
           '⚠️ Background sync not available. Install expo-task-manager and expo-secure-store for background/terminated notification handling.'
         );
         // Fallback to foreground-only listener
-        const foregroundSubscription =
-          ExpoNotifications.addNotificationReceivedListener(
-            (notification: any) => {
-              logger.info(
-                '📬 RAW notification received:',
-                JSON.stringify(notification.request?.content)
-              );
-              if (isSqliteCloudNotification(notification)) {
-                logger.info(
-                  '📲 SQLite Cloud notification (foreground) - triggering sync'
-                );
-                performSyncRef.current?.();
-              }
-            }
-          );
-        subscriptions.push(foregroundSubscription);
+        subscriptions.push(addForegroundListener());
       }
     } else {
       // FOREGROUND ONLY: Use traditional listener
-      const foregroundSubscription =
-        ExpoNotifications.addNotificationReceivedListener(
-          (notification: any) => {
-            logger.info(
-              '📬 RAW notification received:',
-              JSON.stringify(notification.request?.content)
-            );
-            if (isSqliteCloudNotification(notification)) {
-              logger.info(
-                '📲 SQLite Cloud notification (foreground) - triggering sync'
-              );
-              performSyncRef.current?.();
-            }
-          }
-        );
-      subscriptions.push(foregroundSubscription);
+      subscriptions.push(addForegroundListener());
     }
 
     return () => {
