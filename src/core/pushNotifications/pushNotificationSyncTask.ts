@@ -5,33 +5,7 @@ import { createLogger } from '../common/logger';
 import { BACKGROUND_SYNC_TASK_NAME } from '../constants';
 import { executeBackgroundSync } from '../background/executeBackgroundSync';
 import { getForegroundSyncCallback } from './pushNotificationSyncCallbacks';
-
-/**
- * Check if task data is from SQLite Cloud.
- * Handles different data structures from foreground vs background notifications.
- */
-const isSqliteCloudNotification = (taskData: any): boolean => {
-  // Background notification: data is in taskData.data.body (as JSON string)
-  const bodyString = taskData?.data?.body || taskData?.data?.dataString;
-  if (bodyString) {
-    try {
-      const parsed = JSON.parse(bodyString);
-      if (parsed?.artifactURI === 'https://sqlite.ai') {
-        return true;
-      }
-    } catch {
-      // Not valid JSON
-    }
-  }
-
-  // Foreground notification structure
-  const artifactURI = taskData?.request?.content?.data?.artifactURI;
-  if (artifactURI === 'https://sqlite.ai') {
-    return true;
-  }
-
-  return false;
-};
+import { isSqliteCloudNotification } from './isSqliteCloudNotification';
 
 /**
  * Auto-define background task at module level.

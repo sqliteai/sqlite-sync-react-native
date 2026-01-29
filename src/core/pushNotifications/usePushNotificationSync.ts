@@ -97,13 +97,7 @@ export interface PushNotificationSyncParams {
   onBeforePushPermissionRequest?: () => Promise<boolean>;
 }
 
-/**
- * Check if a notification is from SQLite Cloud
- */
-const isSqliteCloudNotification = (notification: any): boolean => {
-  const artifactURI = notification?.request?.content?.data?.artifactURI;
-  return artifactURI === 'https://sqlite.ai';
-};
+import { isForegroundSqliteCloudNotification } from './isSqliteCloudNotification';
 
 export function usePushNotificationSync(
   params: PushNotificationSyncParams
@@ -279,7 +273,7 @@ export function usePushNotificationSync(
           JSON.stringify(notification, null, 2)
         );
 
-        if (isSqliteCloudNotification(notification)) {
+        if (isForegroundSqliteCloudNotification(notification)) {
           logger.info(
             '📲 SQLite Cloud notification (foreground) - triggering sync'
           );
