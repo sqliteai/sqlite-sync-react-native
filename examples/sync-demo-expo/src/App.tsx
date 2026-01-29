@@ -29,16 +29,6 @@ import {
   TABLE_NAME,
 } from '@env';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 /**
  * Register background sync handler at module level (outside components).
  * This is called when new data is synced while app is in background/terminated.
