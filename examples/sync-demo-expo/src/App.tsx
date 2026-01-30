@@ -86,7 +86,13 @@ registerBackgroundSyncCallback(
  */
 function TestApp({ deviceToken }: { deviceToken: string | null }) {
   const { writeDb, initError } = useSqliteDb();
-  const { isSyncReady, isSyncing, lastSyncTime, syncError, currentSyncInterval } = useSyncStatus();
+  const {
+    isSyncReady,
+    isSyncing,
+    lastSyncTime,
+    syncError,
+    currentSyncInterval,
+  } = useSyncStatus();
   const [nextSyncIn, setNextSyncIn] = useState<number | null>(null);
 
   useEffect(() => {
@@ -227,9 +233,7 @@ function TestApp({ deviceToken }: { deviceToken: string | null }) {
             </Text>
           )}
           {nextSyncIn != null && (
-            <Text style={styles.status}>
-              Next sync in {nextSyncIn}s
-            </Text>
+            <Text style={styles.status}>Next sync in {nextSyncIn}s</Text>
           )}
         </View>
 

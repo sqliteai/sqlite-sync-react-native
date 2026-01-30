@@ -45,7 +45,13 @@ import {
  */
 function TestApp() {
   const { writeDb, initError } = useSqliteDb();
-  const { isSyncReady, isSyncing, lastSyncTime, syncError, currentSyncInterval } = useSyncStatus();
+  const {
+    isSyncReady,
+    isSyncing,
+    lastSyncTime,
+    syncError,
+    currentSyncInterval,
+  } = useSyncStatus();
   const [nextSyncIn, setNextSyncIn] = useState<number | null>(null);
 
   useEffect(() => {
@@ -57,7 +63,7 @@ function TestApp() {
     const update = () => {
       const remaining = Math.max(
         0,
-        Math.ceil((lastSyncTime + currentSyncInterval - Date.now()) / 1000)
+        Math.ceil((lastSyncTime + currentSyncInterval - Date.now()) / 1000),
       );
       setNextSyncIn(remaining);
     };
@@ -172,9 +178,7 @@ function TestApp() {
             </Text>
           )}
           {nextSyncIn != null && (
-            <Text style={styles.status}>
-              Next sync in {nextSyncIn}s
-            </Text>
+            <Text style={styles.status}>Next sync in {nextSyncIn}s</Text>
           )}
         </View>
 
