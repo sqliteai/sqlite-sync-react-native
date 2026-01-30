@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Text,
   View,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
+  Clipboard,
 } from 'react-native';
 import {
   SQLiteSyncProvider,
@@ -83,7 +84,7 @@ registerBackgroundSyncCallback(
  *    - Always uses writeDb (for atomic write operations)
  *    - Triggers reactive queries when transaction commits
  */
-function TestApp() {
+function TestApp({ deviceToken }: { deviceToken: string | null }) {
   const { writeDb, initError } = useSqliteDb();
   const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
   const [searchText, setSearchText] = useState('');
@@ -176,6 +177,18 @@ function TestApp() {
       {/* 1. FIXED TOP SECTION (Header, Status, Inputs) */}
       <View style={styles.fixedHeader}>
         <Text style={styles.title}>SQLite Sync Demo</Text>
+
+        {deviceToken && (
+          <TouchableOpacity
+            style={styles.tokenBanner}
+            onPress={() => Clipboard.setString(deviceToken)}
+          >
+            <Text style={styles.tokenLabel}>Device Token (tap to copy):</Text>
+            <Text style={styles.tokenText} numberOfLines={2}>
+              {deviceToken}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Status Section */}
         <View style={styles.statusSection}>
@@ -344,6 +357,13 @@ function PermissionDialog({
 export default function App() {
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const permissionResolverRef = useRef<((value: boolean) => void) | null>(null);
+  const [deviceToken, setDeviceToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    Notifications.getExpoPushTokenAsync()
+      .then((token) => setDeviceToken(token.data as string))
+      .catch(() => setDeviceToken('Failed to get token'));
+  }, []);
 
   // Callback to show custom UI before system permission request
   const handleBeforePushPermissionRequest = useCallback(async () => {
@@ -412,7 +432,7 @@ export default function App() {
         apiKey={SQLITE_CLOUD_API_KEY}
         debug={true}
       >
-        <TestApp />
+        <TestApp deviceToken={deviceToken} />
       </SQLiteSyncProvider>
     </>
   );
@@ -696,5 +716,26 @@ const styles = StyleSheet.create({
   permissionDenyText: {
     color: '#666',
     fontSize: 16,
+  },
+  tokenBanner: {
+    backgroundColor: '#E8F5E9',
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 0,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  tokenLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginBottom: 4,
+  },
+  tokenText: {
+    fontSize: 11,
+    color: '#333',
+    fontFamily: 'monospace',
   },
 });
