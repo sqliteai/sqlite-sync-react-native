@@ -47,7 +47,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
   - [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/)
   - [`expo-constants`](https://docs.expo.dev/versions/latest/sdk/constants/)
 
-> **⚠️ Note:** This library is **native-only** (iOS/Android).
+> **Note:** This library is **native-only** (iOS/Android). Web is not supported.
 
 ## 📦 Installation
 
@@ -79,7 +79,21 @@ No additional setup required. Native modules are linked automatically.
 
 #### Expo
 
-If using Expo, you must use **development builds** (Expo Go is not supported):
+If using Expo, you must use **development builds** (Expo Go is not supported).
+
+**1. Set Android `minSdkVersion` to 26** (Expo defaults to 24, which will cause a build failure):
+
+```bash
+npx expo install expo-build-properties
+```
+
+Add to your `app.json` or `app.config.js` plugins:
+
+```json
+["expo-build-properties", { "android": { "minSdkVersion": 26 } }]
+```
+
+**2. Build and run:**
 
 ```bash
 # Generate native directories
@@ -101,7 +115,7 @@ npx expo run:android
 2. **Create a database**  
    Follow the [database creation guide](https://docs.sqlitecloud.io/docs/create-database).
 
-   > Ensure your tables have identical schemas in both local and cloud databases.
+   > Ensure your tables have identical schemas in both local and cloud databases. See [SQLite Sync Best Practices](https://docs.sqlitecloud.io/docs/sqlite-sync-best-practices) for schema requirements (e.g., all non-primary-key `NOT NULL` columns must have a `DEFAULT` value).
 
 3. **Enable OffSync**  
    Configure OffSync by following the [OffSync setup guide](https://docs.sqlitecloud.io/docs/offsync#:~:text=in%20the%20cloud.-,Configuring%20OffSync,-You%20can%20enable).
@@ -156,6 +170,7 @@ import {
   useOnTableUpdate,
   useTriggerSqliteSync,
   useSqliteTransaction,
+  useSyncStatus,
 } from '@sqliteai/sqlite-sync-react-native';
 
 interface Task {
@@ -186,7 +201,10 @@ function TaskList() {
 
   // 3. WRITING DATA: Use transactions to trigger reactive queries
   const { executeTransaction } = useSqliteTransaction();
-  const { triggerSync, isSyncing } = useTriggerSqliteSync();
+  const { triggerSync } = useTriggerSqliteSync();
+
+  // 4. SYNC STATUS: Get sync state for UI indicators
+  const { isSyncing } = useSyncStatus();
 
   const addTask = useCallback(
     async (title: string) => {
@@ -748,7 +766,8 @@ Manually trigger a sync operation.
 **How it works:** This hook is a convenience wrapper that exposes the `triggerSync` function from the Provider. The actual sync logic lives in `SQLiteSyncProvider` to ensure that `isSyncing`, `lastSyncTime`, and `lastSyncChanges` state are updated correctly, allowing all hooks (`useSqliteSyncQuery`) to react properly.
 
 ```typescript
-const { triggerSync, isSyncing } = useTriggerSqliteSync();
+const { triggerSync } = useTriggerSqliteSync();
+const { isSyncing } = useSyncStatus(); // isSyncing comes from useSyncStatus
 
 // Trigger sync on button press
 <Button
