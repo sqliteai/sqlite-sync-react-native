@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Text,
   View,
@@ -45,7 +45,27 @@ import {
  */
 function TestApp() {
   const { writeDb, initError } = useSqliteDb();
-  const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
+  const { isSyncReady, isSyncing, lastSyncTime, syncError, currentSyncInterval } = useSyncStatus();
+  const [nextSyncIn, setNextSyncIn] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!lastSyncTime || !currentSyncInterval) {
+      setNextSyncIn(null);
+      return;
+    }
+
+    const update = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((lastSyncTime + currentSyncInterval - Date.now()) / 1000)
+      );
+      setNextSyncIn(remaining);
+    };
+
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [lastSyncTime, currentSyncInterval]);
   const [searchText, setSearchText] = useState('');
   const [text, setText] = useState('');
   const [rowNotification, setRowNotification] = useState<string | null>(null);
@@ -149,6 +169,11 @@ function TestApp() {
           {lastSyncTime && (
             <Text style={styles.status}>
               Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
+            </Text>
+          )}
+          {nextSyncIn != null && (
+            <Text style={styles.status}>
+              Next sync in {nextSyncIn}s
             </Text>
           )}
         </View>

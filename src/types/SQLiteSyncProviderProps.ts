@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { TableConfig } from './TableConfig';
 import type { DB } from '@op-engineering/op-sqlite';
 
@@ -148,7 +149,7 @@ interface PollingMode {
    * Not available in polling mode
    */
   notificationListening?: never;
-  onBeforePushPermissionRequest?: never;
+  renderPushPermissionPrompt?: never;
 }
 
 /**
@@ -170,23 +171,26 @@ interface PushMode {
   notificationListening?: NotificationListeningMode;
 
   /**
-   * Callback invoked before requesting push notification permissions (push mode only).
-   * Use this to show a custom UI explaining why permissions are needed.
-   *
-   * @returns Promise<boolean> - true to proceed with system permission request, false to skip
+   * Render prop for showing a custom permission prompt before requesting push notification permissions.
+   * Receives `allow` and `deny` callbacks to resolve the permission request.
    *
    * @example
    * ```tsx
-   * onBeforePushPermissionRequest={async () => {
-   *   const userWantsToEnable = await showCustomAlert({
-   *     title: "Enable Real-time Sync",
-   *     message: "Allow notifications to get instant updates"
-   *   });
-   *   return userWantsToEnable;
-   * }}
+   * renderPushPermissionPrompt={({ allow, deny }) => (
+   *   <Modal visible animationType="fade" transparent>
+   *     <View>
+   *       <Text>Enable Real-time Sync?</Text>
+   *       <Button title="Allow" onPress={allow} />
+   *       <Button title="Deny" onPress={deny} />
+   *     </View>
+   *   </Modal>
+   * )}
    * ```
    */
-  onBeforePushPermissionRequest?: () => Promise<boolean>;
+  renderPushPermissionPrompt?: (props: {
+    allow: () => void;
+    deny: () => void;
+  }) => ReactNode;
 
   /**
    * Not available in push mode

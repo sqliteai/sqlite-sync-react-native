@@ -331,7 +331,7 @@ Main provider component that enables sync functionality.
 | `syncMode`                      | `'polling' \| 'push'`       | ❌       | Sync mode (default: `'polling'`)                           |
 | `adaptivePolling`               | `AdaptivePollingConfig`     | ❌       | Adaptive polling configuration (polling mode only)         |
 | `notificationListening`         | `'foreground' \| 'always'`  | ❌       | When to listen for push notifications (push mode only)     |
-| `onBeforePushPermissionRequest` | `() => Promise<boolean>`    | ❌       | Custom UI before system permission prompt (push mode only) |
+| `renderPushPermissionPrompt`    | `(props: { allow: () => void; deny: () => void }) => ReactNode` | ❌ | Render prop for permission prompt UI (push mode only) |
 | `onDatabaseReady`               | `(db: DB) => Promise<void>` | ❌       | Callback after DB opens, before sync init (for migrations) |
 | `debug`                         | `boolean`                   | ❌       | Enable debug logging (default: `false`)                    |
 | `children`                      | `ReactNode`                 | ✅       | Child components                                           |
@@ -439,54 +439,30 @@ Use `onDatabaseReady` to run migrations or other setup after the database opens 
 >
 ```
 
-#### Custom Push Permission UI with `onBeforePushPermissionRequest`
+#### Custom Push Permission UI with `renderPushPermissionPrompt`
 
-When using push mode, the system will prompt the user for notification permissions. Use `onBeforePushPermissionRequest` to show your own UI (e.g., an explanation modal) before the system prompt appears. Return `true` to proceed with the system prompt, or `false` to skip it.
+When using push mode, the system will prompt the user for notification permissions. Use `renderPushPermissionPrompt` to show your own UI before the system prompt appears. The render prop receives `allow` and `deny` callbacks — no Promise or ref boilerplate needed.
 
-```typescript
-import { useState, useCallback, useRef } from 'react';
-import { Modal, View, Text, TouchableOpacity } from 'react-native';
-
-export default function App() {
-  const [showDialog, setShowDialog] = useState(false);
-  const resolverRef = useRef<((value: boolean) => void) | null>(null);
-
-  const handleBeforePermission = useCallback(async () => {
-    return new Promise<boolean>((resolve) => {
-      resolverRef.current = resolve;
-      setShowDialog(true);
-    });
-  }, []);
-
-  return (
-    <>
-      <Modal visible={showDialog} transparent>
-        <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
-          <Text>Enable notifications for real-time sync?</Text>
-          <TouchableOpacity onPress={() => {
-            setShowDialog(false);
-            resolverRef.current?.(true); // Proceed to system prompt
-          }}>
-            <Text>Enable</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {
-            setShowDialog(false);
-            resolverRef.current?.(false); // Skip, fall back to polling
-          }}>
-            <Text>Not Now</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-      <SQLiteSyncProvider
-        syncMode="push"
-        onBeforePushPermissionRequest={handleBeforePermission}
-        // ...other props
-      >
-        <YourApp />
-      </SQLiteSyncProvider>
-    </>
-  );
-}
+```tsx
+<SQLiteSyncProvider
+  syncMode="push"
+  renderPushPermissionPrompt={({ allow, deny }) => (
+    <Modal visible animationType="fade" transparent>
+      <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
+        <Text>Enable notifications for real-time sync?</Text>
+        <TouchableOpacity onPress={allow}>
+          <Text>Enable</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={deny}>
+          <Text>Not Now</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  )}
+  // ...other props
+>
+  <YourApp />
+</SQLiteSyncProvider>
 ```
 
 #### `AdaptivePollingConfig`

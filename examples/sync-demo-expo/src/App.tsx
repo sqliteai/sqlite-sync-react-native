@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Text,
   View,
@@ -86,7 +86,27 @@ registerBackgroundSyncCallback(
  */
 function TestApp({ deviceToken }: { deviceToken: string | null }) {
   const { writeDb, initError } = useSqliteDb();
-  const { isSyncReady, isSyncing, lastSyncTime, syncError } = useSyncStatus();
+  const { isSyncReady, isSyncing, lastSyncTime, syncError, currentSyncInterval } = useSyncStatus();
+  const [nextSyncIn, setNextSyncIn] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!lastSyncTime || !currentSyncInterval) {
+      setNextSyncIn(null);
+      return;
+    }
+
+    const update = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((lastSyncTime + currentSyncInterval - Date.now()) / 1000)
+      );
+      setNextSyncIn(remaining);
+    };
+
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [lastSyncTime, currentSyncInterval]);
   const [searchText, setSearchText] = useState('');
   const [text, setText] = useState('');
   const [rowNotification, setRowNotification] = useState<string | null>(null);
@@ -204,6 +224,11 @@ function TestApp({ deviceToken }: { deviceToken: string | null }) {
           {lastSyncTime && (
             <Text style={styles.status}>
               Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
+            </Text>
+          )}
+          {nextSyncIn != null && (
+            <Text style={styles.status}>
+              Next sync in {nextSyncIn}s
             </Text>
           )}
         </View>
@@ -355,34 +380,12 @@ function PermissionDialog({
 }
 
 export default function App() {
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-  const permissionResolverRef = useRef<((value: boolean) => void) | null>(null);
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
 
   useEffect(() => {
     Notifications.getExpoPushTokenAsync()
       .then((token) => setDeviceToken(token.data as string))
       .catch(() => setDeviceToken('Failed to get token'));
-  }, []);
-
-  // Callback to show custom UI before system permission request
-  const handleBeforePushPermissionRequest = useCallback(async () => {
-    return new Promise<boolean>((resolve) => {
-      permissionResolverRef.current = resolve;
-      setShowPermissionDialog(true);
-    });
-  }, []);
-
-  const handlePermissionAllow = useCallback(() => {
-    setShowPermissionDialog(false);
-    permissionResolverRef.current?.(true);
-    permissionResolverRef.current = null;
-  }, []);
-
-  const handlePermissionDeny = useCallback(() => {
-    setShowPermissionDialog(false);
-    permissionResolverRef.current?.(false);
-    permissionResolverRef.current = null;
   }, []);
 
   if (
@@ -405,36 +408,31 @@ export default function App() {
   }
 
   return (
-    <>
-      <PermissionDialog
-        visible={showPermissionDialog}
-        onAllow={handlePermissionAllow}
-        onDeny={handlePermissionDeny}
-      />
-      <SQLiteSyncProvider
-        connectionString={SQLITE_CLOUD_CONNECTION_STRING}
-        databaseName={DATABASE_NAME}
-        tablesToBeSynced={[
-          {
-            name: TABLE_NAME,
-            createTableSql: `
-              CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-                id TEXT PRIMARY KEY NOT NULL,
-                value TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-              );
-            `,
-          },
-        ]}
-        syncMode="push"
-        notificationListening="always"
-        onBeforePushPermissionRequest={handleBeforePushPermissionRequest}
-        apiKey={SQLITE_CLOUD_API_KEY}
-        debug={true}
-      >
-        <TestApp deviceToken={deviceToken} />
-      </SQLiteSyncProvider>
-    </>
+    <SQLiteSyncProvider
+      connectionString={SQLITE_CLOUD_CONNECTION_STRING}
+      databaseName={DATABASE_NAME}
+      tablesToBeSynced={[
+        {
+          name: TABLE_NAME,
+          createTableSql: `
+            CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+              id TEXT PRIMARY KEY NOT NULL,
+              value TEXT,
+              created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+          `,
+        },
+      ]}
+      syncMode="push"
+      notificationListening="always"
+      renderPushPermissionPrompt={({ allow, deny }) => (
+        <PermissionDialog visible onAllow={allow} onDeny={deny} />
+      )}
+      apiKey={SQLITE_CLOUD_API_KEY}
+      debug={true}
+    >
+      <TestApp deviceToken={deviceToken} />
+    </SQLiteSyncProvider>
   );
 }
 

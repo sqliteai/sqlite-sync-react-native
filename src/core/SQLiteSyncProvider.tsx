@@ -63,7 +63,7 @@ export function SQLiteSyncProvider({
   adaptivePolling,
   syncMode = 'polling',
   notificationListening = 'foreground',
-  onBeforePushPermissionRequest,
+  renderPushPermissionPrompt,
   onDatabaseReady,
   debug = false,
   children,
@@ -147,12 +147,13 @@ export function SQLiteSyncProvider({
   });
 
   /** RESET INTERVAL ON CONFIG CHANGE */
-  const prevSyncModeRef = useRef(syncMode);
+  const prevEffectiveSyncModeRef = useRef(effectiveSyncMode);
   const prevIdleMultiplierRef = useRef(adaptiveConfig.idleBackoffMultiplier);
   const prevErrorMultiplierRef = useRef(adaptiveConfig.errorBackoffMultiplier);
 
   useEffect(() => {
-    const syncModeChanged = prevSyncModeRef.current !== syncMode;
+    const syncModeChanged =
+      prevEffectiveSyncModeRef.current !== effectiveSyncMode;
     const idleChanged =
       prevIdleMultiplierRef.current !== adaptiveConfig.idleBackoffMultiplier;
     const errorChanged =
@@ -161,7 +162,7 @@ export function SQLiteSyncProvider({
     if (syncModeChanged || idleChanged || errorChanged) {
       if (syncModeChanged) {
         logger.info(
-          `🔄 Sync mode changed to '${syncMode}' - resetting interval state`
+          `🔄 Sync mode changed to '${effectiveSyncMode}' - resetting interval state`
         );
       } else {
         logger.info(
@@ -171,7 +172,7 @@ export function SQLiteSyncProvider({
 
       setConsecutiveEmptySyncs(0);
 
-      if (syncMode === 'polling') {
+      if (effectiveSyncMode === 'polling') {
         setCurrentInterval(adaptiveConfig.baseInterval);
         currentIntervalRef.current = adaptiveConfig.baseInterval;
       } else {
@@ -179,12 +180,12 @@ export function SQLiteSyncProvider({
         currentIntervalRef.current = null;
       }
 
-      prevSyncModeRef.current = syncMode;
+      prevEffectiveSyncModeRef.current = effectiveSyncMode;
       prevIdleMultiplierRef.current = adaptiveConfig.idleBackoffMultiplier;
       prevErrorMultiplierRef.current = adaptiveConfig.errorBackoffMultiplier;
     }
   }, [
-    syncMode,
+    effectiveSyncMode,
     adaptiveConfig.idleBackoffMultiplier,
     adaptiveConfig.errorBackoffMultiplier,
     adaptiveConfig.baseInterval,
@@ -237,7 +238,7 @@ export function SQLiteSyncProvider({
   }, [logger]);
 
   /** PUSH NOTIFICATIONS - Only active when syncMode is 'push' */
-  usePushNotificationSync({
+  const { permissionPromptNode } = usePushNotificationSync({
     isSyncReady,
     performSyncRef,
     writeDbRef,
@@ -245,7 +246,7 @@ export function SQLiteSyncProvider({
     notificationListening,
     logger,
     onPermissionsDenied: handlePermissionsDenied,
-    onBeforePushPermissionRequest,
+    renderPushPermissionPrompt,
     connectionString,
     databaseName,
     tablesToBeSynced,
@@ -314,6 +315,7 @@ export function SQLiteSyncProvider({
         <SQLiteSyncStatusContext.Provider value={syncStatusContextValue}>
           <SQLiteSyncActionsContext.Provider value={syncActionsContextValue}>
             {children}
+            {permissionPromptNode}
           </SQLiteSyncActionsContext.Provider>
         </SQLiteSyncStatusContext.Provider>
       </SQLiteDbContext.Provider>

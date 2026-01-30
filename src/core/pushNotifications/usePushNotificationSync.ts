@@ -1,4 +1,10 @@
-import { useEffect, useRef } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import type { DB } from '@op-engineering/op-sqlite';
 import type {
   SyncMode,
@@ -90,18 +96,20 @@ export interface PushNotificationSyncParams {
   debug?: boolean;
 
   /**
-   * Callback invoked before requesting push notification permissions.
-   * Use this to show a custom UI explaining why permissions are needed.
-   * @returns Promise<boolean> - true to proceed with system permission request, false to skip
+   * Render prop for showing a custom permission prompt before requesting push notification permissions.
+   * Receives `allow` and `deny` callbacks to resolve the permission request.
    */
-  onBeforePushPermissionRequest?: () => Promise<boolean>;
+  renderPushPermissionPrompt?: (props: {
+    allow: () => void;
+    deny: () => void;
+  }) => ReactNode;
 }
 
 import { isForegroundSqliteCloudNotification } from './isSqliteCloudNotification';
 
-export function usePushNotificationSync(
-  params: PushNotificationSyncParams
-): void {
+export function usePushNotificationSync(params: PushNotificationSyncParams): {
+  permissionPromptNode: ReactNode;
+} {
   const {
     isSyncReady,
     performSyncRef,
@@ -110,7 +118,7 @@ export function usePushNotificationSync(
     notificationListening,
     logger,
     onPermissionsDenied,
-    onBeforePushPermissionRequest,
+    renderPushPermissionPrompt,
     connectionString,
     databaseName,
     tablesToBeSynced,
@@ -134,18 +142,40 @@ export function usePushNotificationSync(
   const hasRequestedPermissionsRef = useRef(false);
   const permissionsGrantedRef = useRef(false);
 
-  const onBeforePushPermissionRequestRef = useRef(
-    onBeforePushPermissionRequest
-  );
   const onPermissionsDeniedRef = useRef(onPermissionsDenied);
-
-  useEffect(() => {
-    onBeforePushPermissionRequestRef.current = onBeforePushPermissionRequest;
-  }, [onBeforePushPermissionRequest]);
+  const renderPushPermissionPromptRef = useRef(renderPushPermissionPrompt);
 
   useEffect(() => {
     onPermissionsDeniedRef.current = onPermissionsDenied;
   }, [onPermissionsDenied]);
+
+  useEffect(() => {
+    renderPushPermissionPromptRef.current = renderPushPermissionPrompt;
+  }, [renderPushPermissionPrompt]);
+
+  /** RENDER PROP PERMISSION PROMPT STATE */
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  const permissionResolverRef = useRef<((value: boolean) => void) | null>(null);
+
+  const handlePermissionAllow = useCallback(() => {
+    setShowPermissionPrompt(false);
+    permissionResolverRef.current?.(true);
+    permissionResolverRef.current = null;
+  }, []);
+
+  const handlePermissionDeny = useCallback(() => {
+    setShowPermissionPrompt(false);
+    permissionResolverRef.current?.(false);
+    permissionResolverRef.current = null;
+  }, []);
+
+  const permissionPromptNode =
+    showPermissionPrompt && renderPushPermissionPrompt
+      ? renderPushPermissionPrompt({
+          allow: handlePermissionAllow,
+          deny: handlePermissionDeny,
+        })
+      : null;
 
   // Unregister background sync when switching away from push mode
   useEffect(() => {
@@ -189,9 +219,11 @@ export function usePushNotificationSync(
 
         if (existingStatus !== 'granted') {
           // Call custom UI callback before system permission request
-          if (onBeforePushPermissionRequestRef.current) {
-            const shouldProceed =
-              await onBeforePushPermissionRequestRef.current();
+          if (renderPushPermissionPromptRef.current) {
+            const shouldProceed = await new Promise<boolean>((resolve) => {
+              permissionResolverRef.current = resolve;
+              setShowPermissionPrompt(true);
+            });
             if (!shouldProceed) {
               logger.info(
                 '📲 User declined push permissions from custom UI - falling back to polling mode'
@@ -327,4 +359,6 @@ export function usePushNotificationSync(
     logger,
     serializedBackgroundConfig,
   ]);
+
+  return { permissionPromptNode };
 }
