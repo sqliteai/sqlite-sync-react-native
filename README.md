@@ -159,19 +159,12 @@ export default function App() {
 }
 ```
 
-### 3. Use the Hooks
+### 3. Read Data
 
-The library provides specialized hooks to simplify querying, syncing, and state management.
+Use `useSqliteSyncQuery` to run a reactive query that automatically updates when the table changes — no manual refresh needed.
 
 ```typescript
-import { useCallback } from 'react';
-import {
-  useSqliteSyncQuery,
-  useOnTableUpdate,
-  useTriggerSqliteSync,
-  useSqliteTransaction,
-  useSyncStatus,
-} from '@sqliteai/sqlite-sync-react-native';
+import { useSqliteSyncQuery } from '@sqliteai/sqlite-sync-react-native';
 
 interface Task {
   id: string;
@@ -180,50 +173,62 @@ interface Task {
 }
 
 function TaskList() {
-  // 1. REACTIVE QUERY: Automatically updates when table changes (via transactions)
-  const {
-    data: tasks,
-    isLoading,
-    error,
-  } = useSqliteSyncQuery<Task>({
+  const { data: tasks, isLoading, error } = useSqliteSyncQuery<Task>({
     query: 'SELECT * FROM tasks ORDER BY created_at DESC',
     arguments: [],
     fireOn: [{ table: 'tasks' }],
   });
 
-  // 2. ROW-LEVEL NOTIFICATIONS: Get notified of individual INSERT/UPDATE/DELETE
-  useOnTableUpdate<Task>({
-    tables: ['tasks'],
-    onUpdate: (data) => {
-      console.log(`Row ${data.operation}:`, data.row);
-    },
-  });
-
-  // 3. WRITING DATA: Use transactions to trigger reactive queries
-  const { executeTransaction } = useSqliteTransaction();
-  const { triggerSync } = useTriggerSqliteSync();
-
-  // 4. SYNC STATUS: Get sync state for UI indicators
-  const { isSyncing } = useSyncStatus();
-
-  const addTask = useCallback(
-    async (title: string) => {
-      // Use transaction to trigger reactive query update
-      // Uses writeDb by default (no need to specify readOnly: false)
-      await executeTransaction(async (tx) => {
-        await tx.execute(
-          'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
-          [title]
-        );
-      });
-      // Optional: Push changes to cloud immediately
-      triggerSync();
-    },
-    [executeTransaction, triggerSync]
-  );
-
-  if (isLoading) return <Text>Loading local DB...</Text>;
+  if (isLoading) return <Text>Loading...</Text>;
   if (error) return <Text>Error: {error.message}</Text>;
+
+  return (
+    <FlatList
+      data={tasks}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => <Text>{item.title}</Text>}
+    />
+  );
+}
+```
+
+### 4. Write Data
+
+Use `useSqliteTransaction` to insert or update rows. Transactions automatically trigger reactive queries to re-run.
+
+```typescript
+import { useSqliteTransaction } from '@sqliteai/sqlite-sync-react-native';
+
+function AddTaskButton() {
+  const { executeTransaction } = useSqliteTransaction();
+
+  const addTask = async (title: string) => {
+    await executeTransaction(async (tx) => {
+      await tx.execute(
+        'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?);',
+        [title]
+      );
+    });
+    // The reactive query in TaskList updates automatically!
+  };
+
+  return <Button title="Add Task" onPress={() => addTask('New Task')} />;
+}
+```
+
+### 5. Sync & Status
+
+Use `useTriggerSqliteSync` to manually trigger a sync, and `useSyncStatus` to display sync state in your UI.
+
+```typescript
+import {
+  useTriggerSqliteSync,
+  useSyncStatus,
+} from '@sqliteai/sqlite-sync-react-native';
+
+function SyncControls() {
+  const { triggerSync } = useTriggerSqliteSync();
+  const { isSyncing, lastSyncTime, syncError } = useSyncStatus();
 
   return (
     <View>
@@ -232,12 +237,10 @@ function TaskList() {
         onPress={triggerSync}
         disabled={isSyncing}
       />
-
-      {tasks.map((task) => (
-        <Text key={task.id}>{task.title}</Text>
-      ))}
-
-      <Button title="Add Task" onPress={() => addTask('New Task')} />
+      {lastSyncTime && (
+        <Text>Last sync: {new Date(lastSyncTime).toLocaleTimeString()}</Text>
+      )}
+      {syncError && <Text>Sync error: {syncError.message}</Text>}
     </View>
   );
 }
@@ -434,6 +437,56 @@ Use `onDatabaseReady` to run migrations or other setup after the database opens 
     }
   }}
 >
+```
+
+#### Custom Push Permission UI with `onBeforePushPermissionRequest`
+
+When using push mode, the system will prompt the user for notification permissions. Use `onBeforePushPermissionRequest` to show your own UI (e.g., an explanation modal) before the system prompt appears. Return `true` to proceed with the system prompt, or `false` to skip it.
+
+```typescript
+import { useState, useCallback, useRef } from 'react';
+import { Modal, View, Text, TouchableOpacity } from 'react-native';
+
+export default function App() {
+  const [showDialog, setShowDialog] = useState(false);
+  const resolverRef = useRef<((value: boolean) => void) | null>(null);
+
+  const handleBeforePermission = useCallback(async () => {
+    return new Promise<boolean>((resolve) => {
+      resolverRef.current = resolve;
+      setShowDialog(true);
+    });
+  }, []);
+
+  return (
+    <>
+      <Modal visible={showDialog} transparent>
+        <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
+          <Text>Enable notifications for real-time sync?</Text>
+          <TouchableOpacity onPress={() => {
+            setShowDialog(false);
+            resolverRef.current?.(true); // Proceed to system prompt
+          }}>
+            <Text>Enable</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => {
+            setShowDialog(false);
+            resolverRef.current?.(false); // Skip, fall back to polling
+          }}>
+            <Text>Not Now</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      <SQLiteSyncProvider
+        syncMode="push"
+        onBeforePushPermissionRequest={handleBeforePermission}
+        // ...other props
+      >
+        <YourApp />
+      </SQLiteSyncProvider>
+    </>
+  );
+}
 ```
 
 #### `AdaptivePollingConfig`
