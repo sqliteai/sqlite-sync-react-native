@@ -3768,6 +3768,7 @@ __metadata:
     "@react-native-community/netinfo": "npm:^11.4.1"
     "@sqliteai/sqlite-sync-react-native": "npm:*"
     expo: "npm:~54.0.25"
+    expo-application: "npm:~7.0.8"
     expo-build-properties: "npm:~1.0.0"
     expo-constants: "npm:~18.0.13"
     expo-dev-client: "npm:~6.0.20"

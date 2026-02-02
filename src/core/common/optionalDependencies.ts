@@ -38,6 +38,14 @@ try {
   // Not available
 }
 
+// Load expo-application
+export let ExpoApplication: any = null;
+try {
+  ExpoApplication = require('expo-application');
+} catch {
+  // Not available
+}
+
 // Compound availability check
 export const isBackgroundSyncAvailable = () =>
   ExpoNotifications !== null &&

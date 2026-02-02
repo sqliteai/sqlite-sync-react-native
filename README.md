@@ -44,8 +44,11 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 - [`@react-native-community/netinfo`](https://github.com/react-native-netinfo/react-native-netinfo) **^11.0.0**
 - [SQLite Cloud](https://sqlitecloud.io/) account
 - **Optional (for push mode):**
-  - [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/)
-  - [`expo-constants`](https://docs.expo.dev/versions/latest/sdk/constants/)
+  - [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/) - Push notification handling
+  - [`expo-constants`](https://docs.expo.dev/versions/latest/sdk/constants/) - EAS project ID for push tokens
+  - [`expo-application`](https://docs.expo.dev/versions/latest/sdk/application/) - Device ID for push token registration
+  - [`expo-secure-store`](https://docs.expo.dev/versions/latest/sdk/securestore/) - Persisting background sync config and push token state
+  - [`expo-task-manager`](https://docs.expo.dev/versions/latest/sdk/task-manager/) - Background/terminated notification sync
 
 > **Note:** This library is **native-only** (iOS/Android). Web is not supported.
 
@@ -62,7 +65,7 @@ yarn add @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-nat
 **Optional: For push mode (Expo projects only)**
 
 ```bash
-npx expo install expo-notifications expo-constants
+npx expo install expo-notifications expo-constants expo-application expo-secure-store expo-task-manager
 ```
 
 ### 2. Platform Setup

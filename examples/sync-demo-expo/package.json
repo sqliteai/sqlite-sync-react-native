@@ -22,6 +22,7 @@
     "@react-native-community/netinfo": "^11.4.1",
     "@sqliteai/sqlite-sync-react-native": "*",
     "expo": "~54.0.25",
+    "expo-application": "~7.0.8",
     "expo-build-properties": "~1.0.0",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",

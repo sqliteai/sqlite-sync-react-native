@@ -22,6 +22,9 @@ import {
   unregisterBackgroundSync,
 } from '../background/backgroundSyncRegistry';
 import { setForegroundSyncCallback } from './pushNotificationSyncCallbacks';
+import { Platform } from 'react-native';
+import { isForegroundSqliteCloudNotification } from './isSqliteCloudNotification';
+import { registerPushToken } from './registerPushToken';
 
 /**
  * Parameters for usePushNotificationSync hook
@@ -104,8 +107,6 @@ export interface PushNotificationSyncParams {
     deny: () => void;
   }) => ReactNode;
 }
-
-import { isForegroundSqliteCloudNotification } from './isSqliteCloudNotification';
 
 export function usePushNotificationSync(params: PushNotificationSyncParams): {
   permissionPromptNode: ReactNode;
@@ -268,7 +269,38 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
 
         if (token?.data) {
           logger.info('📱 Expo Push Token:', token.data);
-          // TODO: Send token to backend
+
+          let siteId: string | undefined;
+          try {
+            const firstTable = tablesToBeSynced[0];
+            if (firstTable && writeDbRef.current) {
+              const initResult = await writeDbRef.current.execute(
+                'SELECT cloudsync_init(?);',
+                [firstTable.name]
+              );
+              const firstRow = initResult.rows?.[0];
+              siteId = firstRow
+                ? String(Object.values(firstRow)[0])
+                : undefined;
+            }
+          } catch {
+            logger.warn('⚠️ Could not retrieve siteId');
+          }
+
+          try {
+            await registerPushToken({
+              expoToken: token.data,
+              databaseName,
+              siteId,
+              platform: Platform.OS,
+              connectionString,
+              apiKey,
+              accessToken,
+              logger,
+            });
+          } catch (registerError) {
+            logger.warn('⚠️ Failed to register push token:', registerError);
+          }
         }
       } catch (error) {
         // Network errors and other temporary failures - don't fallback
@@ -277,7 +309,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     };
 
     requestPermissions();
-  }, [isSyncReady, syncMode, writeDbRef, logger]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount, guarded by hasRequestedPermissionsRef
+  }, [isSyncReady, syncMode]);
 
   /** NOTIFICATION LISTENERS */
   useEffect(() => {
