@@ -1,3 +1,4 @@
+/** SQLITE CLOUD ARTIFACT URI */
 const ARTIFACT_URI = 'https://sqlite.ai';
 
 /**
@@ -22,12 +23,12 @@ export const isForegroundSqliteCloudNotification = (
 export const isSqliteCloudNotification = (notification: any): boolean => {
   const body = notification?.data?.body;
 
-  // iOS background
+  /** CHECK IOS BACKGROUND FORMAT */
   if (body && typeof body === 'object' && body.artifactURI === ARTIFACT_URI) {
     return true;
   }
 
-  // Android background
+  /** CHECK ANDROID BACKGROUND FORMAT */
   const bodyString =
     typeof body === 'string' ? body : notification?.data?.dataString;
   if (typeof bodyString === 'string') {
@@ -41,6 +42,6 @@ export const isSqliteCloudNotification = (notification: any): boolean => {
     }
   }
 
-  // Foreground notification structure (fallback)
+  /** CHECK FOREGROUND FORMAT */
   return isForegroundSqliteCloudNotification(notification);
 };

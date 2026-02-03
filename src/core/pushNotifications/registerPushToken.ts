@@ -51,7 +51,7 @@ export async function registerPushToken(
     logger,
   } = params;
 
-  // Check if token was already registered
+  /** CHECK IF ALREADY REGISTERED */
   if (ExpoSecureStore) {
     try {
       const registered = await ExpoSecureStore.getItemAsync(
@@ -66,6 +66,7 @@ export async function registerPushToken(
     }
   }
 
+  /** PREPARE REQUEST HEADERS */
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -76,6 +77,7 @@ export async function registerPushToken(
     headers.Authorization = `Bearer ${connectionString}?apikey=${apiKey}`;
   }
 
+  /** PREPARE REQUEST BODY */
   const deviceId = await getDeviceId();
 
   const body = {
@@ -86,6 +88,7 @@ export async function registerPushToken(
     platform,
   };
 
+  /** SEND REGISTRATION REQUEST */
   const url = `${CLOUDSYNC_BASE_URL}/cloudsync/notifications/tokens`;
   logger.info(
     '📱 Registering push token with backend...',
@@ -108,7 +111,7 @@ export async function registerPushToken(
 
   logger.info('📱 Push token registered successfully');
 
-  // Persist that this token has been registered
+  /** PERSIST REGISTRATION STATUS */
   if (ExpoSecureStore) {
     try {
       await ExpoSecureStore.setItemAsync(TOKEN_REGISTERED_KEY, expoToken);

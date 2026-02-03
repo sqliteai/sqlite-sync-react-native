@@ -65,13 +65,12 @@ export function useAdaptivePollingSync(params: AdaptivePollingParams): void {
     syncMode,
   } = params;
 
-  /** REFS */
   const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isPollingActiveRef = useRef<boolean>(false);
 
-  /** ADAPTIVE SYNC POLLING - Dynamic interval with foreground/background awareness */
+  /** ADAPTIVE SYNC POLLING EFFECT */
   useEffect(() => {
-    // Only enable polling when syncMode is 'polling'
+    /** GUARD: POLLING MODE ONLY */
     if (
       !isSyncReady ||
       syncMode !== 'polling' ||
@@ -81,7 +80,7 @@ export function useAdaptivePollingSync(params: AdaptivePollingParams): void {
       return;
     }
 
-    // Pause polling if app is in background
+    /** GUARD: PAUSE WHEN BACKGROUNDED */
     if (appState !== 'active') {
       if (syncTimerRef.current !== null) {
         clearTimeout(syncTimerRef.current);
@@ -91,14 +90,14 @@ export function useAdaptivePollingSync(params: AdaptivePollingParams): void {
       return;
     }
 
-    // Prevent multiple polling loops from starting
+    /** GUARD: PREVENT MULTIPLE LOOPS */
     if (isPollingActiveRef.current) {
       return;
     }
 
     isPollingActiveRef.current = true;
 
-    // Schedule next sync with recursive setTimeout
+    /** RECURSIVE POLLING LOOP */
     const scheduleNextSync = () => {
       if (syncTimerRef.current !== null) {
         clearTimeout(syncTimerRef.current);
@@ -123,6 +122,7 @@ export function useAdaptivePollingSync(params: AdaptivePollingParams): void {
 
     scheduleNextSync();
 
+    /** CLEANUP */
     return () => {
       if (syncTimerRef.current !== null) {
         clearTimeout(syncTimerRef.current);

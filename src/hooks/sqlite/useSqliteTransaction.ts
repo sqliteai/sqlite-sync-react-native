@@ -46,6 +46,7 @@ export function useSqliteTransaction() {
   const { writeDb } = useContext(SQLiteDbContext);
   const logger = useInternalLogger();
 
+  /** STATE */
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -72,10 +73,11 @@ export function useSqliteTransaction() {
       setError(null);
 
       try {
+        /** EXECUTE TRANSACTION */
         await writeDb.transaction(fn);
 
-        // Auto-sync local changes to cloud after successful commit
-        // Only if auto-sync is not explicitly disabled
+        /** AUTO-SYNC */
+        // Only sync if auto-sync is not explicitly disabled
         const shouldAutoSync = options?.autoSync !== false;
 
         if (shouldAutoSync) {
@@ -88,6 +90,7 @@ export function useSqliteTransaction() {
           }
         }
       } catch (err) {
+        /** HANDLE ERROR */
         const errorObj =
           err instanceof Error ? err : new Error('Transaction failed');
 

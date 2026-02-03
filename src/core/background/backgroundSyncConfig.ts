@@ -14,7 +14,7 @@ export interface BackgroundSyncConfig {
   debug?: boolean;
 }
 
-// Storage key for persisted config
+/** STORAGE KEY */
 const CONFIG_STORAGE_KEY = 'sqlite_sync_background_config';
 
 /**
@@ -44,6 +44,7 @@ export async function persistConfig(
 ): Promise<void> {
   const logger = createLogger(config.debug ?? false);
 
+  /** GUARD: SECURE STORE REQUIRED */
   if (!ExpoSecureStore) {
     logger.warn(
       '⚠️ expo-secure-store not found. Background/terminated sync will not work.'
@@ -51,6 +52,7 @@ export async function persistConfig(
     return;
   }
 
+  /** SAVE CONFIG */
   try {
     const configJson = JSON.stringify(config);
     await ExpoSecureStore.setItemAsync(CONFIG_STORAGE_KEY, configJson);

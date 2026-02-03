@@ -56,7 +56,7 @@ export async function executeSync(
   let changes = 0;
 
   if (useNativeRetry) {
-    // Native retry: pass params to cloudsync_network_sync
+    /** NATIVE RETRY MODE */
     // Retry/delay happens in native code - better for background (won't be killed by OS)
     logger.info(
       `🔄 Sync with native retry (max: ${maxAttempts}, delay: ${attemptDelay}ms)...`
@@ -70,7 +70,8 @@ export async function executeSync(
     changes = extractChangesFromResult(result);
     logger.info(`🔄 Sync result: ${changes} changes`);
   } else {
-    // JS retry: retry/delay in JS thread - better for foreground (doesn't block write connection)
+    /** JS RETRY MODE */
+    // Retry/delay in JS thread - better for foreground (doesn't block write connection)
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       logger.info(`🔄 Sync attempt ${attempt + 1}/${maxAttempts}...`);
 
@@ -92,12 +93,14 @@ export async function executeSync(
         break;
       }
 
+      // Wait before next attempt (except on last attempt)
       if (attempt < maxAttempts - 1) {
         await new Promise((resolve) => setTimeout(resolve, attemptDelay));
       }
     }
   }
 
+  /** LOG RESULT */
   if (changes > 0) {
     logger.info(`✅ Sync completed: ${changes} changes synced`);
   } else {

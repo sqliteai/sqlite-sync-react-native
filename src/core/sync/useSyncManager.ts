@@ -141,7 +141,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
     syncMode,
   } = params;
 
-  /** SYNC STATE */
+  /** STATE */
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
   const [lastSyncChanges, setLastSyncChanges] = useState(0);
@@ -153,19 +153,19 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
   const isSyncingRef = useRef(false);
   const performSyncRef = useRef<(() => Promise<void>) | null>(null);
 
-  /** SYNC FUNCTION - used for both manual and automatic sync */
+  /** SYNC FUNCTION */
   const performSync = useCallback(async () => {
-    /** GUARD: DB */
+    /** GUARD: DATABASE REQUIRED */
     if (!writeDbRef.current) {
       return;
     }
 
-    /** GUARD: CONCURRENCY */
+    /** GUARD: PREVENT CONCURRENT SYNCS */
     if (isSyncingRef.current) {
       return;
     }
 
-    /** GUARD: NETWORK CONNECTIVITY (Android Only) */
+    /** GUARD: NETWORK CONNECTIVITY (ANDROID ONLY) */
     // On Android, the native call blocks for ~10-15s if offline.
     // We check NetInfo first to prevent this freeze.
     // On iOS, the OS fails fast, so we let the native code handle it.
@@ -181,7 +181,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
       }
     }
 
-    /** GUARD: OFFLINE MODE */
+    /** GUARD: SYNC MUST BE READY */
     // If Phase 2 Init failed (e.g. bad credentials), we can't sync.
     if (!isSyncReady) {
       return;
@@ -191,19 +191,17 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
       setIsSyncing(true);
       isSyncingRef.current = true;
 
-      /**
-       * We wrap each call in a transaction for compatibility with op-sqlite's
-       * `db.reactiveExecute`. Reactive queries re-run only after a transaction
-       * commits, providing a single, efficient update.
-       */
+      /** EXECUTE SYNC */
+      // Wrap in transaction for reactive query compatibility
       const changes = await executeSync(writeDbRef.current, logger, {
         useTransaction: true,
       });
 
+      /** UPDATE STATE */
       setLastSyncTime(Date.now());
       setLastSyncChanges(changes);
 
-      // Update adaptive counters
+      /** UPDATE ADAPTIVE COUNTERS */
       if (changes > 0) {
         setConsecutiveEmptySyncs(0);
         setConsecutiveErrors(0);
@@ -212,7 +210,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
         setConsecutiveErrors(0);
       }
 
-      // Recalculate interval based on activity (polling mode only)
+      /** RECALCULATE INTERVAL (POLLING MODE ONLY) */
       if (syncMode === 'polling') {
         const newInterval = calculateAdaptiveSyncInterval(
           {
@@ -232,13 +230,12 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
 
       setSyncError(null);
     } catch (err) {
+      /** HANDLE SYNC ERROR */
       logger.error('❌ Sync failed:', err);
       setSyncError(err instanceof Error ? err : new Error('Sync failed'));
-
-      // Increment error counter for backoff
       setConsecutiveErrors((prev) => prev + 1);
 
-      // Recalculate interval with error backoff (polling mode only)
+      /** RECALCULATE INTERVAL WITH ERROR BACKOFF (POLLING MODE ONLY) */
       if (syncMode === 'polling') {
         const newInterval = calculateAdaptiveSyncInterval(
           {
@@ -270,7 +267,7 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
     syncMode,
   ]);
 
-  /** Keep performSyncRef updated */
+  /** KEEP REF UPDATED */
   useEffect(() => {
     performSyncRef.current = performSync;
   }, [performSync]);

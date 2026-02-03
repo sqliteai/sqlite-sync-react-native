@@ -21,11 +21,11 @@ export async function executeBackgroundSync(
   try {
     logger.info('📲 Starting background sync...');
 
-    // Open database connection
+    /** OPEN DATABASE */
     db = await createDatabase(config.databaseName, 'write');
     logger.info('✅ Database connection opened');
 
-    // Initialize sync extension
+    /** INITIALIZE SYNC EXTENSION */
     await initializeSyncExtension(
       db,
       {
@@ -37,7 +37,7 @@ export async function executeBackgroundSync(
       logger
     );
 
-    // Set up updateHook to capture changes during sync
+    /** REGISTER UPDATE HOOK */
     const callback = getBackgroundSyncCallback();
     if (callback) {
       db.updateHook(({ operation, table, rowId }) => {
@@ -50,6 +50,7 @@ export async function executeBackgroundSync(
       logger.info('📲 Update hook registered for change tracking');
     }
 
+    /** EXECUTE SYNC */
     await executeSync(db, logger, {
       useNativeRetry: true,
       maxAttempts: 3,
@@ -58,7 +59,7 @@ export async function executeBackgroundSync(
 
     logger.info('✅ Background sync completed successfully');
 
-    // Call the callback with changes (before closing db so callback can query)
+    /** INVOKE USER CALLBACK */
     if (callback && db) {
       logger.info(
         `📲 Calling background sync callback with ${changes.length} changes`
@@ -76,10 +77,9 @@ export async function executeBackgroundSync(
     logger.error('❌ Background sync failed:', error);
     throw error;
   } finally {
-    // Always close database connection
+    /** CLEANUP */
     if (db) {
       try {
-        // Ensure hook is removed
         db.updateHook(null);
         db.close();
         logger.info('✅ Database connection closed');

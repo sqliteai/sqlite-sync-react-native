@@ -17,17 +17,18 @@ export async function createDatabase(
   name: string,
   mode: 'write' | 'read'
 ): Promise<DB> {
+  /** OPEN DATABASE */
   const db = open({ name });
 
-  // Configure WAL mode for both connections
+  /** CONFIGURE WAL MODE */
+  // WAL mode enables concurrent reads and writes
   await db.execute('PRAGMA journal_mode = WAL');
 
+  /** CONFIGURE CONNECTION MODE */
   if (mode === 'write') {
-    // Write connection configuration
     await db.execute('PRAGMA synchronous = NORMAL');
     await db.execute('PRAGMA locking_mode = NORMAL');
   } else {
-    // Read connection configuration
     await db.execute('PRAGMA query_only = true');
   }
 

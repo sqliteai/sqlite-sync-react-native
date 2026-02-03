@@ -51,10 +51,11 @@ export interface InitialSyncParams {
 export function useInitialSync(params: InitialSyncParams): void {
   const { isSyncReady, performSyncRef, logger } = params;
 
-  /** Track if initial sync has been triggered */
+  /** REFS */
   const hasInitialSyncedRef = useRef(false);
 
-  /** INITIAL SYNC - Trigger sync when app starts (with delay for reactive subscriptions) */
+  /** INITIAL SYNC EFFECT */
+  // Trigger sync when app starts (with delay for reactive subscriptions)
   useEffect(() => {
     if (!isSyncReady || hasInitialSyncedRef.current) {
       return;
@@ -68,6 +69,7 @@ export function useInitialSync(params: InitialSyncParams): void {
       performSyncRef.current?.();
     }, INITIAL_SYNC_DELAY_MS);
 
+    /** CLEANUP */
     return () => clearTimeout(timeoutId);
   }, [isSyncReady, performSyncRef, logger]);
 }

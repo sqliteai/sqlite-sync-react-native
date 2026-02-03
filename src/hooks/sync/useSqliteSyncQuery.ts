@@ -65,27 +65,31 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
   const { readDb, writeDb } = useContext(SQLiteDbContext);
   const { isAppInBackground } = useContext(SQLiteSyncStatusContext);
 
+  /** STATE */
   const [data, setData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [internalSubscriptionSignature, setInternalSubscriptionSignature] =
     useState('');
 
+  /** REFS */
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const subscriptionUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
   const activeQuerySignatureRef = useRef<string>('');
 
+  /** SERIALIZED CONFIG */
   const serializedArgs = JSON.stringify(config.arguments || []);
   const serializedFireOn = JSON.stringify(config.fireOn);
   const currentSubscriptionSignature = `${config.query}-${serializedArgs}`;
 
+  /** HELPER: SAFE UNSUBSCRIBE */
   const safeUnsubscribe = (unsubscribe: (() => void) | null) => {
     if (unsubscribe) {
       setTimeout(() => unsubscribe(), 0);
     }
   };
 
-  // Effect 1: Immediate Async Read + Debounce Trigger
+  /** EFFECT 1: IMMEDIATE ASYNC READ + DEBOUNCE TRIGGER */
   useEffect(() => {
     if (!readDb || isAppInBackground) return;
 
@@ -108,7 +112,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
         }
       });
 
-    // Schedule the reactive subscription
+    // Schedule the reactive subscription after debounce period
     if (subscriptionUpdateTimerRef.current)
       clearTimeout(subscriptionUpdateTimerRef.current);
 
@@ -129,7 +133,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
     isAppInBackground,
   ]);
 
-  // Effect 2: Reactive Subscription logic
+  /** EFFECT 2: REACTIVE SUBSCRIPTION */
   useEffect(() => {
     if (!writeDb || !internalSubscriptionSignature) return;
 
@@ -150,6 +154,7 @@ export function useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig) {
 
     unsubscribeRef.current = unsubscribe;
 
+    /** CLEANUP */
     return () => {
       const toCleanup = unsubscribeRef.current;
       unsubscribeRef.current = null;

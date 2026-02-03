@@ -1,32 +1,33 @@
-// Side-effect import: defines background task at module level
-// This ensures the task is defined when app is terminated
+/** SIDE-EFFECT IMPORT */
+// Defines background task at module level - ensures task is defined when app is terminated
 import './core/pushNotifications/pushNotificationSyncTask';
 
+/** PROVIDER */
 export { SQLiteSyncProvider } from './core/SQLiteSyncProvider';
 
-// Background sync callback registration
+/** BACKGROUND SYNC CALLBACK */
 export { registerBackgroundSyncCallback } from './core/pushNotifications/pushNotificationSyncCallbacks';
 
-// Contexts
+/** CONTEXTS */
 export { SQLiteDbContext } from './contexts/SQLiteDbContext';
 export { SQLiteSyncStatusContext } from './contexts/SQLiteSyncStatusContext';
 export { SQLiteSyncActionsContext } from './contexts/SQLiteSyncActionsContext';
 
-// Context hooks
+/** CONTEXT HOOKS */
 export { useSqliteDb } from './hooks/context/useSqliteDb';
 export { useSyncStatus } from './hooks/context/useSyncStatus';
 export { useSqliteSync } from './hooks/context/useSqliteSync';
 
-// SQLite hooks
+/** SQLITE HOOKS */
 export { useOnTableUpdate } from './hooks/sqlite/useOnTableUpdate';
 export { useSqliteExecute } from './hooks/sqlite/useSqliteExecute';
 export { useSqliteTransaction } from './hooks/sqlite/useSqliteTransaction';
 
-// Sync hooks
+/** SYNC HOOKS */
 export { useTriggerSqliteSync } from './hooks/sync/useTriggerSqliteSync';
 export { useSqliteSyncQuery } from './hooks/sync/useSqliteSyncQuery';
 
-// Types
+/** TYPES */
 export type {
   SQLiteSyncProviderProps,
   SyncMode,

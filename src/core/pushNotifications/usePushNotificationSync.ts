@@ -128,7 +128,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     debug,
   } = params;
 
-  // Serialize config to detect actual changes (avoids re-runs from unstable references like tablesToBeSynced)
+  /** SERIALIZED CONFIG */
+  // Detect actual changes (avoids re-runs from unstable references like tablesToBeSynced)
   const serializedBackgroundConfig = JSON.stringify({
     connectionString,
     databaseName,
@@ -138,26 +139,26 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     debug,
   });
 
-  // Track previous syncMode to detect when switching away from push
+  /** REFS */
   const prevSyncModeRef = useRef<SyncMode>(syncMode);
   const hasRequestedPermissionsRef = useRef(false);
   const permissionsGrantedRef = useRef(false);
-
   const onPermissionsDeniedRef = useRef(onPermissionsDenied);
   const renderPushPermissionPromptRef = useRef(renderPushPermissionPrompt);
+  const permissionResolverRef = useRef<((value: boolean) => void) | null>(null);
 
+  /** KEEP REFS IN SYNC */
   useEffect(() => {
     onPermissionsDeniedRef.current = onPermissionsDenied;
   }, [onPermissionsDenied]);
-
   useEffect(() => {
     renderPushPermissionPromptRef.current = renderPushPermissionPrompt;
   }, [renderPushPermissionPrompt]);
 
-  /** RENDER PROP PERMISSION PROMPT STATE */
+  /** PERMISSION PROMPT STATE */
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
-  const permissionResolverRef = useRef<((value: boolean) => void) | null>(null);
 
+  /** PERMISSION PROMPT HANDLERS */
   const handlePermissionAllow = useCallback(() => {
     setShowPermissionPrompt(false);
     permissionResolverRef.current?.(true);
@@ -170,6 +171,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     permissionResolverRef.current = null;
   }, []);
 
+  /** PERMISSION PROMPT NODE */
   const permissionPromptNode =
     showPermissionPrompt && renderPushPermissionPrompt
       ? renderPushPermissionPrompt({
@@ -178,6 +180,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
         })
       : null;
 
+  /** SYNC MODE CHANGE HANDLER */
   // Unregister background sync when switching away from push mode
   useEffect(() => {
     const prevSyncMode = prevSyncModeRef.current;
@@ -191,13 +194,11 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
       // Reset permission tracking when switching away from push
       hasRequestedPermissionsRef.current = false;
       permissionsGrantedRef.current = false;
-      unregisterBackgroundSync().catch(() => {
-        // Ignore errors
-      });
+      unregisterBackgroundSync();
     }
   }, [syncMode, logger]);
 
-  /** PERMISSION REQUEST */
+  /** PERMISSION REQUEST EFFECT */
   useEffect(() => {
     if (
       !isSyncReady ||
@@ -209,22 +210,23 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
       return;
     }
 
-    // Mark that we're requesting permissions
     hasRequestedPermissionsRef.current = true;
 
     const requestPermissions = async () => {
       try {
+        /** CHECK EXISTING PERMISSIONS */
         const { status: existingStatus } =
           await ExpoNotifications.getPermissionsAsync();
         let finalStatus = existingStatus;
 
+        /** REQUEST PERMISSIONS IF NEEDED */
         if (existingStatus !== 'granted') {
-          // Call custom UI callback before system permission request
           if (renderPushPermissionPromptRef.current) {
             const shouldProceed = await new Promise<boolean>((resolve) => {
               permissionResolverRef.current = resolve;
               setShowPermissionPrompt(true);
             });
+
             if (!shouldProceed) {
               logger.info(
                 '📲 User declined push permissions from custom UI - falling back to polling mode'
@@ -238,6 +240,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
           finalStatus = status;
         }
 
+        /** HANDLE DENIED PERMISSIONS */
         if (finalStatus !== 'granted') {
           logger.warn(
             '⚠️ Push notification permissions denied - falling back to polling mode'
@@ -246,30 +249,32 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
           return;
         }
 
-        // Permissions granted
+        /** PERMISSIONS GRANTED */
         permissionsGrantedRef.current = true;
         logger.info('📲 Push notification permissions granted');
 
-        // Get push token
+        /** GET PROJECT ID */
         const projectId =
           ExpoConstants?.expoConfig?.extra?.eas?.projectId ??
           ExpoConstants?.manifest?.extra?.eas?.projectId ??
           ExpoConstants?.easConfig?.projectId;
 
-        // Get native APNs device token
+        /** GET DEVICE TOKEN */
         const deviceToken = await ExpoNotifications.getDevicePushTokenAsync();
         if (deviceToken?.data) {
           logger.info('📱 APNs Device Token:', deviceToken.data);
         }
 
-        // Get Expo push token
+        /** GET EXPO PUSH TOKEN */
         const token = await ExpoNotifications.getExpoPushTokenAsync({
           projectId,
         });
 
+        /** REGISTER TOKEN WITH BACKEND */
         if (token?.data) {
           logger.info('📱 Expo Push Token:', token.data);
 
+          // Get site ID for token registration
           let siteId: string | undefined;
           try {
             const firstTable = tablesToBeSynced[0];
@@ -312,14 +317,13 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount, guarded by hasRequestedPermissionsRef
   }, [isSyncReady, syncMode]);
 
-  /** NOTIFICATION LISTENERS */
+  /** NOTIFICATION LISTENERS EFFECT */
   useEffect(() => {
-    // Only enable push when syncMode is 'push'
+    /** GUARDS */
     if (!isSyncReady || syncMode !== 'push' || !writeDbRef.current) {
       return;
     }
 
-    // Check if Expo Notifications is available
     if (!ExpoNotifications) {
       logger.warn(
         '⚠️ Push mode enabled but expo-notifications not found. Install it with: npx expo install expo-notifications'
@@ -331,6 +335,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
       `📲 SQLite Sync push mode enabled (listening: ${notificationListening})`
     );
 
+    /** HELPER: ADD FOREGROUND LISTENER */
     const addForegroundListener = () =>
       ExpoNotifications.addNotificationReceivedListener((notification: any) => {
         logger.info(
@@ -348,9 +353,9 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
 
     const subscriptions: { remove: () => void }[] = [];
 
-    // BACKGROUND & TERMINATED: Register background task
-    // Enabled for 'always' mode
+    /** REGISTER LISTENERS BASED ON MODE */
     if (notificationListening === 'always') {
+      // BACKGROUND & TERMINATED MODE
       if (isBackgroundSyncAvailable()) {
         // Register callback for foreground sync (uses existing DB connection)
         setForegroundSyncCallback(
@@ -373,10 +378,11 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
         subscriptions.push(addForegroundListener());
       }
     } else {
-      // FOREGROUND ONLY: Use traditional listener
+      // FOREGROUND ONLY MODE
       subscriptions.push(addForegroundListener());
     }
 
+    /** CLEANUP */
     return () => {
       subscriptions.forEach((sub) => sub.remove());
       setForegroundSyncCallback(null);

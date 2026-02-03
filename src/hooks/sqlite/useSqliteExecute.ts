@@ -27,6 +27,7 @@ export function useSqliteExecute() {
   const { writeDb, readDb } = useContext(SQLiteDbContext);
   const logger = useInternalLogger();
 
+  /** STATE */
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -47,6 +48,7 @@ export function useSqliteExecute() {
       params: any[] = [],
       options?: SqliteExecuteOptions
     ): Promise<QueryResult | undefined> => {
+      /** SELECT CONNECTION */
       const db = options?.readOnly ? readDb : writeDb;
 
       if (!db) {
@@ -57,12 +59,11 @@ export function useSqliteExecute() {
       setError(null);
 
       try {
+        /** EXECUTE SQL */
         const result = await db.execute(sql, params);
 
-        // Auto-sync local changes to cloud after write operations
-        // Only if:
-        // 1. It's a write operation (not readOnly)
-        // 2. Auto-sync is not explicitly disabled
+        /** AUTO-SYNC */
+        // Only sync if it's a write operation and auto-sync is not explicitly disabled
         const shouldAutoSync =
           !options?.readOnly && options?.autoSync !== false;
 
@@ -78,6 +79,7 @@ export function useSqliteExecute() {
 
         return result;
       } catch (err) {
+        /** HANDLE ERROR */
         const errorObj =
           err instanceof Error ? err : new Error('Execution failed');
 

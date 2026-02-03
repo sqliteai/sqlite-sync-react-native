@@ -23,12 +23,13 @@ if (ExpoTaskManager) {
         JSON.stringify(data, null, 2)
       );
 
+      /** HANDLE TASK ERROR */
       if (error) {
         logger.error('❌ Background task error:', error);
         return;
       }
 
-      // Check if this is a SQLite Cloud notification
+      /** VALIDATE NOTIFICATION SOURCE */
       if (!isSqliteCloudNotification(data)) {
         logger.info('📲 Not a SQLite Cloud notification, skipping');
         return;
@@ -36,7 +37,8 @@ if (ExpoTaskManager) {
 
       logger.info('📲 SQLite Cloud notification detected');
 
-      // If app is in foreground and we have a callback, use existing DB connection
+      /** FOREGROUND MODE */
+      // If app is active and we have a callback, use existing DB connection
       const foregroundCallback = getForegroundSyncCallback();
       if (AppState.currentState === 'active' && foregroundCallback) {
         logger.info('📲 App is in foreground, using existing sync');
@@ -49,7 +51,7 @@ if (ExpoTaskManager) {
         return;
       }
 
-      // Background/terminated: open new connection and sync
+      /** BACKGROUND/TERMINATED MODE */
       if (!config) {
         logger.info('📲 No config found, skipping background sync');
         return;

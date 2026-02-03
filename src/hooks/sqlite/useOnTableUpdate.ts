@@ -61,27 +61,28 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
   const { writeDb } = useContext(SQLiteDbContext);
   const logger = useInternalLogger();
 
+  /** REFS */
   // Store callback in ref to allow inline functions without causing infinite loops
   const savedCallback = useRef(config.onUpdate);
   const savedTables = useRef(config.tables);
 
-  // Update refs when callback or tables change
+  /** KEEP REFS IN SYNC */
   useEffect(() => {
     savedCallback.current = config.onUpdate;
     savedTables.current = config.tables;
   }, [config.onUpdate, config.tables]);
 
+  /** UPDATE HOOK SUBSCRIPTION */
   useEffect(() => {
     if (!writeDb) return;
 
-    // Subscribe to update hook - fires on every row change
     writeDb.updateHook(async (hookData) => {
       // Only fire callback if the updated table is in our watch list
       if (!savedTables.current.includes(hookData.table)) {
         return;
       }
 
-      // Fetch the row data using SQLite's internal rowid
+      /** FETCH ROW DATA */
       let row: T | null = null;
 
       // For DELETE operations, the row no longer exists, so row will be null
@@ -102,7 +103,7 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
         }
       }
 
-      // Call the user's callback with enriched data including the row
+      /** INVOKE USER CALLBACK */
       savedCallback.current({
         table: hookData.table,
         operation: hookData.operation,
@@ -111,7 +112,7 @@ export function useOnTableUpdate<T = any>(config: TableUpdateConfig<T>) {
       });
     });
 
-    // Cleanup: Remove the hook on unmount by passing null
+    /** CLEANUP */
     return () => {
       writeDb.updateHook(null);
     };

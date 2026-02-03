@@ -55,3 +55,54 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Comment Style
+
+**Consistent, purposeful comments. Not noise.**
+
+### JSDoc for public APIs
+Every exported function, interface, and type gets JSDoc documentation:
+```typescript
+/**
+ * Brief description of what it does
+ *
+ * @param foo - Description of parameter
+ * @returns Description of return value
+ */
+export function myFunction(foo: string): number { ... }
+```
+
+### Section markers inside functions
+Use `/** SECTION NAME */` to mark logical sections within complex functions:
+```typescript
+function complexFunction() {
+  /** PARSE OPTIONS */
+  const { foo, bar } = options;
+
+  /** VALIDATE INPUT */
+  if (!foo) throw new Error('foo required');
+
+  /** EXECUTE MAIN LOGIC */
+  const result = doSomething(foo, bar);
+
+  /** CLEANUP */
+  return result;
+}
+```
+
+Common section names: `STATE`, `REFS`, `GUARDS`, `HELPERS`, `CLEANUP`, `EFFECT 1: ...`, `HANDLE ERROR`
+
+### Inline explanations
+Use `// comment` for explaining specific logic:
+```typescript
+// Only sync if auto-sync is not explicitly disabled
+const shouldAutoSync = options?.autoSync !== false;
+
+// On Android, the native call blocks for ~10-15s if offline
+if (Platform.OS === 'android') { ... }
+```
+
+### What NOT to comment
+- Obvious code (`// increment counter` before `count++`)
+- Code that's already clear from good naming
+- Every single line - only where it adds value

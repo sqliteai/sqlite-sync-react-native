@@ -3,34 +3,35 @@
  * Loaded once at module initialization
  */
 
-// Module references
+/** MODULE REFERENCES */
 export let ExpoNotifications: any = null;
 export let ExpoTaskManager: any = null;
 export let ExpoSecureStore: any = null;
 export let ExpoConstants: any = null;
+export let ExpoApplication: any = null;
 
-// Load expo-notifications
+/** LOAD EXPO-NOTIFICATIONS */
 try {
   ExpoNotifications = require('expo-notifications');
 } catch {
   // Not available
 }
 
-// Load expo-task-manager
+/** LOAD EXPO-TASK-MANAGER */
 try {
   ExpoTaskManager = require('expo-task-manager');
 } catch {
   // Not available
 }
 
-// Load expo-secure-store
+/** LOAD EXPO-SECURE-STORE */
 try {
   ExpoSecureStore = require('expo-secure-store');
 } catch {
   // Not available
 }
 
-// Load expo-constants
+/** LOAD EXPO-CONSTANTS */
 try {
   const constantsModule = require('expo-constants');
   ExpoConstants = constantsModule.default || constantsModule;
@@ -38,15 +39,14 @@ try {
   // Not available
 }
 
-// Load expo-application
-export let ExpoApplication: any = null;
+/** LOAD EXPO-APPLICATION */
 try {
   ExpoApplication = require('expo-application');
 } catch {
   // Not available
 }
 
-// Compound availability check
+/** COMPOUND AVAILABILITY CHECK */
 export const isBackgroundSyncAvailable = () =>
   ExpoNotifications !== null &&
   ExpoTaskManager !== null &&

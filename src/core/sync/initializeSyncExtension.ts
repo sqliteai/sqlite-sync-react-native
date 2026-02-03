@@ -27,12 +27,12 @@ export async function initializeSyncExtension(
 ): Promise<void> {
   const { connectionString, tablesToBeSynced, apiKey, accessToken } = config;
 
-  // Check sync configuration
+  /** VALIDATE CONFIG */
   if (!connectionString || (!apiKey && !accessToken)) {
     throw new Error('Sync configuration incomplete');
   }
 
-  // Load CloudSync extension
+  /** LOAD CLOUDSYNC EXTENSION */
   let extensionPath: string;
   if (Platform.OS === 'ios') {
     extensionPath = getDylibPath('ai.sqlite.cloudsync', 'CloudSync');
@@ -43,7 +43,7 @@ export async function initializeSyncExtension(
   db.loadExtension(extensionPath);
   logger.info('✅ CloudSync extension loaded');
 
-  // Verify CloudSync extension
+  /** VERIFY EXTENSION */
   const versionResult = await db.execute('SELECT cloudsync_version();');
   const version = versionResult.rows?.[0]?.['cloudsync_version()'];
 
@@ -52,7 +52,7 @@ export async function initializeSyncExtension(
   }
   logger.info('✅ CloudSync version:', version);
 
-  // Initialize CloudSync for tables
+  /** INITIALIZE TABLES */
   for (const table of tablesToBeSynced) {
     const initResult = await db.execute('SELECT cloudsync_init(?);', [
       table.name,
@@ -67,11 +67,11 @@ export async function initializeSyncExtension(
     );
   }
 
-  // Initialize network connection
+  /** INITIALIZE NETWORK */
   await db.execute('SELECT cloudsync_network_init(?);', [connectionString]);
   logger.info('✅ Network initialized');
 
-  // Set authentication
+  /** SET AUTHENTICATION */
   if (apiKey) {
     await db.execute('SELECT cloudsync_network_set_apikey(?);', [apiKey]);
     logger.info('✅ API key set');

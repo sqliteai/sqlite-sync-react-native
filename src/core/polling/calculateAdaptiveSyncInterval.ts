@@ -63,14 +63,14 @@ export function calculateAdaptiveSyncInterval(
     errorBackoffMultiplier,
   } = config;
 
-  // Priority 1: Error backoff (exponential)
+  /** PRIORITY 1: ERROR BACKOFF */
   if (errors > 0) {
     const errorInterval =
       baseInterval * Math.pow(errorBackoffMultiplier, errors);
     return Math.min(errorInterval, maxInterval);
   }
 
-  // Priority 2: Idle backoff (exponential)
+  /** PRIORITY 2: IDLE BACKOFF */
   if (emptySyncs >= emptyThreshold) {
     const backoffPower = emptySyncs - emptyThreshold + 1;
     const idleInterval =
@@ -78,6 +78,6 @@ export function calculateAdaptiveSyncInterval(
     return Math.min(idleInterval, maxInterval);
   }
 
-  // Default: base interval
+  /** DEFAULT: BASE INTERVAL */
   return baseInterval;
 }

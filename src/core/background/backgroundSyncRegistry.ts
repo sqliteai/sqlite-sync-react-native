@@ -19,6 +19,7 @@ export async function registerBackgroundSync(
 ): Promise<void> {
   const logger = createLogger(config.debug ?? false);
 
+  /** GUARD: DEPENDENCIES REQUIRED */
   if (!isBackgroundSyncAvailable()) {
     logger.warn(
       '⚠️ Background sync dependencies not available (expo-notifications, expo-task-manager, expo-secure-store)'
@@ -26,10 +27,11 @@ export async function registerBackgroundSync(
     return;
   }
 
-  // Persist config for background/terminated task execution
+  /** PERSIST CONFIG */
+  // Config is needed for background/terminated task execution
   await persistConfig(config);
 
-  // Register the task to handle background notifications
+  /** REGISTER TASK */
   await ExpoNotifications.registerTaskAsync(BACKGROUND_SYNC_TASK_NAME);
   logger.info('📲 Background sync task registered');
 }
