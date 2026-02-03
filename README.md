@@ -33,6 +33,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
   - [Hooks](#hooks)
 - [Error Handling](#-error-handling)
 - [Debug Logging](#-debug-logging)
+- [Known Issues & Improvements](#️-known-issues--improvements)
 - [Examples](#-examples)
 - [Links](#-links)
 
@@ -1156,6 +1157,26 @@ Enable detailed logging during development:
 - Network setup
 - Sync operations
 - Change counts
+
+## ⚠️ Known Issues & Improvements
+
+### Reactive Queries & Write Connection Contention
+
+**Issue:** `useSqliteSyncQuery` uses `writeDb` with op-sqlite's `reactiveExecute` to ensure queries see sync changes immediately. However, when data changes frequently (e.g., during active sync), the write connection can become a bottleneck.
+
+**Potential improvement:** Have `cloudsync_network_sync()` return the list of updated tables. This would allow reactive queries to use `readDb` instead, with manual invalidation when sync completes for specific tables. Trade-off: manual invalidation logic vs. op-sqlite's built-in `reactiveExecute`.
+
+### Optimistic Updates & Sync Blocking
+
+**Issue:** With push notifications, sync can be triggered frequently. Since sync operations use `writeDb`, a user writing to the local database at the same time may experience delayed UI updates while waiting for the sync transaction to complete.
+
+**Potential improvement:** Implement optimistic updates where local writes update the UI immediately, independent of sync status. This requires careful handling of conflict resolution when sync completes.
+
+### First Install Empty State
+
+**Issue:** On first app install, the initial sync may not return changes immediately (server may need time to prepare data). The app stops showing the loader and displays empty content, then shows the actual data on the second sync interval.
+
+**Potential improvement:** Keep showing a loader until the first successful sync with data, or until a timeout since there might not be any data to fetch 
 
 ## 📖 Examples
 
