@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import type { DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../common/logger';
@@ -126,15 +126,24 @@ export function useDatabaseInitialization(
   /** REFS */
   const writeDbRef = useRef<DB | null>(null);
   const readDbRef = useRef<DB | null>(null);
+  const onDatabaseReadyRef = useRef(onDatabaseReady);
+
+  useEffect(() => {
+    onDatabaseReadyRef.current = onDatabaseReady;
+  }, [onDatabaseReady]);
 
   /** SERIALIZED CONFIG - Prevents unnecessary re-initialization */
-  const serializedConfig = JSON.stringify({
-    connectionString,
-    databaseName,
-    tables: tablesToBeSynced,
-    apiKey,
-    accessToken,
-  });
+  const serializedConfig = useMemo(
+    () =>
+      JSON.stringify({
+        connectionString,
+        databaseName,
+        tables: tablesToBeSynced,
+        apiKey,
+        accessToken,
+      }),
+    [connectionString, databaseName, tablesToBeSynced, apiKey, accessToken]
+  );
 
   /** INITIALIZATION EFFECT */
   useEffect(() => {
@@ -183,10 +192,10 @@ export function useDatabaseInitialization(
         logger.info('✅ Databases ready for local use');
 
         /** RUN onDatabaseReady CALLBACK (e.g., migrations) */
-        if (onDatabaseReady) {
+        if (onDatabaseReadyRef.current) {
           logger.info('🔄 Running onDatabaseReady callback...');
           try {
-            await onDatabaseReady(localWriteDb);
+            await onDatabaseReadyRef.current(localWriteDb);
             logger.info('✅ onDatabaseReady callback completed');
           } catch (err) {
             logger.error('❌ onDatabaseReady callback failed:', err);
@@ -277,7 +286,7 @@ export function useDatabaseInitialization(
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serializedConfig, logger]);
+  }, [serializedConfig]);
 
   return {
     writeDb,
