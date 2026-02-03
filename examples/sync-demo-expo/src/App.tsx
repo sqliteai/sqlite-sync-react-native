@@ -97,7 +97,6 @@ function TestApp({ deviceToken }: { deviceToken: string | null }) {
 
   useEffect(() => {
     if (!lastSyncTime || !currentSyncInterval) {
-      setNextSyncIn(null);
       return;
     }
 
@@ -232,7 +231,7 @@ function TestApp({ deviceToken }: { deviceToken: string | null }) {
               Last sync: {new Date(lastSyncTime).toLocaleTimeString()}
             </Text>
           )}
-          {nextSyncIn != null && (
+          {nextSyncIn != null && lastSyncTime && currentSyncInterval && (
             <Text style={styles.status}>Next sync in {nextSyncIn}s</Text>
           )}
         </View>
