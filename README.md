@@ -33,7 +33,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
   - [Hooks](#hooks)
 - [Error Handling](#-error-handling)
 - [Debug Logging](#-debug-logging)
-- [Known Issues & Improvements](#️-known-issues--improvements)
+- [Known Issues & Improvements](#-known-issues--improvements)
 - [Examples](#-examples)
 - [Links](#-links)
 
