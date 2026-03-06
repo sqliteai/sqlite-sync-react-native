@@ -289,7 +289,17 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
                 : undefined;
             }
           } catch {
-            logger.warn('⚠️ Could not retrieve siteId');
+            logger.warn(
+              '⚠️ Could not retrieve siteId - skipping token registration (will retry on next app open)'
+            );
+            return;
+          }
+
+          if (!siteId) {
+            logger.warn(
+              '⚠️ No siteId available - skipping token registration (will retry on next app open)'
+            );
+            return;
           }
 
           try {

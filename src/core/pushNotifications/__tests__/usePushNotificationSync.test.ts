@@ -269,6 +269,38 @@ describe('usePushNotificationSync', () => {
     expect(unregisterBackgroundSync).toHaveBeenCalled();
   });
 
+  it('skips token registration when siteId retrieval fails', async () => {
+    const writeDbRef = {
+      current: {
+        execute: jest.fn().mockRejectedValue(new Error('cloudsync_init fail')),
+      },
+    };
+
+    renderHook(() =>
+      usePushNotificationSync(createDefaultParams({ writeDbRef }))
+    );
+
+    await act(async () => {});
+
+    expect(registerPushToken).not.toHaveBeenCalled();
+  });
+
+  it('skips token registration when siteId is empty', async () => {
+    const writeDbRef = {
+      current: {
+        execute: jest.fn().mockResolvedValue({ rows: [] }),
+      },
+    };
+
+    renderHook(() =>
+      usePushNotificationSync(createDefaultParams({ writeDbRef }))
+    );
+
+    await act(async () => {});
+
+    expect(registerPushToken).not.toHaveBeenCalled();
+  });
+
   it('removes listeners on unmount', async () => {
     const removeMock = jest.fn();
     mockExpoNotifications.addNotificationReceivedListener.mockReturnValue({
