@@ -90,5 +90,8 @@ ios/
 # React Native Nitro Modules
 nitrogen/
 
+# Jest coverage
+coverage/
+
 # Example app environment files
 examples/*/.env
