@@ -1,13 +1,13 @@
 import React, { type ReactNode } from 'react';
-import { SQLiteDbContext } from '../contexts/SQLiteDbContext';
-import { SQLiteSyncStatusContext } from '../contexts/SQLiteSyncStatusContext';
-import { SQLiteSyncActionsContext } from '../contexts/SQLiteSyncActionsContext';
-import { SQLiteInternalContext } from '../contexts/SQLiteInternalContext';
-import { createLogger } from '../core/common/logger';
-import type { SQLiteDbContextValue } from '../types/SQLiteDbContextValue';
-import type { SQLiteSyncStatusContextValue } from '../types/SQLiteSyncStatusContextValue';
-import type { SQLiteSyncActionsContextValue } from '../types/SQLiteSyncActionsContextValue';
-import { createMockDB } from '../__mocks__/@op-engineering/op-sqlite';
+import { SQLiteDbContext } from './contexts/SQLiteDbContext';
+import { SQLiteSyncStatusContext } from './contexts/SQLiteSyncStatusContext';
+import { SQLiteSyncActionsContext } from './contexts/SQLiteSyncActionsContext';
+import { SQLiteInternalContext } from './contexts/SQLiteInternalContext';
+import { createLogger } from './core/common/logger';
+import type { SQLiteDbContextValue } from './types/SQLiteDbContextValue';
+import type { SQLiteSyncStatusContextValue } from './types/SQLiteSyncStatusContextValue';
+import type { SQLiteSyncActionsContextValue } from './types/SQLiteSyncActionsContextValue';
+import { createMockDB } from './__mocks__/@op-engineering/op-sqlite';
 
 const defaultDbContext: SQLiteDbContextValue = {
   writeDb: null,
