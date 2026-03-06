@@ -7,7 +7,7 @@ jest.mock('../polling/useAdaptivePollingSync');
 jest.mock('../pushNotifications/usePushNotificationSync');
 
 import React, { useContext } from 'react';
-import { renderHook } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import { SQLiteSyncProvider } from '../SQLiteSyncProvider';
 import { SQLiteDbContext } from '../../contexts/SQLiteDbContext';
 import { SQLiteSyncStatusContext } from '../../contexts/SQLiteSyncStatusContext';
@@ -199,8 +199,6 @@ describe('SQLiteSyncProvider', () => {
   });
 
   it('passes push mode to usePushNotificationSync', () => {
-    const wrapper = createWrapper();
-    // Force push mode via props
     const pushWrapper = ({ children }: { children: React.ReactNode }) => (
       <SQLiteSyncProvider
         {...defaultProps}
@@ -214,6 +212,99 @@ describe('SQLiteSyncProvider', () => {
 
     expect(usePushNotificationSync).toHaveBeenCalledWith(
       expect.objectContaining({ syncMode: 'push' })
+    );
+  });
+
+  it('falls back to polling when push permissions denied', () => {
+    // Capture the onPermissionsDenied callback
+    let capturedOnPermissionsDenied: (() => void) | undefined;
+    (usePushNotificationSync as jest.Mock).mockImplementation((params: any) => {
+      capturedOnPermissionsDenied = params.onPermissionsDenied;
+      return { permissionPromptNode: null };
+    });
+
+    const pushWrapper = ({ children }: { children: React.ReactNode }) => (
+      <SQLiteSyncProvider
+        {...defaultProps}
+        syncMode="push"
+        apiKey="test-key"
+      >
+        {children}
+      </SQLiteSyncProvider>
+    );
+    renderHook(() => useContext(SQLiteSyncStatusContext), {
+      wrapper: pushWrapper,
+    });
+
+    // Trigger permission denied callback inside act to trigger re-render
+    expect(capturedOnPermissionsDenied).toBeDefined();
+    act(() => {
+      capturedOnPermissionsDenied!();
+    });
+
+    // After re-render, the effective sync mode should be polling
+    // Check that at least one call after the permission denied had syncMode: 'polling'
+    const calls = (usePushNotificationSync as jest.Mock).mock.calls;
+    const lastPollingCall = calls.find(
+      (call: any) => call[0].syncMode === 'polling'
+    );
+    expect(lastPollingCall).toBeDefined();
+  });
+
+  it('sets null interval in push mode', () => {
+    const pushWrapper = ({ children }: { children: React.ReactNode }) => (
+      <SQLiteSyncProvider
+        {...defaultProps}
+        syncMode="push"
+        apiKey="test-key"
+      >
+        {children}
+      </SQLiteSyncProvider>
+    );
+    const { result } = renderHook(
+      () => useContext(SQLiteSyncStatusContext),
+      { wrapper: pushWrapper }
+    );
+
+    expect(result.current.currentSyncInterval).toBeNull();
+  });
+
+  it('uses accessToken auth when provided', () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <SQLiteSyncProvider
+        connectionString="sqlitecloud://test"
+        databaseName="test.db"
+        tablesToBeSynced={defaultProps.tablesToBeSynced}
+        accessToken="my-token"
+      >
+        {children}
+      </SQLiteSyncProvider>
+    );
+    renderHook(() => useContext(SQLiteDbContext), { wrapper });
+
+    expect(useDatabaseInitialization).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: 'my-token' })
+    );
+  });
+
+  it('applies custom adaptivePolling config', () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <SQLiteSyncProvider
+        {...defaultProps}
+        adaptivePolling={{ baseInterval: 10000, maxInterval: 120000 }}
+      >
+        {children}
+      </SQLiteSyncProvider>
+    );
+    renderHook(() => useContext(SQLiteDbContext), { wrapper });
+
+    expect(useSyncManager).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adaptiveConfig: expect.objectContaining({
+          baseInterval: 10000,
+          maxInterval: 120000,
+        }),
+      })
     );
   });
 });
