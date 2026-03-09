@@ -21,7 +21,7 @@ const mockDb = {
 const testConfig = {
   connectionString: 'sqlitecloud://host:port/db',
   databaseName: 'test.db',
-  tablesToBeSynced: [{ name: 'users' }],
+  tablesToBeSynced: [{ name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' }],
   apiKey: 'test-key',
   debug: false,
 };

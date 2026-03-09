@@ -12,7 +12,7 @@ const logger = createLogger(false);
 function makeConfig(overrides: Partial<SyncInitConfig> = {}): SyncInitConfig {
   return {
     connectionString: 'sqlitecloud://test.sqlite.cloud:8860/test.db',
-    tablesToBeSynced: [{ name: 'users' }],
+    tablesToBeSynced: [{ name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' }],
     apiKey: 'test-api-key',
     ...overrides,
   };
@@ -94,7 +94,11 @@ describe('initializeSyncExtension', () => {
   it('calls cloudsync_init for each table', async () => {
     const db = makeMockDB();
     const config = makeConfig({
-      tablesToBeSynced: [{ name: 'users' }, { name: 'posts' }, { name: 'comments' }],
+      tablesToBeSynced: [
+        { name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' },
+        { name: 'posts', createTableSql: 'CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY)' },
+        { name: 'comments', createTableSql: 'CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY)' },
+      ],
     });
 
     await initializeSyncExtension(db as any, config, logger);

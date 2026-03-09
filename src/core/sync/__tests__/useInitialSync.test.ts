@@ -42,8 +42,8 @@ describe('useInitialSync', () => {
     const performSyncRef = { current: performSync };
 
     const { rerender } = renderHook(
-      ({ ready }) =>
-        useInitialSync({ isSyncReady: ready, performSyncRef, logger }),
+      (props: { ready: boolean }) =>
+        useInitialSync({ isSyncReady: props.ready, performSyncRef, logger }),
       { initialProps: { ready: true } }
     );
 

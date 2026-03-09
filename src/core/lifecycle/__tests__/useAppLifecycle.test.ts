@@ -7,7 +7,7 @@ let appStateHandler: ((state: string) => void) | null = null;
 
 jest.mock('react-native', () => ({
   AppState: {
-    addEventListener: jest.fn((event: string, handler: any) => {
+    addEventListener: jest.fn((_event: string, handler: any) => {
       appStateHandler = handler;
       return { remove: mockRemove };
     }),
@@ -26,7 +26,8 @@ const createDefaultParams = (overrides?: Partial<any>) => ({
   adaptiveConfig: {
     baseInterval: 5000,
     maxInterval: 60000,
-    emptyBackoffMultiplier: 1.5,
+    emptyThreshold: 5,
+    idleBackoffMultiplier: 1.5,
     errorBackoffMultiplier: 2.0,
   },
   syncMode: 'polling' as const,
@@ -126,7 +127,8 @@ describe('useAppLifecycle', () => {
     const adaptiveConfig = {
       baseInterval: 5000,
       maxInterval: 60000,
-      emptyBackoffMultiplier: 1.5,
+      emptyThreshold: 5,
+      idleBackoffMultiplier: 1.5,
       errorBackoffMultiplier: 2.0,
     };
     const params = createDefaultParams({

@@ -30,7 +30,10 @@ const mockDefineTask = (ExpoTaskManager as any).defineTask as jest.Mock;
 require('../pushNotificationSyncTask');
 
 /** Capture the handler ONCE before any mocks are cleared */
-const handler = mockDefineTask.mock.calls[0]![1] as (args: { data: any; error: any }) => Promise<void>;
+const handler = mockDefineTask.mock.calls[0]![1] as (args: {
+  data: any;
+  error: any;
+}) => Promise<void>;
 
 describe('pushNotificationSyncTask', () => {
   beforeEach(() => {
@@ -69,7 +72,10 @@ describe('pushNotificationSyncTask', () => {
     (getForegroundSyncCallback as jest.Mock).mockReturnValue(null);
     (AppState as any).currentState = 'background';
 
-    await handler({ data: { body: { artifactURI: 'https://sqlite.ai' } }, error: null });
+    await handler({
+      data: { body: { artifactURI: 'https://sqlite.ai' } },
+      error: null,
+    });
 
     expect(executeBackgroundSync).toHaveBeenCalledWith(fakeConfig);
   });
@@ -78,7 +84,10 @@ describe('pushNotificationSyncTask', () => {
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(false);
 
-    await handler({ data: { body: { artifactURI: 'https://other.com' } }, error: null });
+    await handler({
+      data: { body: { artifactURI: 'https://other.com' } },
+      error: null,
+    });
 
     expect(executeBackgroundSync).not.toHaveBeenCalled();
   });
@@ -87,25 +96,32 @@ describe('pushNotificationSyncTask', () => {
     const foregroundCallback = jest.fn().mockResolvedValue(undefined);
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
-    (getForegroundSyncCallback as jest.Mock).mockReturnValue(foregroundCallback);
+    (getForegroundSyncCallback as jest.Mock).mockReturnValue(
+      foregroundCallback
+    );
     (AppState as any).currentState = 'active';
 
-    await handler({ data: { body: { artifactURI: 'https://sqlite.ai' } }, error: null });
+    await handler({
+      data: { body: { artifactURI: 'https://sqlite.ai' } },
+      error: null,
+    });
 
     expect(foregroundCallback).toHaveBeenCalled();
     expect(executeBackgroundSync).not.toHaveBeenCalled();
   });
 
   it('handles foreground sync error gracefully', async () => {
-    const foregroundCallback = jest.fn().mockRejectedValue(new Error('sync failed'));
+    const foregroundCallback = jest
+      .fn()
+      .mockRejectedValue(new Error('sync failed'));
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
-    (getForegroundSyncCallback as jest.Mock).mockReturnValue(foregroundCallback);
+    (getForegroundSyncCallback as jest.Mock).mockReturnValue(
+      foregroundCallback
+    );
     (AppState as any).currentState = 'active';
 
-    await expect(
-      handler({ data: {}, error: null })
-    ).resolves.toBeUndefined();
+    await expect(handler({ data: {}, error: null })).resolves.toBeUndefined();
   });
 
   it('skips background sync without config', async () => {

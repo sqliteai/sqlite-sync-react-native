@@ -194,7 +194,7 @@ describe('useNetworkListener', () => {
     // Capture the unsubscribe mock returned by addEventListener
     let capturedUnsubscribe: jest.Mock | undefined;
     (NetInfo.addEventListener as jest.Mock).mockImplementationOnce(
-      (callback: any) => {
+      (_callback: any) => {
         capturedUnsubscribe = jest.fn(() => {
           (NetInfo as any).__clearListeners();
         });

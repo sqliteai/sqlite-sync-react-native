@@ -31,6 +31,7 @@ const logger = createLogger(false);
 const baseParams = {
   expoToken: 'ExponentPushToken[abc123]',
   databaseName: 'test-db',
+  siteId: 'site-1',
   platform: 'ios',
   logger,
 };

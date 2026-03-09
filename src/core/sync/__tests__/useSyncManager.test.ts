@@ -17,13 +17,14 @@ describe('useSyncManager', () => {
   const logger = createLogger(false);
 
   const createDefaultParams = (overrides?: Partial<any>) => ({
-    writeDbRef: { current: { execute: jest.fn(), transaction: jest.fn() } },
+    writeDbRef: { current: { execute: jest.fn(), transaction: jest.fn() } } as any,
     isSyncReady: true,
     logger,
     adaptiveConfig: {
       baseInterval: 5000,
       maxInterval: 60000,
-      emptyBackoffMultiplier: 1.5,
+      emptyThreshold: 5,
+      idleBackoffMultiplier: 1.5,
       errorBackoffMultiplier: 2.0,
     },
     currentIntervalRef: { current: 5000 },
@@ -199,9 +200,8 @@ describe('useSyncManager', () => {
     const { result } = renderHook(() => useSyncManager(createDefaultParams()));
 
     // Start first sync
-    let firstDone = false;
     act(() => {
-      result.current.performSync().then(() => { firstDone = true; });
+      result.current.performSync();
     });
 
     // Try second sync while first is in progress

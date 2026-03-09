@@ -276,6 +276,8 @@ describe('SQLiteSyncProvider', () => {
         databaseName="test.db"
         tablesToBeSynced={defaultProps.tablesToBeSynced}
         accessToken="my-token"
+        syncMode="polling"
+        adaptivePolling={{}}
       >
         {children}
       </SQLiteSyncProvider>
@@ -291,6 +293,7 @@ describe('SQLiteSyncProvider', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <SQLiteSyncProvider
         {...defaultProps}
+        syncMode="polling"
         adaptivePolling={{ baseInterval: 10000, maxInterval: 120000 }}
       >
         {children}

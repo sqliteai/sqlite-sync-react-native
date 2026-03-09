@@ -42,13 +42,13 @@ describe('usePushNotificationSync', () => {
   const createDefaultParams = (overrides?: Partial<any>) => ({
     isSyncReady: true,
     performSyncRef: { current: jest.fn().mockResolvedValue(undefined) },
-    writeDbRef: { current: { execute: jest.fn().mockResolvedValue({ rows: [{ site_id: 'site-123' }] }) } },
+    writeDbRef: { current: { execute: jest.fn().mockResolvedValue({ rows: [{ site_id: 'site-123' }] }) } } as any,
     syncMode: 'push' as const,
     notificationListening: 'foreground' as const,
     logger,
     connectionString: 'sqlitecloud://test',
     databaseName: 'test.db',
-    tablesToBeSynced: [{ name: 'users' }],
+    tablesToBeSynced: [{ name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' }],
     ...overrides,
   });
 
