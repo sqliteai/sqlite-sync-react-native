@@ -32,7 +32,6 @@ const baseParams = {
   expoToken: 'ExponentPushToken[abc123]',
   databaseName: 'test-db',
   platform: 'ios',
-  connectionString: 'sqlitecloud://host:8860',
   logger,
 };
 
@@ -62,7 +61,7 @@ describe('registerPushToken', () => {
     await registerPushToken(baseParams);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://cloudsync-staging.fly.dev/v2/cloudsync/notifications/tokens',
+      'https://cloudsync-staging-testing.fly.dev/v2/cloudsync/notifications/tokens',
       expect.any(Object)
     );
   });
@@ -84,9 +83,7 @@ describe('registerPushToken', () => {
     });
 
     const callArgs = mockFetch.mock.calls[0][1];
-    expect(callArgs.headers.Authorization).toBe(
-      'Bearer sqlitecloud://host:8860?apikey=my-api-key'
-    );
+    expect(callArgs.headers.Authorization).toBe('Bearer my-api-key');
   });
 
   it('sends correct body fields', async () => {

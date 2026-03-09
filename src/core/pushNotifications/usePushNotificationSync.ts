@@ -308,7 +308,6 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
               databaseName,
               siteId,
               platform: Platform.OS,
-              connectionString,
               apiKey,
               accessToken,
               logger,
