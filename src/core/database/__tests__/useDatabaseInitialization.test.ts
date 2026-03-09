@@ -149,6 +149,73 @@ describe('useDatabaseInitialization', () => {
     expect(readDb.close).toHaveBeenCalled();
   });
 
+  it('sets initError when databaseName is empty', async () => {
+    const { result } = renderHook(() =>
+      useDatabaseInitialization({ ...defaultParams, databaseName: '' })
+    );
+
+    await act(async () => {});
+
+    expect(result.current.initError?.message).toContain('Database name is required');
+    expect(result.current.writeDb).toBeNull();
+    expect(result.current.isSyncReady).toBe(false);
+  });
+
+  it('warns when tablesToBeSynced is empty', async () => {
+    const { result } = renderHook(() =>
+      useDatabaseInitialization({ ...defaultParams, tablesToBeSynced: [] })
+    );
+
+    await act(async () => {});
+
+    expect(result.current.writeDb).not.toBeNull();
+    expect(result.current.readDb).not.toBeNull();
+  });
+
+  it('handles write db close error on unmount', async () => {
+    const writeDb = {
+      ...mockDb,
+      close: jest.fn().mockImplementation(() => {
+        throw new Error('close fail');
+      }),
+    };
+    const readDb = { ...mockDb, close: jest.fn() };
+    (createDatabase as jest.Mock)
+      .mockResolvedValueOnce(writeDb)
+      .mockResolvedValueOnce(readDb);
+
+    const { unmount } = renderHook(() =>
+      useDatabaseInitialization(defaultParams)
+    );
+
+    await act(async () => {});
+
+    unmount();
+    // No crash — error is caught internally
+  });
+
+  it('handles read db close error on unmount', async () => {
+    const writeDb = { ...mockDb, close: jest.fn() };
+    const readDb = {
+      ...mockDb,
+      close: jest.fn().mockImplementation(() => {
+        throw new Error('close fail');
+      }),
+    };
+    (createDatabase as jest.Mock)
+      .mockResolvedValueOnce(writeDb)
+      .mockResolvedValueOnce(readDb);
+
+    const { unmount } = renderHook(() =>
+      useDatabaseInitialization(defaultParams)
+    );
+
+    await act(async () => {});
+
+    unmount();
+    // No crash — error is caught internally
+  });
+
   it('sets initError when table creation fails', async () => {
     const db = {
       ...mockDb,

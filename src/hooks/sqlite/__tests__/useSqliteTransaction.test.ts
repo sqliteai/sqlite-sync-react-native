@@ -113,4 +113,18 @@ describe('useSqliteTransaction', () => {
     // Should not throw — sync failure is caught internally
     expect(result.current.error).toBeNull();
   });
+
+  it('wraps non-Error thrown value', async () => {
+    const mockDb = createMockDB();
+    (mockDb.transaction as jest.Mock).mockRejectedValue('raw string error');
+    const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
+    const { result } = renderHook(() => useSqliteTransaction(), { wrapper });
+
+    await act(async () => {
+      await expect(
+        result.current.executeTransaction(async () => {})
+      ).rejects.toThrow('Transaction failed');
+    });
+    expect(result.current.error?.message).toBe('Transaction failed');
+  });
 });

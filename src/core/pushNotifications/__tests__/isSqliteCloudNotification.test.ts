@@ -84,6 +84,18 @@ describe('isSqliteCloudNotification', () => {
     ).toBe(false);
   });
 
+  it('returns false for Android dataString with wrong URI', () => {
+    expect(
+      isSqliteCloudNotification({
+        data: {
+          dataString: JSON.stringify({
+            artifactURI: 'https://wrong.com',
+          }),
+        },
+      })
+    ).toBe(false);
+  });
+
   it('returns false for null', () => {
     expect(isSqliteCloudNotification(null)).toBe(false);
   });

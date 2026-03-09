@@ -248,6 +248,20 @@ describe('useSyncManager', () => {
     expect(executeSync).toHaveBeenCalled();
   });
 
+  it('does not recalculate interval on error in push mode', async () => {
+    (executeSync as jest.Mock).mockRejectedValue(new Error('fail'));
+    const params = createDefaultParams({ syncMode: 'push' });
+    const { result } = renderHook(() => useSyncManager(params));
+
+    await act(async () => {
+      await result.current.performSync();
+    });
+
+    expect(calculateAdaptiveSyncInterval).not.toHaveBeenCalled();
+    expect(params.setCurrentInterval).not.toHaveBeenCalled();
+    expect(result.current.syncError?.message).toBe('fail');
+  });
+
   it('keeps performSyncRef updated', () => {
     const { result } = renderHook(() => useSyncManager(createDefaultParams()));
 

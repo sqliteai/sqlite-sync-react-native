@@ -301,6 +301,19 @@ describe('usePushNotificationSync', () => {
     expect(registerPushToken).not.toHaveBeenCalled();
   });
 
+  it('handles registerPushToken failure gracefully', async () => {
+    (registerPushToken as jest.Mock).mockRejectedValue(
+      new Error('token fail')
+    );
+
+    renderHook(() => usePushNotificationSync(createDefaultParams()));
+
+    await act(async () => {});
+
+    // Should not crash — failure is caught internally
+    expect(registerPushToken).toHaveBeenCalled();
+  });
+
   it('removes listeners on unmount', async () => {
     const removeMock = jest.fn();
     mockExpoNotifications.addNotificationReceivedListener.mockReturnValue({

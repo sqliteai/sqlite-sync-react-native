@@ -197,6 +197,49 @@ describe('useSqliteSyncQuery', () => {
     expect(result.current.data).toEqual([]);
   });
 
+  it('clears debounce timer on query change', async () => {
+    const readDb = createMockDB();
+    const writeDb = createMockDB();
+    (readDb.execute as jest.Mock).mockResolvedValue({ rows: [] });
+
+    const wrapper = createTestWrapper({
+      db: { readDb: readDb as any, writeDb: writeDb as any },
+    });
+
+    const { rerender } = renderHook(
+      ({ query }: { query: string }) =>
+        useSqliteSyncQuery({
+          query,
+          arguments: [],
+          fireOn: [{ table: 'users' }],
+        }),
+      { wrapper, initialProps: { query: 'SELECT * FROM users' } }
+    );
+
+    await act(async () => {});
+
+    // Change query before debounce fires
+    rerender({ query: 'SELECT * FROM users WHERE id = 1' });
+
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+
+    // Old timer should be cleared — no subscription yet
+    expect(writeDb.reactiveExecute).not.toHaveBeenCalled();
+
+    // After full debounce from rerender
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+
+    expect(writeDb.reactiveExecute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: 'SELECT * FROM users WHERE id = 1',
+      })
+    );
+  });
+
   it('provides unsubscribe function', async () => {
     const readDb = createMockDB();
     const writeDb = createMockDB();

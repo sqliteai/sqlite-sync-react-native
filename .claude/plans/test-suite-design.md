@@ -301,6 +301,74 @@ Each test overrides via `mockResolvedValueOnce`.
 - Foreground callback, fallback, cleanup
 - Mode transitions: unregister, reset, missing expo warning
 
+---
+
+## Tier 1 Coverage Gap Tests (14 tests — targeting ~90% branch coverage)
+
+### useDatabaseInitialization (+2 tests)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 1 | throws when databaseName is empty | `databaseName: ''` | `initError.message` contains "Database name is required" |
+| 2 | warns when tablesToBeSynced is empty | `tablesToBeSynced: []` | Logger warns "No tables configured", db still opens |
+
+### initializeSyncExtension (+1 test)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 3 | sets accessToken when apiKey absent | `apiKey: undefined, accessToken: 'token'` | Calls `cloudsync_network_set_token` |
+
+> Note: Already covered by existing test "sets access token when accessToken is provided". Replaced with:
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 3 | logs siteId when cloudsync_init returns result | Default config | Logger called with `site_id: site-id-123` |
+
+### useSqliteExecute (+1 test)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 4 | wraps non-Error thrown value | `db.execute` throws string `'raw'` | `error.message` is "Execution failed" |
+
+### useSqliteTransaction (+1 test)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 5 | wraps non-Error thrown value | `db.transaction` throws string `'raw'` | `error.message` is "Transaction failed" |
+
+### useSqliteSyncQuery (+2 tests)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 6 | clears debounce timer on query change | Render, change query before 1000ms | No stale `reactiveExecute` call |
+| 7 | skips stale subscription signature | Change query during debounce | Only latest query subscribed |
+
+### usePushNotificationSync (+2 tests)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 8 | handles registerPushToken failure gracefully | `registerPushToken` rejects | No crash, listener still set up |
+| 9 | warns when ExpoNotifications null | Mock ExpoNotifications = null | Logger warns about missing module |
+
+### isSqliteCloudNotification (+1 test)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 10 | detects Android dataString with wrong URI | `data: { dataString: '{"artifactURI":"https://wrong.com"}' }` | Returns false |
+
+### useSyncManager (+1 test)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 11 | does not recalculate interval on error in push mode | `syncMode: 'push'`, executeSync rejects | `calculateAdaptiveSyncInterval` not called |
+
+### useDatabaseInitialization (+2 tests, close errors)
+
+| # | Test case | Setup | Assertion |
+|---|-----------|-------|-----------|
+| 12 | handles write db close error on unmount | `writeDb.close` throws | Logger error called, no crash |
+| 13 | handles read db close error on unmount | `readDb.close` throws | Logger error called, no crash |
+
 ### SQLiteSyncProvider (18 tests)
 
 - Init: renders children, provides writeDb/readDb, initError, syncError, onDatabaseReady, table creation

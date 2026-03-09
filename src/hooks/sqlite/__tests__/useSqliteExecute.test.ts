@@ -145,4 +145,18 @@ describe('useSqliteExecute', () => {
     });
     expect(res).toEqual({ rows: [] });
   });
+
+  it('wraps non-Error thrown value', async () => {
+    const mockDb = createMockDB();
+    (mockDb.execute as jest.Mock).mockRejectedValue('raw string error');
+    const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
+    const { result } = renderHook(() => useSqliteExecute(), { wrapper });
+
+    await act(async () => {
+      await expect(result.current.execute('BAD')).rejects.toThrow(
+        'Execution failed'
+      );
+    });
+    expect(result.current.error?.message).toBe('Execution failed');
+  });
 });
