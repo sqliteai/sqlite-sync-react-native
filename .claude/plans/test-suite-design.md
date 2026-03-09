@@ -43,58 +43,58 @@ Each test overrides via `mockResolvedValueOnce`.
 
 ### Layer 1: Pure Functions
 
-| # | Test file | Source |
-|---|-----------|--------|
-| 1 | `core/polling/__tests__/calculateAdaptiveSyncInterval.test.ts` | calculateAdaptiveSyncInterval.ts |
-| 2 | `core/pushNotifications/__tests__/isSqliteCloudNotification.test.ts` | isSqliteCloudNotification.ts |
-| 3 | `core/common/__tests__/logger.test.ts` | logger.ts |
-| 4 | `core/pushNotifications/__tests__/pushNotificationSyncCallbacks.test.ts` | pushNotificationSyncCallbacks.ts |
-| 5 | `core/__tests__/constants.test.ts` | constants.ts |
+| #   | Test file                                                                | Source                           |
+| --- | ------------------------------------------------------------------------ | -------------------------------- |
+| 1   | `core/polling/__tests__/calculateAdaptiveSyncInterval.test.ts`           | calculateAdaptiveSyncInterval.ts |
+| 2   | `core/pushNotifications/__tests__/isSqliteCloudNotification.test.ts`     | isSqliteCloudNotification.ts     |
+| 3   | `core/common/__tests__/logger.test.ts`                                   | logger.ts                        |
+| 4   | `core/pushNotifications/__tests__/pushNotificationSyncCallbacks.test.ts` | pushNotificationSyncCallbacks.ts |
+| 5   | `core/__tests__/constants.test.ts`                                       | constants.ts                     |
 
 ### Layer 2: Core Logic (mocked native modules)
 
-| # | Test file | Source |
-|---|-----------|--------|
-| 6 | `core/database/__tests__/createDatabase.test.ts` | createDatabase.ts |
-| 7 | `core/sync/__tests__/initializeSyncExtension.test.ts` | initializeSyncExtension.ts |
-| 8 | `core/sync/__tests__/executeSync.test.ts` | executeSync.ts |
-| 9 | `core/background/__tests__/backgroundSyncConfig.test.ts` | backgroundSyncConfig.ts |
-| 10 | `core/background/__tests__/backgroundSyncRegistry.test.ts` | backgroundSyncRegistry.ts |
-| 11 | `core/background/__tests__/executeBackgroundSync.test.ts` | executeBackgroundSync.ts |
-| 12 | `core/pushNotifications/__tests__/registerPushToken.test.ts` | registerPushToken.ts |
-| 13 | `core/pushNotifications/__tests__/pushNotificationSyncTask.test.ts` | pushNotificationSyncTask.ts |
-| 14 | `core/common/__tests__/optionalDependencies.test.ts` | optionalDependencies.ts |
+| #   | Test file                                                           | Source                      |
+| --- | ------------------------------------------------------------------- | --------------------------- |
+| 6   | `core/database/__tests__/createDatabase.test.ts`                    | createDatabase.ts           |
+| 7   | `core/sync/__tests__/initializeSyncExtension.test.ts`               | initializeSyncExtension.ts  |
+| 8   | `core/sync/__tests__/executeSync.test.ts`                           | executeSync.ts              |
+| 9   | `core/background/__tests__/backgroundSyncConfig.test.ts`            | backgroundSyncConfig.ts     |
+| 10  | `core/background/__tests__/backgroundSyncRegistry.test.ts`          | backgroundSyncRegistry.ts   |
+| 11  | `core/background/__tests__/executeBackgroundSync.test.ts`           | executeBackgroundSync.ts    |
+| 12  | `core/pushNotifications/__tests__/registerPushToken.test.ts`        | registerPushToken.ts        |
+| 13  | `core/pushNotifications/__tests__/pushNotificationSyncTask.test.ts` | pushNotificationSyncTask.ts |
+| 14  | `core/common/__tests__/optionalDependencies.test.ts`                | optionalDependencies.ts     |
 
 ### Layer 3: Context Consumer Hooks
 
-| # | Test file | Source |
-|---|-----------|--------|
-| 15 | `hooks/context/__tests__/useSqliteDb.test.ts` | useSqliteDb.ts |
-| 16 | `hooks/context/__tests__/useSyncStatus.test.ts` | useSyncStatus.ts |
-| 17 | `hooks/context/__tests__/useSqliteSync.test.ts` | useSqliteSync.ts |
-| 18 | `hooks/context/__tests__/useInternalLogger.test.ts` | useInternalLogger.ts |
-| 19 | `hooks/sync/__tests__/useTriggerSqliteSync.test.ts` | useTriggerSqliteSync.ts |
+| #   | Test file                                           | Source                  |
+| --- | --------------------------------------------------- | ----------------------- |
+| 15  | `hooks/context/__tests__/useSqliteDb.test.ts`       | useSqliteDb.ts          |
+| 16  | `hooks/context/__tests__/useSyncStatus.test.ts`     | useSyncStatus.ts        |
+| 17  | `hooks/context/__tests__/useSqliteSync.test.ts`     | useSqliteSync.ts        |
+| 18  | `hooks/context/__tests__/useInternalLogger.test.ts` | useInternalLogger.ts    |
+| 19  | `hooks/sync/__tests__/useTriggerSqliteSync.test.ts` | useTriggerSqliteSync.ts |
 
 ### Layer 4: Complex Hooks
 
-| # | Test file | Source |
-|---|-----------|--------|
-| 20 | `hooks/sqlite/__tests__/useSqliteExecute.test.ts` | useSqliteExecute.ts |
-| 21 | `hooks/sqlite/__tests__/useSqliteTransaction.test.ts` | useSqliteTransaction.ts |
-| 22 | `hooks/sqlite/__tests__/useOnTableUpdate.test.ts` | useOnTableUpdate.ts |
-| 23 | `hooks/sync/__tests__/useSqliteSyncQuery.test.ts` | useSqliteSyncQuery.ts |
-| 24 | `core/sync/__tests__/useSyncManager.test.ts` | useSyncManager.ts |
-| 25 | `core/sync/__tests__/useInitialSync.test.ts` | useInitialSync.ts |
-| 26 | `core/lifecycle/__tests__/useAppLifecycle.test.ts` | useAppLifecycle.ts |
-| 27 | `core/lifecycle/__tests__/useNetworkListener.test.ts` | useNetworkListener.ts |
-| 28 | `core/polling/__tests__/useAdaptivePollingSync.test.ts` | useAdaptivePollingSync.ts |
-| 29 | `core/pushNotifications/__tests__/usePushNotificationSync.test.ts` | usePushNotificationSync.ts |
+| #   | Test file                                                          | Source                     |
+| --- | ------------------------------------------------------------------ | -------------------------- |
+| 20  | `hooks/sqlite/__tests__/useSqliteExecute.test.ts`                  | useSqliteExecute.ts        |
+| 21  | `hooks/sqlite/__tests__/useSqliteTransaction.test.ts`              | useSqliteTransaction.ts    |
+| 22  | `hooks/sqlite/__tests__/useOnTableUpdate.test.ts`                  | useOnTableUpdate.ts        |
+| 23  | `hooks/sync/__tests__/useSqliteSyncQuery.test.ts`                  | useSqliteSyncQuery.ts      |
+| 24  | `core/sync/__tests__/useSyncManager.test.ts`                       | useSyncManager.ts          |
+| 25  | `core/sync/__tests__/useInitialSync.test.ts`                       | useInitialSync.ts          |
+| 26  | `core/lifecycle/__tests__/useAppLifecycle.test.ts`                 | useAppLifecycle.ts         |
+| 27  | `core/lifecycle/__tests__/useNetworkListener.test.ts`              | useNetworkListener.ts      |
+| 28  | `core/polling/__tests__/useAdaptivePollingSync.test.ts`            | useAdaptivePollingSync.ts  |
+| 29  | `core/pushNotifications/__tests__/usePushNotificationSync.test.ts` | usePushNotificationSync.ts |
 
 ### Layer 5: Integration
 
-| # | Test file | Source |
-|---|-----------|--------|
-| 30 | `core/__tests__/SQLiteSyncProvider.test.tsx` | SQLiteSyncProvider.tsx |
+| #   | Test file                                    | Source                 |
+| --- | -------------------------------------------- | ---------------------- |
+| 30  | `core/__tests__/SQLiteSyncProvider.test.tsx` | SQLiteSyncProvider.tsx |
 
 ## Implementation Order
 
@@ -307,67 +307,67 @@ Each test overrides via `mockResolvedValueOnce`.
 
 ### useDatabaseInitialization (+2 tests)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 1 | throws when databaseName is empty | `databaseName: ''` | `initError.message` contains "Database name is required" |
-| 2 | warns when tablesToBeSynced is empty | `tablesToBeSynced: []` | Logger warns "No tables configured", db still opens |
+| #   | Test case                            | Setup                  | Assertion                                                |
+| --- | ------------------------------------ | ---------------------- | -------------------------------------------------------- |
+| 1   | throws when databaseName is empty    | `databaseName: ''`     | `initError.message` contains "Database name is required" |
+| 2   | warns when tablesToBeSynced is empty | `tablesToBeSynced: []` | Logger warns "No tables configured", db still opens      |
 
 ### initializeSyncExtension (+1 test)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 3 | sets accessToken when apiKey absent | `apiKey: undefined, accessToken: 'token'` | Calls `cloudsync_network_set_token` |
+| #   | Test case                           | Setup                                     | Assertion                           |
+| --- | ----------------------------------- | ----------------------------------------- | ----------------------------------- |
+| 3   | sets accessToken when apiKey absent | `apiKey: undefined, accessToken: 'token'` | Calls `cloudsync_network_set_token` |
 
 > Note: Already covered by existing test "sets access token when accessToken is provided". Replaced with:
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 3 | logs siteId when cloudsync_init returns result | Default config | Logger called with `site_id: site-id-123` |
+| #   | Test case                                      | Setup          | Assertion                                 |
+| --- | ---------------------------------------------- | -------------- | ----------------------------------------- |
+| 3   | logs siteId when cloudsync_init returns result | Default config | Logger called with `site_id: site-id-123` |
 
 ### useSqliteExecute (+1 test)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 4 | wraps non-Error thrown value | `db.execute` throws string `'raw'` | `error.message` is "Execution failed" |
+| #   | Test case                    | Setup                              | Assertion                             |
+| --- | ---------------------------- | ---------------------------------- | ------------------------------------- |
+| 4   | wraps non-Error thrown value | `db.execute` throws string `'raw'` | `error.message` is "Execution failed" |
 
 ### useSqliteTransaction (+1 test)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 5 | wraps non-Error thrown value | `db.transaction` throws string `'raw'` | `error.message` is "Transaction failed" |
+| #   | Test case                    | Setup                                  | Assertion                               |
+| --- | ---------------------------- | -------------------------------------- | --------------------------------------- |
+| 5   | wraps non-Error thrown value | `db.transaction` throws string `'raw'` | `error.message` is "Transaction failed" |
 
 ### useSqliteSyncQuery (+2 tests)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 6 | clears debounce timer on query change | Render, change query before 1000ms | No stale `reactiveExecute` call |
-| 7 | skips stale subscription signature | Change query during debounce | Only latest query subscribed |
+| #   | Test case                             | Setup                              | Assertion                       |
+| --- | ------------------------------------- | ---------------------------------- | ------------------------------- |
+| 6   | clears debounce timer on query change | Render, change query before 1000ms | No stale `reactiveExecute` call |
+| 7   | skips stale subscription signature    | Change query during debounce       | Only latest query subscribed    |
 
 ### usePushNotificationSync (+2 tests)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 8 | handles registerPushToken failure gracefully | `registerPushToken` rejects | No crash, listener still set up |
-| 9 | warns when ExpoNotifications null | Mock ExpoNotifications = null | Logger warns about missing module |
+| #   | Test case                                    | Setup                         | Assertion                         |
+| --- | -------------------------------------------- | ----------------------------- | --------------------------------- |
+| 8   | handles registerPushToken failure gracefully | `registerPushToken` rejects   | No crash, listener still set up   |
+| 9   | warns when ExpoNotifications null            | Mock ExpoNotifications = null | Logger warns about missing module |
 
 ### isSqliteCloudNotification (+1 test)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 10 | detects Android dataString with wrong URI | `data: { dataString: '{"artifactURI":"https://wrong.com"}' }` | Returns false |
+| #   | Test case                                 | Setup                                                         | Assertion     |
+| --- | ----------------------------------------- | ------------------------------------------------------------- | ------------- |
+| 10  | detects Android dataString with wrong URI | `data: { dataString: '{"artifactURI":"https://wrong.com"}' }` | Returns false |
 
 ### useSyncManager (+1 test)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 11 | does not recalculate interval on error in push mode | `syncMode: 'push'`, executeSync rejects | `calculateAdaptiveSyncInterval` not called |
+| #   | Test case                                           | Setup                                   | Assertion                                  |
+| --- | --------------------------------------------------- | --------------------------------------- | ------------------------------------------ |
+| 11  | does not recalculate interval on error in push mode | `syncMode: 'push'`, executeSync rejects | `calculateAdaptiveSyncInterval` not called |
 
 ### useDatabaseInitialization (+2 tests, close errors)
 
-| # | Test case | Setup | Assertion |
-|---|-----------|-------|-----------|
-| 12 | handles write db close error on unmount | `writeDb.close` throws | Logger error called, no crash |
-| 13 | handles read db close error on unmount | `readDb.close` throws | Logger error called, no crash |
+| #   | Test case                               | Setup                  | Assertion                     |
+| --- | --------------------------------------- | ---------------------- | ----------------------------- |
+| 12  | handles write db close error on unmount | `writeDb.close` throws | Logger error called, no crash |
+| 13  | handles read db close error on unmount  | `readDb.close` throws  | Logger error called, no crash |
 
 ### SQLiteSyncProvider (18 tests)
 
@@ -377,3 +377,13 @@ Each test overrides via `mockResolvedValueOnce`.
 - Re-init: connectionString, apiKey, tablesToBeSynced changes, not on children
 - Mode: fallback to polling, reset interval, reset empty syncs
 - Cleanup: closes both DBs, handles close error
+
+# To run tests and view coverage:
+
+### Run tests with coverage report
+
+yarn test --coverage
+
+### Open the HTML report in your browser
+
+open coverage/lcov-report/index.html
