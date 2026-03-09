@@ -52,6 +52,7 @@ describe('registerBackgroundSync', () => {
   });
 
   it('warns and returns early when dependencies unavailable', async () => {
+    jest.spyOn(console, 'warn').mockImplementation();
     (isBackgroundSyncAvailable as jest.Mock).mockReturnValue(false);
 
     await registerBackgroundSync({ ...mockConfig, debug: true });
