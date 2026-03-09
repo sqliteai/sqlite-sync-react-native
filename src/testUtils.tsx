@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { SQLiteDbContext } from './contexts/SQLiteDbContext';
 import { SQLiteSyncStatusContext } from './contexts/SQLiteSyncStatusContext';
 import { SQLiteSyncActionsContext } from './contexts/SQLiteSyncActionsContext';
