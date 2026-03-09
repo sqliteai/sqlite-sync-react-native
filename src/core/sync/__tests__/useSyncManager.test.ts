@@ -217,6 +217,24 @@ describe('useSyncManager', () => {
     });
   });
 
+  it('allows sync on Android when isInternetReachable is null', async () => {
+    (Platform as any).OS = 'android';
+    (NetInfo.fetch as jest.Mock).mockResolvedValue({
+      isConnected: true,
+      isInternetReachable: null,
+    });
+    (executeSync as jest.Mock).mockResolvedValue(0);
+
+    const { result } = renderHook(() => useSyncManager(createDefaultParams()));
+
+    await act(async () => {
+      await result.current.performSync();
+    });
+
+    expect(NetInfo.fetch).toHaveBeenCalled();
+    expect(executeSync).toHaveBeenCalled();
+  });
+
   it('checks network on Android before syncing', async () => {
     (Platform as any).OS = 'android';
     (NetInfo.fetch as jest.Mock).mockResolvedValue({

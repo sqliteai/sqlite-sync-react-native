@@ -55,4 +55,12 @@ describe('createLogger', () => {
     const timestamp = (console.log as jest.Mock).mock.calls[0][0];
     expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
+
+  it('defaults to debug=false when called without arguments', () => {
+    createLogger().info('test');
+    expect(console.log).not.toHaveBeenCalled();
+
+    createLogger().error('test');
+    expect(console.error).toHaveBeenCalled();
+  });
 });

@@ -144,6 +144,52 @@ describe('useNetworkListener', () => {
     expect(result.current.isNetworkAvailable).toBe(false);
   });
 
+  it('treats null isInternetReachable as online (true)', () => {
+    const performSync = jest.fn().mockResolvedValue(undefined);
+    const params = createDefaultParams({
+      performSyncRef: { current: performSync },
+      appState: 'active',
+    });
+
+    const { result } = renderHook(() => useNetworkListener(params));
+
+    // Go offline first
+    act(() => {
+      (NetInfo as any).__simulateChange({
+        isConnected: false,
+        isInternetReachable: false,
+      });
+    });
+
+    expect(result.current.isNetworkAvailable).toBe(false);
+
+    // Come back with isInternetReachable = null (should be treated as true)
+    act(() => {
+      (NetInfo as any).__simulateChange({
+        isConnected: true,
+        isInternetReachable: null,
+      });
+    });
+
+    expect(result.current.isNetworkAvailable).toBe(true);
+    expect(performSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats null isConnected as offline (false)', () => {
+    const { result } = renderHook(() =>
+      useNetworkListener(createDefaultParams())
+    );
+
+    act(() => {
+      (NetInfo as any).__simulateChange({
+        isConnected: null,
+        isInternetReachable: true,
+      });
+    });
+
+    expect(result.current.isNetworkAvailable).toBe(false);
+  });
+
   it('unsubscribes on cleanup', () => {
     // Capture the unsubscribe mock returned by addEventListener
     let capturedUnsubscribe: jest.Mock | undefined;

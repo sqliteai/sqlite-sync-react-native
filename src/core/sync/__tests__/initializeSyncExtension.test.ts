@@ -141,6 +141,53 @@ describe('initializeSyncExtension', () => {
     );
   });
 
+  it('throws if cloudsync_version returns no rows', async () => {
+    const db = makeMockDB({ rows: [] });
+    const config = makeConfig();
+
+    await expect(
+      initializeSyncExtension(db as any, config, logger)
+    ).rejects.toThrow('CloudSync extension not loaded properly');
+  });
+
+  it('logs site_id when cloudsync_init returns a result', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+    const debugLogger = createLogger(true);
+    const db = makeMockDB();
+    const config = makeConfig();
+
+    await initializeSyncExtension(db as any, config, debugLogger);
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      '[SQLiteSync]',
+      expect.stringContaining('site_id: site-id-123')
+    );
+    logSpy.mockRestore();
+  });
+
+  it('logs without site_id when cloudsync_init returns empty result', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation();
+    const debugLogger = createLogger(true);
+    const db = createMockDB();
+    db.execute.mockImplementation(async (sql: string) => {
+      if (sql.includes('cloudsync_version'))
+        return { rows: [{ 'cloudsync_version()': '1.0.0' }] };
+      if (sql.includes('cloudsync_init')) return { rows: [{}] };
+      return { rows: [] };
+    });
+    const config = makeConfig();
+
+    await initializeSyncExtension(db as any, config, debugLogger);
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      '[SQLiteSync]',
+      expect.stringContaining('CloudSync initialized for table: users')
+    );
+    logSpy.mockRestore();
+  });
+
   it('prefers apiKey over accessToken when both are provided', async () => {
     const db = makeMockDB();
     const config = makeConfig({ apiKey: 'my-api-key', accessToken: 'my-token' });

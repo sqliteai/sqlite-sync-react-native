@@ -175,6 +175,34 @@ describe('useAdaptivePollingSync', () => {
     expect(performSync).toHaveBeenCalledTimes(1);
   });
 
+  it('stops scheduling when interval becomes null mid-loop', async () => {
+    const intervalRef = { current: 5000 as number | null };
+    // Make performSync set interval to null when called
+    const performSync = jest.fn().mockImplementation(async () => {
+      intervalRef.current = null;
+    });
+    const params = createDefaultParams({
+      currentIntervalRef: intervalRef,
+      performSyncRef: { current: performSync },
+    });
+
+    renderHook(() => useAdaptivePollingSync(params));
+
+    // First poll fires — performSync sets interval to null
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(performSync).toHaveBeenCalledTimes(1);
+
+    // Advance — no more polls should happen since interval is null
+    await act(async () => {
+      jest.advanceTimersByTime(15000);
+    });
+
+    expect(performSync).toHaveBeenCalledTimes(1);
+  });
+
   it('cleans up timer on unmount', async () => {
     const performSync = jest.fn().mockResolvedValue(undefined);
     const params = createDefaultParams({

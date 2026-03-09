@@ -139,6 +139,31 @@ describe('useOnTableUpdate', () => {
     );
   });
 
+  it('provides null row when query returns empty rows', async () => {
+    const mockDb = createMockDB();
+    let hookHandler: any;
+    (mockDb.updateHook as jest.Mock).mockImplementation((fn: any) => {
+      if (typeof fn === 'function') hookHandler = fn;
+    });
+    (mockDb.execute as jest.Mock).mockResolvedValue({ rows: [] });
+
+    const onUpdate = jest.fn();
+    const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
+
+    renderHook(
+      () => useOnTableUpdate({ tables: ['users'], onUpdate }),
+      { wrapper }
+    );
+
+    await act(async () => {
+      await hookHandler({ operation: 'UPDATE', table: 'users', rowId: 99 });
+    });
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ row: null, operation: 'UPDATE' })
+    );
+  });
+
   it('no-ops when writeDb is null', () => {
     const wrapper = createTestWrapper();
 

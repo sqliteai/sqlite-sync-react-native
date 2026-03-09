@@ -240,6 +240,54 @@ describe('useSqliteSyncQuery', () => {
     );
   });
 
+  it('skips stale subscription when signature changed during debounce', async () => {
+    const readDb = createMockDB();
+    const writeDb = createMockDB();
+    (readDb.execute as jest.Mock).mockResolvedValue({ rows: [] });
+
+    const wrapper = createTestWrapper({
+      db: { readDb: readDb as any, writeDb: writeDb as any },
+    });
+
+    const { rerender } = renderHook(
+      ({ query }: { query: string }) =>
+        useSqliteSyncQuery({
+          query,
+          arguments: [],
+          fireOn: [{ table: 'users' }],
+        }),
+      { wrapper, initialProps: { query: 'SELECT * FROM users' } }
+    );
+
+    await act(async () => {});
+
+    // Let debounce almost fire for original query
+    await act(async () => {
+      jest.advanceTimersByTime(900);
+    });
+
+    // Change query — old debounce fires but signature is stale
+    rerender({ query: 'SELECT * FROM users WHERE active = 1' });
+
+    await act(async () => {});
+
+    // Old debounce fires at 1000ms
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
+
+    // The stale subscription should be skipped — only new query should subscribe
+    // New debounce fires at 1900ms total
+    await act(async () => {
+      jest.advanceTimersByTime(900);
+    });
+
+    // Should only have the new query subscription
+    const calls = (writeDb.reactiveExecute as jest.Mock).mock.calls;
+    const queries = calls.map((c: any) => c[0].query);
+    expect(queries).toContain('SELECT * FROM users WHERE active = 1');
+  });
+
   it('provides unsubscribe function', async () => {
     const readDb = createMockDB();
     const writeDb = createMockDB();
