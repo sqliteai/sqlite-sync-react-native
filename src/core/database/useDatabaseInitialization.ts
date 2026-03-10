@@ -10,9 +10,14 @@ import { initializeSyncExtension } from '../sync/initializeSyncExtension';
  */
 export interface DatabaseInitializationParams {
   /**
-   * SQLite Cloud connection string
+   * SQLite Cloud project ID
    */
-  connectionString: string;
+  projectID: string;
+
+  /**
+   * Sync provider organization ID
+   */
+  organizationID: string;
 
   /**
    * Local database file name
@@ -95,7 +100,8 @@ export interface DatabaseInitializationResult {
  * @example
  * ```typescript
  * const { writeDb, readDb, isSyncReady, initError } = useDatabaseInitialization({
- *   connectionString: 'sqlitecloud://...',
+ *   projectID: 'your-project-id',
+ *   organizationID: 'org_sqlitecloud',
  *   databaseName: 'app.db',
  *   tablesToBeSynced: [{ name: 'users', createTableSql: '...' }],
  *   apiKey: 'your-api-key',
@@ -107,7 +113,8 @@ export function useDatabaseInitialization(
   params: DatabaseInitializationParams
 ): DatabaseInitializationResult {
   const {
-    connectionString,
+    projectID,
+    organizationID,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -136,13 +143,21 @@ export function useDatabaseInitialization(
   const serializedConfig = useMemo(
     () =>
       JSON.stringify({
-        connectionString,
+        projectID,
+        organizationID,
         databaseName,
         tables: tablesToBeSynced,
         apiKey,
         accessToken,
       }),
-    [connectionString, databaseName, tablesToBeSynced, apiKey, accessToken]
+    [
+      projectID,
+      organizationID,
+      databaseName,
+      tablesToBeSynced,
+      apiKey,
+      accessToken,
+    ]
   );
 
   /** INITIALIZATION EFFECT */
@@ -220,7 +235,14 @@ export function useDatabaseInitialization(
 
           await initializeSyncExtension(
             localWriteDb,
-            { connectionString, tablesToBeSynced, apiKey, accessToken },
+            {
+              projectID,
+              organizationID,
+              databaseName,
+              tablesToBeSynced,
+              apiKey,
+              accessToken,
+            },
             logger
           );
 

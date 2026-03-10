@@ -3,9 +3,9 @@ import {
   ExpoApplication,
 } from '../common/optionalDependencies';
 import type { Logger } from '../common/logger';
+import { CLOUDSYNC_BASE_URL } from '../constants';
 
 const TOKEN_REGISTERED_KEY = 'sqlite_sync_push_token_registered';
-const CLOUDSYNC_BASE_URL = 'https://cloudsync-staging.fly.dev/v2';
 
 async function getDeviceId(): Promise<string> {
   if (!ExpoApplication) {
@@ -25,9 +25,8 @@ async function getDeviceId(): Promise<string> {
 interface RegisterPushTokenParams {
   expoToken: string;
   databaseName: string;
-  siteId?: string;
+  siteId: string;
   platform: string;
-  connectionString: string;
   apiKey?: string;
   accessToken?: string;
   logger: Logger;
@@ -45,7 +44,6 @@ export async function registerPushToken(
     databaseName,
     siteId,
     platform,
-    connectionString,
     apiKey,
     accessToken,
     logger,
@@ -74,7 +72,7 @@ export async function registerPushToken(
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   } else if (apiKey) {
-    headers.Authorization = `Bearer ${connectionString}?apikey=${apiKey}`;
+    headers.Authorization = `Bearer ${apiKey}`;
   }
 
   /** PREPARE REQUEST BODY */
@@ -84,12 +82,12 @@ export async function registerPushToken(
     expoToken,
     deviceId,
     database: databaseName,
-    siteId: siteId ?? '',
+    siteId,
     platform,
   };
 
   /** SEND REGISTRATION REQUEST */
-  const url = `${CLOUDSYNC_BASE_URL}/cloudsync/notifications/tokens`;
+  const url = `${CLOUDSYNC_BASE_URL}/v2/cloudsync/notifications/tokens`;
   logger.info(
     '📱 Registering push token with backend...',
     url,

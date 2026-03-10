@@ -60,7 +60,8 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
 2. **Fill in your credentials** in the `.env` file:
 
    ```env
-   SQLITE_CLOUD_CONNECTION_STRING=sqlitecloud://your-host.sqlite.cloud:8860/your-database
+   SQLITE_CLOUD_PROJECT_ID=your-project-id
+   SQLITE_CLOUD_ORGANIZATION_ID=your-organization-id
    SQLITE_CLOUD_API_KEY=your-api-key-here
    DATABASE_NAME=sync-demo.db
    TABLE_NAME=test_table

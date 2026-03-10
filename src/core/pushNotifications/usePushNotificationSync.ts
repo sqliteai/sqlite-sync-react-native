@@ -69,9 +69,14 @@ export interface PushNotificationSyncParams {
 
   // Background sync configuration (needed for background/terminated modes)
   /**
-   * SQLite Cloud connection string
+   * SQLite Cloud project ID
    */
-  connectionString: string;
+  projectID: string;
+
+  /**
+   * SQLite Cloud organization ID
+   */
+  organizationID: string;
 
   /**
    * Local database file name
@@ -120,7 +125,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     logger,
     onPermissionsDenied,
     renderPushPermissionPrompt,
-    connectionString,
+    projectID,
+    organizationID,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -131,7 +137,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
   /** SERIALIZED CONFIG */
   // Detect actual changes (avoids re-runs from unstable references like tablesToBeSynced)
   const serializedBackgroundConfig = JSON.stringify({
-    connectionString,
+    projectID,
+    organizationID,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -289,7 +296,17 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
                 : undefined;
             }
           } catch {
-            logger.warn('⚠️ Could not retrieve siteId');
+            logger.warn(
+              '⚠️ Could not retrieve siteId - skipping token registration (will retry on next app open)'
+            );
+            return;
+          }
+
+          if (!siteId) {
+            logger.warn(
+              '⚠️ No siteId available - skipping token registration (will retry on next app open)'
+            );
+            return;
           }
 
           try {
@@ -298,13 +315,16 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
               databaseName,
               siteId,
               platform: Platform.OS,
-              connectionString,
               apiKey,
               accessToken,
               logger,
             });
           } catch (registerError) {
-            logger.warn('⚠️ Failed to register push token:', registerError);
+            logger.warn(
+              '⚠️ Failed to register push token - falling back to polling mode:',
+              registerError
+            );
+            onPermissionsDeniedRef.current?.();
           }
         }
       } catch (error) {
@@ -363,7 +383,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
         );
 
         registerBackgroundSync({
-          connectionString,
+          projectID,
+          organizationID,
           databaseName,
           tablesToBeSynced,
           apiKey,

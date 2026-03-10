@@ -43,11 +43,12 @@ import { usePushNotificationSync } from './pushNotifications/usePushNotification
  *      - Still syncs on foreground and network reconnect for reliability
  *
  * 4. **Reactive Configuration:**
- *    - Changes to critical props (`connectionString`, `apiKey`, `tablesToBeSynced`) will trigger
+ *    - Changes to critical props (`projectID`, `organizationID`, `apiKey`, `tablesToBeSynced`) will trigger
  *      a safe teardown (closing DB) and re-initialization to ensure auth consistency.
  *    - Configuration objects are serialized internally to prevent unnecessary re-renders.
  *
- * @param props.connectionString - SQLite Cloud connection string
+ * @param props.projectID - SQLite Cloud project ID
+ * @param props.organizationID - Sync provider organization ID (`org_sqlitecloud` for SQLite Cloud)
  * @param props.databaseName - Local filename (e.g., 'app.db')
  * @param props.tablesToBeSynced - Array of table configs. (Changes to content trigger re-init)
  * @param props.syncMode - Sync mode: 'polling' (default) or 'push'
@@ -57,7 +58,8 @@ import { usePushNotificationSync } from './pushNotifications/usePushNotification
  * @param props.debug - Enable console logging
  */
 export function SQLiteSyncProvider({
-  connectionString,
+  projectID,
+  organizationID,
   databaseName,
   tablesToBeSynced,
   adaptivePolling,
@@ -117,7 +119,8 @@ export function SQLiteSyncProvider({
     initError,
     syncError: initSyncError,
   } = useDatabaseInitialization({
-    connectionString,
+    projectID,
+    organizationID,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -229,11 +232,9 @@ export function SQLiteSyncProvider({
     syncMode: effectiveSyncMode,
   });
 
-  /** PUSH PERMISSIONS DENIED HANDLER */
-  const handlePermissionsDenied = useCallback(() => {
-    logger.warn(
-      '⚠️ Falling back to polling mode due to denied push permissions'
-    );
+  /** PUSH FALLBACK HANDLER */
+  const handleFallbackToPolling = useCallback(() => {
+    logger.warn('⚠️ Falling back to polling mode because push setup failed');
     setEffectiveSyncMode('polling');
   }, [logger]);
 
@@ -245,9 +246,10 @@ export function SQLiteSyncProvider({
     syncMode: effectiveSyncMode,
     notificationListening,
     logger,
-    onPermissionsDenied: handlePermissionsDenied,
+    onPermissionsDenied: handleFallbackToPolling,
     renderPushPermissionPrompt,
-    connectionString,
+    projectID,
+    organizationID,
     databaseName,
     tablesToBeSynced,
     apiKey,

@@ -6,7 +6,8 @@ import { ExpoSecureStore } from '../common/optionalDependencies';
  * Configuration for background sync
  */
 export interface BackgroundSyncConfig {
-  connectionString: string;
+  projectID: string;
+  organizationID: string;
   databaseName: string;
   tablesToBeSynced: TableConfig[];
   apiKey?: string;
