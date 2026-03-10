@@ -33,10 +33,14 @@ describe('useDatabaseInitialization', () => {
   });
 
   const defaultParams = {
-    connectionString: 'sqlitecloud://test',
+    projectID: 'test-project-id',
+    organizationID: 'test-organization-id',
     databaseName: 'test.db',
     tablesToBeSynced: [
-      { name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT)' },
+      {
+        name: 'users',
+        createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT)',
+      },
     ],
     logger,
   };
@@ -58,7 +62,10 @@ describe('useDatabaseInitialization', () => {
   });
 
   it('creates tables from config', async () => {
-    const db = { ...mockDb, execute: jest.fn().mockResolvedValue({ rows: [] }) };
+    const db = {
+      ...mockDb,
+      execute: jest.fn().mockResolvedValue({ rows: [] }),
+    };
     (createDatabase as jest.Mock).mockResolvedValue(db);
 
     renderHook(() => useDatabaseInitialization(defaultParams));
@@ -156,7 +163,9 @@ describe('useDatabaseInitialization', () => {
 
     await act(async () => {});
 
-    expect(result.current.initError?.message).toContain('Database name is required');
+    expect(result.current.initError?.message).toContain(
+      'Database name is required'
+    );
     expect(result.current.writeDb).toBeNull();
     expect(result.current.isSyncReady).toBe(false);
   });
@@ -229,6 +238,8 @@ describe('useDatabaseInitialization', () => {
 
     await act(async () => {});
 
-    expect(result.current.initError?.message).toContain('Failed to create table users');
+    expect(result.current.initError?.message).toContain(
+      'Failed to create table users'
+    );
   });
 });

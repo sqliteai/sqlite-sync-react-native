@@ -1,4 +1,8 @@
-import { getPersistedConfig, persistConfig, clearPersistedConfig } from '../backgroundSyncConfig';
+import {
+  getPersistedConfig,
+  persistConfig,
+  clearPersistedConfig,
+} from '../backgroundSyncConfig';
 import type { BackgroundSyncConfig } from '../backgroundSyncConfig';
 
 jest.mock('../../common/optionalDependencies', () => ({
@@ -9,7 +13,9 @@ jest.mock('../../common/optionalDependencies', () => ({
   },
 }));
 
-const { ExpoSecureStore: mockSecureStore } = jest.requireMock('../../common/optionalDependencies') as {
+const { ExpoSecureStore: mockSecureStore } = jest.requireMock(
+  '../../common/optionalDependencies'
+) as {
   ExpoSecureStore: {
     getItemAsync: jest.Mock;
     setItemAsync: jest.Mock;
@@ -18,9 +24,15 @@ const { ExpoSecureStore: mockSecureStore } = jest.requireMock('../../common/opti
 };
 
 const SAMPLE_CONFIG: BackgroundSyncConfig = {
-  connectionString: 'sqlitecloud://host:8860/db',
+  projectID: 'test-project-id',
+  organizationID: 'test-organization-id',
   databaseName: 'test.db',
-  tablesToBeSynced: [{ name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' }],
+  tablesToBeSynced: [
+    {
+      name: 'users',
+      createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)',
+    },
+  ],
   debug: false,
 };
 
@@ -62,11 +74,15 @@ describe('backgroundSyncConfig', () => {
       const result = await getPersistedConfig();
 
       expect(result).toBeNull();
-      expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith('sqlite_sync_background_config');
+      expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(
+        'sqlite_sync_background_config'
+      );
     });
 
     it('returns parsed config when stored value exists', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue(JSON.stringify(SAMPLE_CONFIG));
+      mockSecureStore.getItemAsync.mockResolvedValue(
+        JSON.stringify(SAMPLE_CONFIG)
+      );
 
       const result = await getPersistedConfig();
 
@@ -120,7 +136,9 @@ describe('backgroundSyncConfig', () => {
 
       await clearPersistedConfig();
 
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith('sqlite_sync_background_config');
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        'sqlite_sync_background_config'
+      );
     });
 
     it('no-ops when ExpoSecureStore is not available', async () => {
@@ -132,7 +150,9 @@ describe('backgroundSyncConfig', () => {
     });
 
     it('handles deleteItemAsync error gracefully', async () => {
-      mockSecureStore.deleteItemAsync.mockRejectedValue(new Error('delete failed'));
+      mockSecureStore.deleteItemAsync.mockRejectedValue(
+        new Error('delete failed')
+      );
 
       // Should not throw
       await expect(clearPersistedConfig()).resolves.toBeUndefined();

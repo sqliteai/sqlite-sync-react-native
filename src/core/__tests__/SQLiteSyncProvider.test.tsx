@@ -68,10 +68,14 @@ afterEach(() => {
 });
 
 const defaultProps = {
-  connectionString: 'sqlitecloud://test',
+  projectID: 'test-project-id',
+  organizationID: 'test-organization-id',
   databaseName: 'test.db',
   tablesToBeSynced: [
-    { name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT)' },
+    {
+      name: 'users',
+      createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT)',
+    },
   ],
   apiKey: 'test-key',
 };
@@ -127,13 +131,14 @@ describe('SQLiteSyncProvider', () => {
     expect(typeof result.current.logger.info).toBe('function');
   });
 
-  it('passes connectionString and databaseName to useDatabaseInitialization', () => {
+  it('passes org/project metadata and databaseName to useDatabaseInitialization', () => {
     const wrapper = createWrapper();
     renderHook(() => useContext(SQLiteDbContext), { wrapper });
 
     expect(useDatabaseInitialization).toHaveBeenCalledWith(
       expect.objectContaining({
-        connectionString: 'sqlitecloud://test',
+        projectID: 'test-project-id',
+        organizationID: 'test-organization-id',
         databaseName: 'test.db',
       })
     );
@@ -200,11 +205,7 @@ describe('SQLiteSyncProvider', () => {
 
   it('passes push mode to usePushNotificationSync', () => {
     const pushWrapper = ({ children }: { children: React.ReactNode }) => (
-      <SQLiteSyncProvider
-        {...defaultProps}
-        syncMode="push"
-        apiKey="test-key"
-      >
+      <SQLiteSyncProvider {...defaultProps} syncMode="push" apiKey="test-key">
         {children}
       </SQLiteSyncProvider>
     );
@@ -224,11 +225,7 @@ describe('SQLiteSyncProvider', () => {
     });
 
     const pushWrapper = ({ children }: { children: React.ReactNode }) => (
-      <SQLiteSyncProvider
-        {...defaultProps}
-        syncMode="push"
-        apiKey="test-key"
-      >
+      <SQLiteSyncProvider {...defaultProps} syncMode="push" apiKey="test-key">
         {children}
       </SQLiteSyncProvider>
     );
@@ -253,18 +250,13 @@ describe('SQLiteSyncProvider', () => {
 
   it('sets null interval in push mode', () => {
     const pushWrapper = ({ children }: { children: React.ReactNode }) => (
-      <SQLiteSyncProvider
-        {...defaultProps}
-        syncMode="push"
-        apiKey="test-key"
-      >
+      <SQLiteSyncProvider {...defaultProps} syncMode="push" apiKey="test-key">
         {children}
       </SQLiteSyncProvider>
     );
-    const { result } = renderHook(
-      () => useContext(SQLiteSyncStatusContext),
-      { wrapper: pushWrapper }
-    );
+    const { result } = renderHook(() => useContext(SQLiteSyncStatusContext), {
+      wrapper: pushWrapper,
+    });
 
     expect(result.current.currentSyncInterval).toBeNull();
   });
@@ -272,7 +264,8 @@ describe('SQLiteSyncProvider', () => {
   it('uses accessToken auth when provided', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <SQLiteSyncProvider
-        connectionString="sqlitecloud://test"
+        projectID="test-project-id"
+        organizationID="test-organization-id"
         databaseName="test.db"
         tablesToBeSynced={defaultProps.tablesToBeSynced}
         accessToken="my-token"

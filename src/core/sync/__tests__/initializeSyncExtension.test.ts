@@ -5,24 +5,39 @@ import { Platform } from 'react-native';
 import { getDylibPath } from '@op-engineering/op-sqlite';
 import { createMockDB } from '../../../__mocks__/@op-engineering/op-sqlite';
 import { createLogger } from '../../common/logger';
-import { initializeSyncExtension, type SyncInitConfig } from '../initializeSyncExtension';
+import { CLOUDSYNC_BASE_URL } from '../../constants';
+import {
+  initializeSyncExtension,
+  type SyncInitConfig,
+} from '../initializeSyncExtension';
 
 const logger = createLogger(false);
 
 function makeConfig(overrides: Partial<SyncInitConfig> = {}): SyncInitConfig {
   return {
-    connectionString: 'sqlitecloud://test.sqlite.cloud:8860/test.db',
-    tablesToBeSynced: [{ name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' }],
+    projectID: 'test-project-id',
+    organizationID: 'test-organization-id',
+    databaseName: 'test.db',
+    tablesToBeSynced: [
+      {
+        name: 'users',
+        createTableSql:
+          'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)',
+      },
+    ],
     apiKey: 'test-api-key',
     ...overrides,
   };
 }
 
-function makeMockDB(versionResult: any = { rows: [{ 'cloudsync_version()': '1.0.0' }] }) {
+function makeMockDB(
+  versionResult: any = { rows: [{ 'cloudsync_version()': '1.0.0' }] }
+) {
   const db = createMockDB();
   db.execute.mockImplementation(async (sql: string) => {
     if (sql.includes('cloudsync_version')) return versionResult;
-    if (sql.includes('cloudsync_init')) return { rows: [{ 'cloudsync_init(?)': 'site-id-123' }] };
+    if (sql.includes('cloudsync_init'))
+      return { rows: [{ 'cloudsync_init(?)': 'site-id-123' }] };
     return { rows: [] };
   });
   return db;
@@ -34,22 +49,31 @@ describe('initializeSyncExtension', () => {
     (Platform as any).OS = 'ios';
   });
 
-  it('throws if connectionString is missing', async () => {
+  it('throws if projectID is missing', async () => {
     const db = makeMockDB();
-    const config = makeConfig({ connectionString: '' });
+    const config = makeConfig({ projectID: '' });
 
-    await expect(initializeSyncExtension(db as any, config, logger)).rejects.toThrow(
-      'Sync configuration incomplete'
-    );
+    await expect(
+      initializeSyncExtension(db as any, config, logger)
+    ).rejects.toThrow('Sync configuration incomplete');
+  });
+
+  it('throws if organizationID is missing', async () => {
+    const db = makeMockDB();
+    const config = makeConfig({ organizationID: '' });
+
+    await expect(
+      initializeSyncExtension(db as any, config, logger)
+    ).rejects.toThrow('Sync configuration incomplete');
   });
 
   it('throws if neither apiKey nor accessToken is provided', async () => {
     const db = makeMockDB();
     const config = makeConfig({ apiKey: undefined, accessToken: undefined });
 
-    await expect(initializeSyncExtension(db as any, config, logger)).rejects.toThrow(
-      'Sync configuration incomplete'
-    );
+    await expect(
+      initializeSyncExtension(db as any, config, logger)
+    ).rejects.toThrow('Sync configuration incomplete');
   });
 
   it('uses getDylibPath for iOS extension path', async () => {
@@ -59,7 +83,10 @@ describe('initializeSyncExtension', () => {
 
     await initializeSyncExtension(db as any, config, logger);
 
-    expect(getDylibPath).toHaveBeenCalledWith('ai.sqlite.cloudsync', 'CloudSync');
+    expect(getDylibPath).toHaveBeenCalledWith(
+      'ai.sqlite.cloudsync',
+      'CloudSync'
+    );
     expect(db.loadExtension).toHaveBeenCalledWith('/mock/path/CloudSync');
   });
 
@@ -86,37 +113,63 @@ describe('initializeSyncExtension', () => {
     const db = makeMockDB({ rows: [{}] });
     const config = makeConfig();
 
-    await expect(initializeSyncExtension(db as any, config, logger)).rejects.toThrow(
-      'CloudSync extension not loaded properly'
-    );
+    await expect(
+      initializeSyncExtension(db as any, config, logger)
+    ).rejects.toThrow('CloudSync extension not loaded properly');
   });
 
   it('calls cloudsync_init for each table', async () => {
     const db = makeMockDB();
     const config = makeConfig({
       tablesToBeSynced: [
-        { name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' },
-        { name: 'posts', createTableSql: 'CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY)' },
-        { name: 'comments', createTableSql: 'CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY)' },
+        {
+          name: 'users',
+          createTableSql:
+            'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)',
+        },
+        {
+          name: 'posts',
+          createTableSql:
+            'CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY)',
+        },
+        {
+          name: 'comments',
+          createTableSql:
+            'CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY)',
+        },
       ],
     });
 
     await initializeSyncExtension(db as any, config, logger);
 
-    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_init(?);', ['users']);
-    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_init(?);', ['posts']);
-    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_init(?);', ['comments']);
+    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_init(?);', [
+      'users',
+    ]);
+    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_init(?);', [
+      'posts',
+    ]);
+    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_init(?);', [
+      'comments',
+    ]);
   });
 
-  it('calls cloudsync_network_init with connectionString', async () => {
+  it('calls cloudsync_network_init with project metadata', async () => {
     const db = makeMockDB();
     const config = makeConfig();
 
     await initializeSyncExtension(db as any, config, logger);
 
-    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_network_init(?);', [
-      config.connectionString,
-    ]);
+    expect(db.execute).toHaveBeenCalledWith(
+      'SELECT cloudsync_network_init(?);',
+      [
+        JSON.stringify({
+          address: CLOUDSYNC_BASE_URL,
+          database: config.databaseName,
+          projectID: config.projectID,
+          organizationID: config.organizationID,
+        }),
+      ]
+    );
   });
 
   it('sets API key when apiKey is provided', async () => {
@@ -125,9 +178,10 @@ describe('initializeSyncExtension', () => {
 
     await initializeSyncExtension(db as any, config, logger);
 
-    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_network_set_apikey(?);', [
-      'my-api-key',
-    ]);
+    expect(db.execute).toHaveBeenCalledWith(
+      'SELECT cloudsync_network_set_apikey(?);',
+      ['my-api-key']
+    );
   });
 
   it('sets access token when accessToken is provided', async () => {
@@ -136,9 +190,10 @@ describe('initializeSyncExtension', () => {
 
     await initializeSyncExtension(db as any, config, logger);
 
-    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_network_set_token(?);', [
-      'my-token',
-    ]);
+    expect(db.execute).toHaveBeenCalledWith(
+      'SELECT cloudsync_network_set_token(?);',
+      ['my-token']
+    );
     expect(db.execute).not.toHaveBeenCalledWith(
       'SELECT cloudsync_network_set_apikey(?);',
       expect.anything()
@@ -194,13 +249,17 @@ describe('initializeSyncExtension', () => {
 
   it('prefers apiKey over accessToken when both are provided', async () => {
     const db = makeMockDB();
-    const config = makeConfig({ apiKey: 'my-api-key', accessToken: 'my-token' });
+    const config = makeConfig({
+      apiKey: 'my-api-key',
+      accessToken: 'my-token',
+    });
 
     await initializeSyncExtension(db as any, config, logger);
 
-    expect(db.execute).toHaveBeenCalledWith('SELECT cloudsync_network_set_apikey(?);', [
-      'my-api-key',
-    ]);
+    expect(db.execute).toHaveBeenCalledWith(
+      'SELECT cloudsync_network_set_apikey(?);',
+      ['my-api-key']
+    );
     expect(db.execute).not.toHaveBeenCalledWith(
       'SELECT cloudsync_network_set_token(?);',
       expect.anything()

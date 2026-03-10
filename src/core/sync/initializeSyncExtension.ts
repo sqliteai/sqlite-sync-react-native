@@ -2,12 +2,15 @@ import { Platform } from 'react-native';
 import { getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../common/logger';
+import { CLOUDSYNC_BASE_URL } from '../constants';
 
 /**
  * Configuration for sync initialization
  */
 export interface SyncInitConfig {
-  connectionString: string;
+  projectID: string;
+  organizationID: string;
+  databaseName: string;
   tablesToBeSynced: TableConfig[];
   apiKey?: string;
   accessToken?: string;
@@ -25,10 +28,22 @@ export async function initializeSyncExtension(
   config: SyncInitConfig,
   logger: Logger
 ): Promise<void> {
-  const { connectionString, tablesToBeSynced, apiKey, accessToken } = config;
+  const {
+    projectID,
+    organizationID,
+    databaseName,
+    tablesToBeSynced,
+    apiKey,
+    accessToken,
+  } = config;
 
   /** VALIDATE CONFIG */
-  if (!connectionString || (!apiKey && !accessToken)) {
+  if (
+    !projectID ||
+    !organizationID ||
+    !databaseName ||
+    (!apiKey && !accessToken)
+  ) {
     throw new Error('Sync configuration incomplete');
   }
 
@@ -68,7 +83,13 @@ export async function initializeSyncExtension(
   }
 
   /** INITIALIZE NETWORK */
-  await db.execute('SELECT cloudsync_network_init(?);', [connectionString]);
+  const networkConfig = JSON.stringify({
+    address: CLOUDSYNC_BASE_URL,
+    database: databaseName,
+    projectID,
+    organizationID,
+  });
+  await db.execute('SELECT cloudsync_network_init(?);', [networkConfig]);
   logger.info('✅ Network initialized');
 
   /** SET AUTHENTICATION */

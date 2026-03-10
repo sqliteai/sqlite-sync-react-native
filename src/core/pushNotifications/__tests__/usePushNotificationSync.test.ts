@@ -42,13 +42,26 @@ describe('usePushNotificationSync', () => {
   const createDefaultParams = (overrides?: Partial<any>) => ({
     isSyncReady: true,
     performSyncRef: { current: jest.fn().mockResolvedValue(undefined) },
-    writeDbRef: { current: { execute: jest.fn().mockResolvedValue({ rows: [{ site_id: 'site-123' }] }) } } as any,
+    writeDbRef: {
+      current: {
+        execute: jest
+          .fn()
+          .mockResolvedValue({ rows: [{ site_id: 'site-123' }] }),
+      },
+    } as any,
     syncMode: 'push' as const,
     notificationListening: 'foreground' as const,
     logger,
-    connectionString: 'sqlitecloud://test',
+    projectID: 'test-project-id',
+    organizationID: 'test-organization-id',
     databaseName: 'test.db',
-    tablesToBeSynced: [{ name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' }],
+    tablesToBeSynced: [
+      {
+        name: 'users',
+        createTableSql:
+          'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)',
+      },
+    ],
     ...overrides,
   });
 
@@ -135,9 +148,7 @@ describe('usePushNotificationSync', () => {
 
     const onPermissionsDenied = jest.fn();
     renderHook(() =>
-      usePushNotificationSync(
-        createDefaultParams({ onPermissionsDenied })
-      )
+      usePushNotificationSync(createDefaultParams({ onPermissionsDenied }))
     );
 
     await act(async () => {});
@@ -229,7 +240,6 @@ describe('usePushNotificationSync', () => {
 
     expect(registerBackgroundSync).toHaveBeenCalledWith(
       expect.objectContaining({
-        connectionString: 'sqlitecloud://test',
         databaseName: 'test.db',
       })
     );
@@ -302,9 +312,7 @@ describe('usePushNotificationSync', () => {
   });
 
   it('handles registerPushToken failure gracefully', async () => {
-    (registerPushToken as jest.Mock).mockRejectedValue(
-      new Error('token fail')
-    );
+    (registerPushToken as jest.Mock).mockRejectedValue(new Error('token fail'));
 
     renderHook(() => usePushNotificationSync(createDefaultParams()));
 

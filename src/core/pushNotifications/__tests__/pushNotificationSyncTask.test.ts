@@ -66,7 +66,13 @@ describe('pushNotificationSyncTask', () => {
   });
 
   it('calls executeBackgroundSync for valid SQLite Cloud notification', async () => {
-    const fakeConfig = { debug: false, connectionString: 'test' };
+    const fakeConfig = {
+      debug: false,
+      projectID: 'test-project-id',
+      organizationID: 'test-organization-id',
+      databaseName: 'test.db',
+      tablesToBeSynced: [],
+    };
     (getPersistedConfig as jest.Mock).mockResolvedValue(fakeConfig);
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
     (getForegroundSyncCallback as jest.Mock).mockReturnValue(null);

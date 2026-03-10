@@ -19,9 +19,15 @@ const mockDb = {
 };
 
 const testConfig = {
-  connectionString: 'sqlitecloud://host:port/db',
+  projectID: 'test-project-id',
+  organizationID: 'test-organization-id',
   databaseName: 'test.db',
-  tablesToBeSynced: [{ name: 'users', createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)' }],
+  tablesToBeSynced: [
+    {
+      name: 'users',
+      createTableSql: 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)',
+    },
+  ],
   apiKey: 'test-key',
   debug: false,
 };
@@ -54,7 +60,9 @@ describe('executeBackgroundSync', () => {
     expect(initializeSyncExtension).toHaveBeenCalledWith(
       mockDb,
       {
-        connectionString: testConfig.connectionString,
+        projectID: testConfig.projectID,
+        organizationID: testConfig.organizationID,
+        databaseName: testConfig.databaseName,
         tablesToBeSynced: testConfig.tablesToBeSynced,
         apiKey: testConfig.apiKey,
         accessToken: undefined,
@@ -139,7 +147,9 @@ describe('executeBackgroundSync', () => {
   });
 
   it('handles callback error without throwing', async () => {
-    const mockCallback = jest.fn().mockRejectedValue(new Error('callback failed'));
+    const mockCallback = jest
+      .fn()
+      .mockRejectedValue(new Error('callback failed'));
     (getBackgroundSyncCallback as jest.Mock).mockReturnValue(mockCallback);
 
     await expect(executeBackgroundSync(testConfig)).resolves.toBeUndefined();
@@ -154,7 +164,9 @@ describe('executeBackgroundSync', () => {
   it('closes DB when sync fails', async () => {
     (executeSync as jest.Mock).mockRejectedValue(new Error('sync error'));
 
-    await expect(executeBackgroundSync(testConfig)).rejects.toThrow('sync error');
+    await expect(executeBackgroundSync(testConfig)).rejects.toThrow(
+      'sync error'
+    );
     expect(mockDb.close).toHaveBeenCalled();
   });
 
@@ -162,7 +174,9 @@ describe('executeBackgroundSync', () => {
     const syncError = new Error('network failure');
     (executeSync as jest.Mock).mockRejectedValue(syncError);
 
-    await expect(executeBackgroundSync(testConfig)).rejects.toThrow('network failure');
+    await expect(executeBackgroundSync(testConfig)).rejects.toThrow(
+      'network failure'
+    );
   });
 
   it('skips callback when none registered and does not call updateHook', async () => {

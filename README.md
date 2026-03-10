@@ -125,7 +125,8 @@ npx expo run:android
    Configure OffSync by following the [OffSync setup guide](https://docs.sqlitecloud.io/docs/offsync#:~:text=in%20the%20cloud.-,Configuring%20OffSync,-You%20can%20enable).
 
 4. **Get credentials**  
-   Copy your **connection string** and **API key** from the dashboard.
+   Copy your **project ID** and **API key** from the dashboard.  
+   Set `organizationID` to your sqlite-sync provider ID. For SQLite Cloud, use `org_sqlitecloud`.
    - Alternatively, you can use [access tokens](https://docs.sqlitecloud.io/docs/access-tokens) for [Row-Level Security](https://docs.sqlitecloud.io/docs/rls).
 
 ### 2. Wrap Your App
@@ -138,7 +139,8 @@ import { SQLiteSyncProvider } from '@sqliteai/sqlite-sync-react-native';
 export default function App() {
   return (
     <SQLiteSyncProvider
-      connectionString="sqlitecloud://your-host.sqlite.cloud:8860/your-database"
+      projectID="your-project-id"
+      organizationID="org_sqlitecloud"
       databaseName="myapp.db"
       apiKey="your-api-key"
       syncMode="polling"
@@ -327,7 +329,8 @@ Main provider component that enables sync functionality.
 
 | Prop                            | Type                        | Required | Description                                                |
 | ------------------------------- | --------------------------- | -------- | ---------------------------------------------------------- |
-| `connectionString`              | `string`                    | ✅       | SQLite Cloud connection string                             |
+| `projectID`                     | `string`                    | ✅       | SQLite Cloud project ID                                    |
+| `organizationID`                | `string`                    | ✅       | Sync provider organization ID (`org_sqlitecloud` for SQLite Cloud) |
 | `databaseName`                  | `string`                    | ✅       | Local database file name                                   |
 | `tablesToBeSynced`              | `TableConfig[]`             | ✅       | Array of tables to sync                                    |
 | `apiKey`                        | `string`                    | \*       | API key for authentication                                 |
@@ -365,12 +368,22 @@ Uses push notifications from SQLite Cloud:
 ```typescript
 // Polling mode with default settings (recommended)
 <SQLiteSyncProvider
+  projectID="your-project-id"
+  organizationID="org_sqlitecloud"
+  databaseName="myapp.db"
+  apiKey="your-api-key"
+  tablesToBeSynced={[...]}
   syncMode="polling"
   // Uses defaults: baseInterval=5s, maxInterval=5min, emptyThreshold=5
 >
 
 // Polling mode with custom intervals
 <SQLiteSyncProvider
+  projectID="your-project-id"
+  organizationID="org_sqlitecloud"
+  databaseName="myapp.db"
+  apiKey="your-api-key"
+  tablesToBeSynced={[...]}
   syncMode="polling"
   adaptivePolling={{
     baseInterval: 3000,    // 3s base interval
@@ -381,6 +394,11 @@ Uses push notifications from SQLite Cloud:
 
 // Push mode (requires expo-notifications)
 <SQLiteSyncProvider
+  projectID="your-project-id"
+  organizationID="org_sqlitecloud"
+  databaseName="myapp.db"
+  apiKey="your-api-key"
+  tablesToBeSynced={[...]}
   syncMode="push"
   // Automatically falls back to polling if permissions denied
 >
@@ -425,7 +443,8 @@ Use `onDatabaseReady` to run migrations or other setup after the database opens 
 
 ```typescript
 <SQLiteSyncProvider
-  connectionString="..."
+  projectID="..."
+  organizationID="..."
   databaseName="myapp.db"
   apiKey="..."
   tablesToBeSynced={[...]}
@@ -449,6 +468,11 @@ When using push mode, the system will prompt the user for notification permissio
 
 ```tsx
 <SQLiteSyncProvider
+  projectID="your-project-id"
+  organizationID="org_sqlitecloud"
+  databaseName="myapp.db"
+  apiKey="your-api-key"
+  tablesToBeSynced={[...]}
   syncMode="push"
   renderPushPermissionPrompt={({ allow, deny }) => (
     <Modal visible animationType="fade" transparent>
@@ -463,7 +487,6 @@ When using push mode, the system will prompt the user for notification permissio
       </View>
     </Modal>
   )}
-  // ...other props
 >
   <YourApp />
 </SQLiteSyncProvider>
@@ -1144,7 +1167,11 @@ Enable detailed logging during development:
 
 ```typescript
 <SQLiteSyncProvider
-  // ... other props
+  projectID="your-project-id"
+  organizationID="org_sqlitecloud"
+  databaseName="myapp.db"
+  apiKey="your-api-key"
+  tablesToBeSynced={[...]}
   debug={__DEV__} // Enable in development only
 >
 ```

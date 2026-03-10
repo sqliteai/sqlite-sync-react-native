@@ -25,7 +25,8 @@ import { persistConfig, clearPersistedConfig } from '../backgroundSyncConfig';
 import { BACKGROUND_SYNC_TASK_NAME } from '../../constants';
 
 const mockConfig: BackgroundSyncConfig = {
-  connectionString: 'sqlitecloud://host:8860/db',
+  projectID: 'test-project-id',
+  organizationID: 'test-organization-id',
   databaseName: 'test.db',
   tablesToBeSynced: [],
   debug: false,

@@ -69,9 +69,14 @@ export interface PushNotificationSyncParams {
 
   // Background sync configuration (needed for background/terminated modes)
   /**
-   * SQLite Cloud connection string
+   * SQLite Cloud project ID
    */
-  connectionString: string;
+  projectID: string;
+
+  /**
+   * SQLite Cloud organization ID
+   */
+  organizationID: string;
 
   /**
    * Local database file name
@@ -120,7 +125,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     logger,
     onPermissionsDenied,
     renderPushPermissionPrompt,
-    connectionString,
+    projectID,
+    organizationID,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -131,7 +137,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
   /** SERIALIZED CONFIG */
   // Detect actual changes (avoids re-runs from unstable references like tablesToBeSynced)
   const serializedBackgroundConfig = JSON.stringify({
-    connectionString,
+    projectID,
+    organizationID,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -372,7 +379,8 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
         );
 
         registerBackgroundSync({
-          connectionString,
+          projectID,
+          organizationID,
           databaseName,
           tablesToBeSynced,
           apiKey,

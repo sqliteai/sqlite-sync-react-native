@@ -3,9 +3,9 @@ import {
   ExpoApplication,
 } from '../common/optionalDependencies';
 import type { Logger } from '../common/logger';
+import { CLOUDSYNC_BASE_URL } from '../constants';
 
 const TOKEN_REGISTERED_KEY = 'sqlite_sync_push_token_registered';
-const CLOUDSYNC_BASE_URL = 'https://cloudsync-staging-testing.fly.dev/v2';
 
 async function getDeviceId(): Promise<string> {
   if (!ExpoApplication) {
@@ -87,7 +87,7 @@ export async function registerPushToken(
   };
 
   /** SEND REGISTRATION REQUEST */
-  const url = `${CLOUDSYNC_BASE_URL}/cloudsync/notifications/tokens`;
+  const url = `${CLOUDSYNC_BASE_URL}/v2/cloudsync/notifications/tokens`;
   logger.info(
     '📱 Registering push token with backend...',
     url,
