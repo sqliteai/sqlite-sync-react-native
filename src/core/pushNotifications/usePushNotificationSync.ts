@@ -320,7 +320,11 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
               logger,
             });
           } catch (registerError) {
-            logger.warn('⚠️ Failed to register push token:', registerError);
+            logger.warn(
+              '⚠️ Failed to register push token - falling back to polling mode:',
+              registerError
+            );
+            onPermissionsDeniedRef.current?.();
           }
         }
       } catch (error) {

@@ -311,15 +311,18 @@ describe('usePushNotificationSync', () => {
     expect(registerPushToken).not.toHaveBeenCalled();
   });
 
-  it('handles registerPushToken failure gracefully', async () => {
+  it('falls back to polling when registerPushToken fails', async () => {
     (registerPushToken as jest.Mock).mockRejectedValue(new Error('token fail'));
+    const onPermissionsDenied = jest.fn();
 
-    renderHook(() => usePushNotificationSync(createDefaultParams()));
+    renderHook(() =>
+      usePushNotificationSync(createDefaultParams({ onPermissionsDenied }))
+    );
 
     await act(async () => {});
 
-    // Should not crash — failure is caught internally
     expect(registerPushToken).toHaveBeenCalled();
+    expect(onPermissionsDenied).toHaveBeenCalled();
   });
 
   it('removes listeners on unmount', async () => {

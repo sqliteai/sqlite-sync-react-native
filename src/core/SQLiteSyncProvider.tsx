@@ -232,11 +232,9 @@ export function SQLiteSyncProvider({
     syncMode: effectiveSyncMode,
   });
 
-  /** PUSH PERMISSIONS DENIED HANDLER */
-  const handlePermissionsDenied = useCallback(() => {
-    logger.warn(
-      '⚠️ Falling back to polling mode due to denied push permissions'
-    );
+  /** PUSH FALLBACK HANDLER */
+  const handleFallbackToPolling = useCallback(() => {
+    logger.warn('⚠️ Falling back to polling mode because push setup failed');
     setEffectiveSyncMode('polling');
   }, [logger]);
 
@@ -248,7 +246,7 @@ export function SQLiteSyncProvider({
     syncMode: effectiveSyncMode,
     notificationListening,
     logger,
-    onPermissionsDenied: handlePermissionsDenied,
+    onPermissionsDenied: handleFallbackToPolling,
     renderPushPermissionPrompt,
     projectID,
     organizationID,
