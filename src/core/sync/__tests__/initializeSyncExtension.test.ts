@@ -156,19 +156,12 @@ describe('initializeSyncExtension', () => {
   it('calls cloudsync_network_init with project metadata', async () => {
     const db = makeMockDB();
     const config = makeConfig();
+    const expectedNetworkConfig = `{"address":"${CLOUDSYNC_BASE_URL}","database":"${config.databaseName}","projectID":"${config.projectID}","organizationID":"${config.organizationID}"}`;
 
     await initializeSyncExtension(db as any, config, logger);
 
     expect(db.execute).toHaveBeenCalledWith(
-      'SELECT cloudsync_network_init(?);',
-      [
-        JSON.stringify({
-          address: CLOUDSYNC_BASE_URL,
-          database: config.databaseName,
-          projectID: config.projectID,
-          organizationID: config.organizationID,
-        }),
-      ]
+      `SELECT cloudsync_network_init('${expectedNetworkConfig}');`
     );
   });
 

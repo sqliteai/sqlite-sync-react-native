@@ -28,14 +28,12 @@ export async function initializeSyncExtension(
   config: SyncInitConfig,
   logger: Logger
 ): Promise<void> {
-  const {
-    projectID,
-    organizationID,
-    databaseName,
-    tablesToBeSynced,
-    apiKey,
-    accessToken,
-  } = config;
+  const projectID = config.projectID.trim();
+  const organizationID = config.organizationID.trim();
+  const databaseName = config.databaseName.trim();
+  const apiKey = config.apiKey?.trim();
+  const accessToken = config.accessToken?.trim();
+  const { tablesToBeSynced } = config;
 
   /** VALIDATE CONFIG */
   if (
@@ -89,7 +87,9 @@ export async function initializeSyncExtension(
     projectID,
     organizationID,
   });
-  await db.execute('SELECT cloudsync_network_init(?);', [networkConfig]);
+  const escapedNetworkConfig = networkConfig.replace(/'/g, "''");
+
+  await db.execute(`SELECT cloudsync_network_init('${escapedNetworkConfig}');`);
   logger.info('✅ Network initialized');
 
   /** SET AUTHENTICATION */
