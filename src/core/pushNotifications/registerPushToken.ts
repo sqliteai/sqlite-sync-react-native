@@ -24,7 +24,9 @@ async function getDeviceId(): Promise<string> {
 
 interface RegisterPushTokenParams {
   expoToken: string;
+  projectID: string;
   databaseName: string;
+  organizationID: string;
   siteId: string;
   platform: string;
   apiKey?: string;
@@ -41,7 +43,9 @@ export async function registerPushToken(
 ): Promise<void> {
   const {
     expoToken,
+    projectID,
     databaseName,
+    organizationID,
     siteId,
     platform,
     apiKey,
@@ -67,6 +71,7 @@ export async function registerPushToken(
   /** PREPARE REQUEST HEADERS */
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'X-CloudSync-Org': organizationID,
   };
 
   if (accessToken) {
@@ -87,7 +92,9 @@ export async function registerPushToken(
   };
 
   /** SEND REGISTRATION REQUEST */
-  const url = `${CLOUDSYNC_BASE_URL}/v2/cloudsync/notifications/tokens`;
+  const url = `${CLOUDSYNC_BASE_URL}/v2/cloudsync/${encodeURIComponent(
+    projectID
+  )}/${encodeURIComponent(databaseName)}/notifications/tokens`;
   logger.info(
     '📱 Registering push token with backend...',
     url,

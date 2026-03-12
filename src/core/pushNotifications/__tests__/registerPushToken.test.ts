@@ -30,7 +30,9 @@ const logger = createLogger(false);
 
 const baseParams = {
   expoToken: 'ExponentPushToken[abc123]',
+  projectID: 'test-project-id',
   databaseName: 'test-db',
+  organizationID: 'org_sqlitecloud',
   siteId: 'site-1',
   platform: 'ios',
   logger,
@@ -62,7 +64,7 @@ describe('registerPushToken', () => {
     await registerPushToken(baseParams);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://cloudsync-staging-testing.fly.dev/v2/cloudsync/notifications/tokens',
+      'https://cloudsync-staging-testing.fly.dev/v2/cloudsync/test-project-id/test-db/notifications/tokens',
       expect.any(Object)
     );
   });
@@ -85,6 +87,13 @@ describe('registerPushToken', () => {
 
     const callArgs = mockFetch.mock.calls[0][1];
     expect(callArgs.headers.Authorization).toBe('Bearer my-api-key');
+  });
+
+  it('sends organization header', async () => {
+    await registerPushToken(baseParams);
+
+    const callArgs = mockFetch.mock.calls[0][1];
+    expect(callArgs.headers['X-CloudSync-Org']).toBe('org_sqlitecloud');
   });
 
   it('sends correct body fields', async () => {

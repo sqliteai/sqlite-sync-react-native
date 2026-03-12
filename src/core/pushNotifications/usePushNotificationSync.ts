@@ -312,7 +312,9 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
           try {
             await registerPushToken({
               expoToken: token.data,
+              projectID,
               databaseName,
+              organizationID,
               siteId,
               platform: Platform.OS,
               apiKey,
