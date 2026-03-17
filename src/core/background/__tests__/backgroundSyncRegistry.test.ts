@@ -25,8 +25,7 @@ import { persistConfig, clearPersistedConfig } from '../backgroundSyncConfig';
 import { BACKGROUND_SYNC_TASK_NAME } from '../../constants';
 
 const mockConfig: BackgroundSyncConfig = {
-  projectID: 'test-project-id',
-  organizationID: 'test-organization-id',
+  databaseId: 'db_test_database_id',
   databaseName: 'test.db',
   tablesToBeSynced: [],
   debug: false,

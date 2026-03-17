@@ -46,14 +46,13 @@ describe('usePushNotificationSync', () => {
       current: {
         execute: jest
           .fn()
-          .mockResolvedValue({ rows: [{ site_id: 'site-123' }] }),
+          .mockResolvedValue({ rows: [{ 'cloudsync_siteid()': 'site-123' }] }),
       },
     } as any,
     syncMode: 'push' as const,
     notificationListening: 'foreground' as const,
     logger,
-    projectID: 'test-project-id',
-    organizationID: 'test-organization-id',
+    databaseId: 'db_test_database_id',
     databaseName: 'test.db',
     tablesToBeSynced: [
       {
@@ -133,7 +132,7 @@ describe('usePushNotificationSync', () => {
     expect(registerPushToken).toHaveBeenCalledWith(
       expect.objectContaining({
         expoToken: 'ExponentPushToken[xxx]',
-        databaseName: 'test.db',
+        databaseId: 'db_test_database_id',
       })
     );
   });
@@ -282,7 +281,7 @@ describe('usePushNotificationSync', () => {
   it('skips token registration when siteId retrieval fails', async () => {
     const writeDbRef = {
       current: {
-        execute: jest.fn().mockRejectedValue(new Error('cloudsync_init fail')),
+        execute: jest.fn().mockRejectedValue(new Error('cloudsync_siteid fail')),
       },
     };
 
@@ -322,6 +321,24 @@ describe('usePushNotificationSync', () => {
     await act(async () => {});
 
     expect(registerPushToken).toHaveBeenCalled();
+    expect(onPermissionsDenied).toHaveBeenCalled();
+  });
+
+  it('falls back to polling when databaseId is missing', async () => {
+    const onPermissionsDenied = jest.fn();
+
+    renderHook(() =>
+      usePushNotificationSync(
+        createDefaultParams({
+          databaseId: '',
+          onPermissionsDenied,
+        })
+      )
+    );
+
+    await act(async () => {});
+
+    expect(registerPushToken).not.toHaveBeenCalled();
     expect(onPermissionsDenied).toHaveBeenCalled();
   });
 

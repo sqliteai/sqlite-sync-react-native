@@ -5,10 +5,9 @@ import type { Logger } from '../common/logger';
  * Extracts the number of received rows from a CloudSync query result.
  *
  * The result row contains a JSON string:
- * {"status":"synced|syncing|out-of-sync","localVersion":N,"serverVersion":N,"rowsReceived":N}
+ * {"send":{...},"receive":{"rows":N,"tables":["table1"]}}
  *
- * We only use rowsReceived since polling is for downloading remote changes.
- * The status field relates to upload state and is not relevant here.
+ * We only use receive.rows since polling is for downloading remote changes.
  */
 const extractChangesFromResult = (result: QueryResult | undefined): number => {
   const firstRow = result?.rows?.[0];
@@ -19,7 +18,7 @@ const extractChangesFromResult = (result: QueryResult | undefined): number => {
   if (typeof raw === 'string') {
     try {
       const parsed = JSON.parse(raw);
-      return typeof parsed.rowsReceived === 'number' ? parsed.rowsReceived : 0;
+      return typeof parsed?.receive?.rows === 'number' ? parsed.receive.rows : 0;
     } catch {
       return 0;
     }
@@ -81,8 +80,8 @@ export async function executeSync(
     );
 
     const result = await db.execute('SELECT cloudsync_network_sync(?, ?);', [
-      maxAttempts,
       attemptDelay,
+      maxAttempts,
     ]);
 
     changes = extractChangesFromResult(result);

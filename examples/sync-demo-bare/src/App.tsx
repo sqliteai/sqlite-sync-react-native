@@ -19,8 +19,7 @@ import {
   useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
 import {
-  SQLITE_CLOUD_PROJECT_ID,
-  SQLITE_CLOUD_ORGANIZATION_ID,
+  SQLITE_CLOUD_DATABASE_ID,
   SQLITE_CLOUD_API_KEY,
   DATABASE_NAME,
   TABLE_NAME,
@@ -280,8 +279,7 @@ function TestApp() {
 
 export default function App() {
   if (
-    !SQLITE_CLOUD_PROJECT_ID ||
-    !SQLITE_CLOUD_ORGANIZATION_ID ||
+    !SQLITE_CLOUD_DATABASE_ID ||
     !SQLITE_CLOUD_API_KEY ||
     !DATABASE_NAME ||
     !TABLE_NAME
@@ -301,8 +299,7 @@ export default function App() {
 
   return (
     <SQLiteSyncProvider
-      projectID={SQLITE_CLOUD_PROJECT_ID}
-      organizationID={SQLITE_CLOUD_ORGANIZATION_ID}
+      databaseId={SQLITE_CLOUD_DATABASE_ID}
       databaseName={DATABASE_NAME}
       tablesToBeSynced={[
         {

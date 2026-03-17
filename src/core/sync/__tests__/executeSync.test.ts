@@ -13,7 +13,18 @@ afterEach(() => {
 });
 
 const syncResult = (rowsReceived: number) => ({
-  rows: [{ 'cloudsync_network_sync()': JSON.stringify({ rowsReceived }) }],
+  rows: [
+    {
+      'cloudsync_network_sync()': JSON.stringify({
+        send: {
+          status: 'synced',
+          localVersion: 5,
+          serverVersion: 5,
+        },
+        receive: { rows: rowsReceived, tables: ['users'] },
+      }),
+    },
+  ],
 });
 
 const noChangesResult = () => syncResult(0);
@@ -189,7 +200,7 @@ describe('Native retry', () => {
 
     expect(db.execute).toHaveBeenCalledWith(
       'SELECT cloudsync_network_sync(?, ?);',
-      [5, 2000]
+      [2000, 5]
     );
   });
 

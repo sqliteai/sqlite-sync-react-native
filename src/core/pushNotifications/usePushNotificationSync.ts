@@ -69,14 +69,9 @@ export interface PushNotificationSyncParams {
 
   // Background sync configuration (needed for background/terminated modes)
   /**
-   * SQLite Cloud project ID
+   * Database ID used by CloudSync v2 runtime APIs
    */
-  projectID: string;
-
-  /**
-   * SQLite Cloud organization ID
-   */
-  organizationID: string;
+  databaseId: string;
 
   /**
    * Local database file name
@@ -125,8 +120,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     logger,
     onPermissionsDenied,
     renderPushPermissionPrompt,
-    projectID,
-    organizationID,
+    databaseId,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -137,8 +131,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
   /** SERIALIZED CONFIG */
   // Detect actual changes (avoids re-runs from unstable references like tablesToBeSynced)
   const serializedBackgroundConfig = JSON.stringify({
-    projectID,
-    organizationID,
+    databaseId,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -219,6 +212,14 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
 
     hasRequestedPermissionsRef.current = true;
 
+    if (!databaseId.trim()) {
+      logger.warn(
+        '⚠️ Push mode requires databaseId for notification token registration. Falling back to polling mode.'
+      );
+      onPermissionsDeniedRef.current?.();
+      return;
+    }
+
     const requestPermissions = async () => {
       try {
         /** CHECK EXISTING PERMISSIONS */
@@ -284,16 +285,12 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
           // Get site ID for token registration
           let siteId: string | undefined;
           try {
-            const firstTable = tablesToBeSynced[0];
-            if (firstTable && writeDbRef.current) {
-              const initResult = await writeDbRef.current.execute(
-                'SELECT cloudsync_init(?);',
-                [firstTable.name]
+            if (writeDbRef.current) {
+              const siteIdResult = await writeDbRef.current.execute(
+                'SELECT cloudsync_siteid();'
               );
-              const firstRow = initResult.rows?.[0];
-              siteId = firstRow
-                ? String(Object.values(firstRow)[0])
-                : undefined;
+              const firstRow = siteIdResult.rows?.[0];
+              siteId = firstRow ? String(Object.values(firstRow)[0]) : undefined;
             }
           } catch {
             logger.warn(
@@ -312,9 +309,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
           try {
             await registerPushToken({
               expoToken: token.data,
-              projectID,
-              databaseName,
-              organizationID,
+              databaseId,
               siteId,
               platform: Platform.OS,
               apiKey,
@@ -337,7 +332,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
 
     requestPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount, guarded by hasRequestedPermissionsRef
-  }, [isSyncReady, syncMode]);
+  }, [databaseId, isSyncReady, syncMode]);
 
   /** NOTIFICATION LISTENERS EFFECT */
   useEffect(() => {
@@ -385,8 +380,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
         );
 
         registerBackgroundSync({
-          projectID,
-          organizationID,
+          databaseId,
           databaseName,
           tablesToBeSynced,
           apiKey,

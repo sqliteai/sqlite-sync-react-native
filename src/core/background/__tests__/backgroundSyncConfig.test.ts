@@ -24,8 +24,7 @@ const { ExpoSecureStore: mockSecureStore } = jest.requireMock(
 };
 
 const SAMPLE_CONFIG: BackgroundSyncConfig = {
-  projectID: 'test-project-id',
-  organizationID: 'test-organization-id',
+  databaseId: 'db_test_database_id',
   databaseName: 'test.db',
   tablesToBeSynced: [
     {

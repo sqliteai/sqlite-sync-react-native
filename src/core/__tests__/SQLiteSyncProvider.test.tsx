@@ -68,8 +68,7 @@ afterEach(() => {
 });
 
 const defaultProps = {
-  projectID: 'test-project-id',
-  organizationID: 'test-organization-id',
+  databaseId: 'db_test_database_id',
   databaseName: 'test.db',
   tablesToBeSynced: [
     {
@@ -131,14 +130,13 @@ describe('SQLiteSyncProvider', () => {
     expect(typeof result.current.logger.info).toBe('function');
   });
 
-  it('passes org/project metadata and databaseName to useDatabaseInitialization', () => {
+  it('passes database sync metadata to useDatabaseInitialization', () => {
     const wrapper = createWrapper();
     renderHook(() => useContext(SQLiteDbContext), { wrapper });
 
     expect(useDatabaseInitialization).toHaveBeenCalledWith(
       expect.objectContaining({
-        projectID: 'test-project-id',
-        organizationID: 'test-organization-id',
+        databaseId: 'db_test_database_id',
         databaseName: 'test.db',
       })
     );
@@ -212,7 +210,10 @@ describe('SQLiteSyncProvider', () => {
     renderHook(() => useContext(SQLiteDbContext), { wrapper: pushWrapper });
 
     expect(usePushNotificationSync).toHaveBeenCalledWith(
-      expect.objectContaining({ syncMode: 'push' })
+      expect.objectContaining({
+        syncMode: 'push',
+        databaseId: 'db_test_database_id',
+      })
     );
   });
 
@@ -264,8 +265,7 @@ describe('SQLiteSyncProvider', () => {
   it('uses accessToken auth when provided', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <SQLiteSyncProvider
-        projectID="test-project-id"
-        organizationID="test-organization-id"
+        databaseId="db_test_database_id"
         databaseName="test.db"
         tablesToBeSynced={defaultProps.tablesToBeSynced}
         accessToken="my-token"

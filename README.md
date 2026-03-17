@@ -125,8 +125,7 @@ npx expo run:android
    Configure OffSync by following the [OffSync setup guide](https://docs.sqlitecloud.io/docs/offsync#:~:text=in%20the%20cloud.-,Configuring%20OffSync,-You%20can%20enable).
 
 4. **Get credentials**  
-   Copy your **project ID** and **API key** from the dashboard.  
-   Set `organizationID` to your sqlite-sync provider ID. For SQLite Cloud, use `org_sqlitecloud`.
+   Copy your **database ID** and **API key** from the dashboard.  
    - Alternatively, you can use [access tokens](https://docs.sqlitecloud.io/docs/access-tokens) for [Row-Level Security](https://docs.sqlitecloud.io/docs/rls).
 
 ### 2. Wrap Your App
@@ -139,8 +138,7 @@ import { SQLiteSyncProvider } from '@sqliteai/sqlite-sync-react-native';
 export default function App() {
   return (
     <SQLiteSyncProvider
-      projectID="your-project-id"
-      organizationID="org_sqlitecloud"
+      databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
       databaseName="myapp.db"
       apiKey="your-api-key"
       syncMode="polling"
@@ -329,8 +327,7 @@ Main provider component that enables sync functionality.
 
 | Prop                            | Type                        | Required | Description                                                |
 | ------------------------------- | --------------------------- | -------- | ---------------------------------------------------------- |
-| `projectID`                     | `string`                    | ✅       | SQLite Cloud project ID                                    |
-| `organizationID`                | `string`                    | ✅       | Sync provider organization ID (`org_sqlitecloud` for SQLite Cloud) |
+| `databaseId`                    | `string`                    | ✅       | CloudSync database ID used by runtime sync APIs            |
 | `databaseName`                  | `string`                    | ✅       | Local database file name                                   |
 | `tablesToBeSynced`              | `TableConfig[]`             | ✅       | Array of tables to sync                                    |
 | `apiKey`                        | `string`                    | \*       | API key for authentication                                 |
@@ -368,8 +365,7 @@ Uses push notifications from SQLite Cloud:
 ```typescript
 // Polling mode with default settings (recommended)
 <SQLiteSyncProvider
-  projectID="your-project-id"
-  organizationID="org_sqlitecloud"
+  databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
@@ -379,8 +375,7 @@ Uses push notifications from SQLite Cloud:
 
 // Polling mode with custom intervals
 <SQLiteSyncProvider
-  projectID="your-project-id"
-  organizationID="org_sqlitecloud"
+  databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
@@ -394,8 +389,7 @@ Uses push notifications from SQLite Cloud:
 
 // Push mode (requires expo-notifications)
 <SQLiteSyncProvider
-  projectID="your-project-id"
-  organizationID="org_sqlitecloud"
+  databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
@@ -443,8 +437,7 @@ Use `onDatabaseReady` to run migrations or other setup after the database opens 
 
 ```typescript
 <SQLiteSyncProvider
-  projectID="..."
-  organizationID="..."
+  databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="..."
   tablesToBeSynced={[...]}
@@ -468,8 +461,7 @@ When using push mode, the system will prompt the user for notification permissio
 
 ```tsx
 <SQLiteSyncProvider
-  projectID="your-project-id"
-  organizationID="org_sqlitecloud"
+  databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
@@ -1167,8 +1159,7 @@ Enable detailed logging during development:
 
 ```typescript
 <SQLiteSyncProvider
-  projectID="your-project-id"
-  organizationID="org_sqlitecloud"
+  databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}

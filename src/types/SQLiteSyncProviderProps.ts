@@ -58,14 +58,9 @@ export interface AdaptivePollingConfig {
  */
 interface CommonProviderProps {
   /**
-   * SQLite Cloud project ID (e.g., 'cticaikkhk')
+   * CloudSync database ID used by runtime sync APIs and native network init.
    */
-  projectID: string;
-
-  /**
-   * Sync provider organization ID (e.g., 'org_sqlitecloud' for SQLite Cloud)
-   */
-  organizationID: string;
+  databaseId: string;
 
   /**
    * Name of the local database file

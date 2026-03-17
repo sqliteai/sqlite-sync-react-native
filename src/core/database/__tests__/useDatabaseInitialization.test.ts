@@ -33,8 +33,7 @@ describe('useDatabaseInitialization', () => {
   });
 
   const defaultParams = {
-    projectID: 'test-project-id',
-    organizationID: 'test-organization-id',
+    databaseId: 'db_test_database_id',
     databaseName: 'test.db',
     tablesToBeSynced: [
       {

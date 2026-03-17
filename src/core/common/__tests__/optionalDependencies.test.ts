@@ -1,3 +1,5 @@
+export {};
+
 /** Helper: mock all expo modules as available */
 const mockAllPresent = () => {
   jest.doMock('expo-notifications', () => ({

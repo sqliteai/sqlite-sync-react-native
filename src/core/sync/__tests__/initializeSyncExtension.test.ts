@@ -5,7 +5,6 @@ import { Platform } from 'react-native';
 import { getDylibPath } from '@op-engineering/op-sqlite';
 import { createMockDB } from '../../../__mocks__/@op-engineering/op-sqlite';
 import { createLogger } from '../../common/logger';
-import { CLOUDSYNC_BASE_URL } from '../../constants';
 import {
   initializeSyncExtension,
   type SyncInitConfig,
@@ -15,8 +14,7 @@ const logger = createLogger(false);
 
 function makeConfig(overrides: Partial<SyncInitConfig> = {}): SyncInitConfig {
   return {
-    projectID: 'test-project-id',
-    organizationID: 'test-organization-id',
+    databaseId: 'db_test_database_id',
     databaseName: 'test.db',
     tablesToBeSynced: [
       {
@@ -49,18 +47,18 @@ describe('initializeSyncExtension', () => {
     (Platform as any).OS = 'ios';
   });
 
-  it('throws if projectID is missing', async () => {
+  it('throws if databaseId is missing', async () => {
     const db = makeMockDB();
-    const config = makeConfig({ projectID: '' });
+    const config = makeConfig({ databaseId: '' });
 
     await expect(
       initializeSyncExtension(db as any, config, logger)
     ).rejects.toThrow('Sync configuration incomplete');
   });
 
-  it('throws if organizationID is missing', async () => {
+  it('throws if databaseName is missing', async () => {
     const db = makeMockDB();
-    const config = makeConfig({ organizationID: '' });
+    const config = makeConfig({ databaseName: '' });
 
     await expect(
       initializeSyncExtension(db as any, config, logger)
@@ -153,15 +151,15 @@ describe('initializeSyncExtension', () => {
     ]);
   });
 
-  it('calls cloudsync_network_init with project metadata', async () => {
+  it('calls cloudsync_network_init with databaseId', async () => {
     const db = makeMockDB();
     const config = makeConfig();
-    const expectedNetworkConfig = `{"address":"${CLOUDSYNC_BASE_URL}","database":"${config.databaseName}","projectID":"${config.projectID}","organizationID":"${config.organizationID}"}`;
 
     await initializeSyncExtension(db as any, config, logger);
 
     expect(db.execute).toHaveBeenCalledWith(
-      `SELECT cloudsync_network_init('${expectedNetworkConfig}');`
+      'SELECT cloudsync_network_init(?);',
+      ['db_test_database_id']
     );
   });
 
@@ -202,7 +200,7 @@ describe('initializeSyncExtension', () => {
     ).rejects.toThrow('CloudSync extension not loaded properly');
   });
 
-  it('logs site_id when cloudsync_init returns a result', async () => {
+  it('logs initialization for each table', async () => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation();
     const debugLogger = createLogger(true);
     const db = makeMockDB();
@@ -213,12 +211,12 @@ describe('initializeSyncExtension', () => {
     expect(logSpy).toHaveBeenCalledWith(
       expect.any(String),
       '[SQLiteSync]',
-      expect.stringContaining('site_id: site-id-123')
+      expect.stringContaining('CloudSync initialized for table: users')
     );
     logSpy.mockRestore();
   });
 
-  it('logs without site_id when cloudsync_init returns empty result', async () => {
+  it('does not depend on a return value from cloudsync_init', async () => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation();
     const debugLogger = createLogger(true);
     const db = createMockDB();

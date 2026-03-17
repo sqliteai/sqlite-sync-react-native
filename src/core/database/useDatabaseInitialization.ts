@@ -10,14 +10,9 @@ import { initializeSyncExtension } from '../sync/initializeSyncExtension';
  */
 export interface DatabaseInitializationParams {
   /**
-   * SQLite Cloud project ID
+   * CloudSync database ID used by runtime sync APIs
    */
-  projectID: string;
-
-  /**
-   * Sync provider organization ID
-   */
-  organizationID: string;
+  databaseId: string;
 
   /**
    * Local database file name
@@ -100,8 +95,7 @@ export interface DatabaseInitializationResult {
  * @example
  * ```typescript
  * const { writeDb, readDb, isSyncReady, initError } = useDatabaseInitialization({
- *   projectID: 'your-project-id',
- *   organizationID: 'org_sqlitecloud',
+ *   databaseId: 'db_xxxxxxxxxxxxxxxxxxxxxxxx',
  *   databaseName: 'app.db',
  *   tablesToBeSynced: [{ name: 'users', createTableSql: '...' }],
  *   apiKey: 'your-api-key',
@@ -113,8 +107,7 @@ export function useDatabaseInitialization(
   params: DatabaseInitializationParams
 ): DatabaseInitializationResult {
   const {
-    projectID,
-    organizationID,
+    databaseId,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -143,16 +136,14 @@ export function useDatabaseInitialization(
   const serializedConfig = useMemo(
     () =>
       JSON.stringify({
-        projectID,
-        organizationID,
+        databaseId,
         databaseName,
         tables: tablesToBeSynced,
         apiKey,
         accessToken,
       }),
     [
-      projectID,
-      organizationID,
+      databaseId,
       databaseName,
       tablesToBeSynced,
       apiKey,
@@ -236,8 +227,7 @@ export function useDatabaseInitialization(
           await initializeSyncExtension(
             localWriteDb,
             {
-              projectID,
-              organizationID,
+              databaseId,
               databaseName,
               tablesToBeSynced,
               apiKey,

@@ -19,8 +19,7 @@ const mockDb = {
 };
 
 const testConfig = {
-  projectID: 'test-project-id',
-  organizationID: 'test-organization-id',
+  databaseId: 'db_test_database_id',
   databaseName: 'test.db',
   tablesToBeSynced: [
     {
@@ -60,8 +59,7 @@ describe('executeBackgroundSync', () => {
     expect(initializeSyncExtension).toHaveBeenCalledWith(
       mockDb,
       {
-        projectID: testConfig.projectID,
-        organizationID: testConfig.organizationID,
+        databaseId: testConfig.databaseId,
         databaseName: testConfig.databaseName,
         tablesToBeSynced: testConfig.tablesToBeSynced,
         apiKey: testConfig.apiKey,
