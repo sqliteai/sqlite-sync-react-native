@@ -10,6 +10,10 @@ export default {
     userInterfaceStyle: 'light',
     newArchEnabled: true,
     extra: {
+      sqliteCloudDatabaseId: process.env.SQLITE_CLOUD_DATABASE_ID,
+      sqliteCloudApiKey: process.env.SQLITE_CLOUD_API_KEY,
+      databaseName: process.env.DATABASE_NAME,
+      tableName: process.env.TABLE_NAME,
       eas: {
         projectId: process.env.EAS_PROJECT_ID,
       },
