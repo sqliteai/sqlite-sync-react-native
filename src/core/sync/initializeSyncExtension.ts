@@ -2,7 +2,6 @@ import { Platform } from 'react-native';
 import { getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../common/logger';
-import { getCloudSyncBaseUrlOverride } from '../constants';
 
 /**
  * Configuration for sync initialization
@@ -34,11 +33,7 @@ export async function initializeSyncExtension(
   const { tablesToBeSynced } = config;
 
   /** VALIDATE CONFIG */
-  if (
-    !databaseId ||
-    !databaseName ||
-    (!apiKey && !accessToken)
-  ) {
+  if (!databaseId || !databaseName || (!apiKey && !accessToken)) {
     throw new Error('Sync configuration incomplete');
   }
 
@@ -70,7 +65,8 @@ export async function initializeSyncExtension(
   }
 
   /** INITIALIZE NETWORK */
-  const baseUrlOverride = getCloudSyncBaseUrlOverride();
+  // For Tiziano
+  const baseUrlOverride = 'https://cloudsync-staging-testing.fly.dev';
   if (baseUrlOverride) {
     await db.execute('SELECT cloudsync_network_init_custom(?, ?);', [
       baseUrlOverride,
