@@ -84,9 +84,6 @@ lib/
 ios/generated
 android/generated
 
-# iOS XCFramework
-ios/
-
 # React Native Nitro Modules
 nitrogen/
 
