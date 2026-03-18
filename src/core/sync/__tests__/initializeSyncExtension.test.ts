@@ -6,6 +6,10 @@ import { getDylibPath } from '@op-engineering/op-sqlite';
 import { createMockDB } from '../../../__mocks__/@op-engineering/op-sqlite';
 import { createLogger } from '../../common/logger';
 import {
+  CLOUDSYNC_BASE_URL,
+  CLOUDSYNC_BASE_URL_OVERRIDE_ENV_VAR,
+} from '../../constants';
+import {
   initializeSyncExtension,
   type SyncInitConfig,
 } from '../initializeSyncExtension';
@@ -42,9 +46,22 @@ function makeMockDB(
 }
 
 describe('initializeSyncExtension', () => {
+  const originalBaseUrlOverride =
+    process.env[CLOUDSYNC_BASE_URL_OVERRIDE_ENV_VAR];
+
   beforeEach(() => {
     jest.clearAllMocks();
     (Platform as any).OS = 'ios';
+    delete process.env[CLOUDSYNC_BASE_URL_OVERRIDE_ENV_VAR];
+  });
+
+  afterAll(() => {
+    if (originalBaseUrlOverride === undefined) {
+      delete process.env[CLOUDSYNC_BASE_URL_OVERRIDE_ENV_VAR];
+    } else {
+      process.env[CLOUDSYNC_BASE_URL_OVERRIDE_ENV_VAR] =
+        originalBaseUrlOverride;
+    }
   });
 
   it('throws if databaseId is missing', async () => {
@@ -151,7 +168,7 @@ describe('initializeSyncExtension', () => {
     ]);
   });
 
-  it('calls cloudsync_network_init with databaseId', async () => {
+  it('calls cloudsync_network_init by default', async () => {
     const db = makeMockDB();
     const config = makeConfig();
 
@@ -160,6 +177,20 @@ describe('initializeSyncExtension', () => {
     expect(db.execute).toHaveBeenCalledWith(
       'SELECT cloudsync_network_init(?);',
       ['db_test_database_id']
+    );
+  });
+
+  it('calls cloudsync_network_init_custom when override env var is set', async () => {
+    process.env[CLOUDSYNC_BASE_URL_OVERRIDE_ENV_VAR] = CLOUDSYNC_BASE_URL;
+
+    const db = makeMockDB();
+    const config = makeConfig();
+
+    await initializeSyncExtension(db as any, config, logger);
+
+    expect(db.execute).toHaveBeenCalledWith(
+      'SELECT cloudsync_network_init_custom(?, ?);',
+      [CLOUDSYNC_BASE_URL, 'db_test_database_id']
     );
   });
 
