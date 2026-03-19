@@ -9,7 +9,7 @@ Build real-time, collaborative mobile apps that work seamlessly offline and auto
 ## ✨ Features
 
 - 🧩 **Offline-First, Automatic Sync**  
-  Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional cloud synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
+  Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
 
 - 🪝 **React Hooks with Reactive Queries**
   Use `useSqliteSyncQuery` for table-level reactivity and `useOnTableUpdate` for row-level notifications. Your UI automatically updates when data changes, locally or from the cloud — no manual refresh needed.
@@ -375,7 +375,7 @@ Main provider component that enables sync functionality.
 
 | Prop                            | Type                        | Required | Description                                                |
 | ------------------------------- | --------------------------- | -------- | ---------------------------------------------------------- |
-| `databaseId`                    | `string`                    | ✅       | CloudSync database ID used by runtime sync APIs            |
+| `databaseId`                    | `string`                    | ✅       | SQLite Sync database ID used by runtime sync APIs          |
 | `databaseName`                  | `string`                    | ✅       | Local database file name                                   |
 | `tablesToBeSynced`              | `TableConfig[]`             | ✅       | Array of tables to sync                                    |
 | `apiKey`                        | `string`                    | \*       | API key for authentication                                 |
