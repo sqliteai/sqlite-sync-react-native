@@ -316,12 +316,27 @@ Push notifications from SQLite Cloud trigger sync when there are changes to be s
 
 **Setup:**
 
-1. **Install the optional Expo packages** (see [Installation](#-installation))
-2. **Configure push credentials:**
+1. **Install the required Expo packages for push mode** (see [Installation](#-installation))
+2. **Configure `app.json` / `app.config.js` for background notifications** (only needed for `notificationListening: 'always'`):
+   ```json
+   {
+     "expo": {
+       "plugins": [
+         ["expo-notifications", { "enableBackgroundRemoteNotifications": true }]
+       ],
+       "ios": {
+         "infoPlist": {
+           "UIBackgroundModes": ["remote-notification"]
+         }
+       }
+     }
+   }
+   ```
+3. **Configure push credentials:**
    - **iOS:** Run `eas credentials -p ios` to set up an APNs key
    - **Android:** Create a [Firebase project](https://console.firebase.google.com/), add an Android app with your package name, download `google-services.json` and place it in your project root, then run `eas credentials -p android`
    - See the [Expo Push Notifications guide](https://docs.expo.dev/push-notifications/push-notifications-setup/) for detailed instructions
-3. **Configure the Expo Access Token on the SQLite Cloud Dashboard** (if using [Expo enhanced security](https://docs.expo.dev/push-notifications/sending-notifications/#additional-security)):
+4. **Configure the Expo Access Token on the SQLite Cloud Dashboard** (if using [Expo enhanced security](https://docs.expo.dev/push-notifications/sending-notifications/#additional-security)):
    - Generate an access token from your [Expo Access Tokens settings](https://expo.dev/settings/access-tokens)
    - In the [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/), navigate to your database > **OffSync** > **Configuration**
    - Under **Push Notifications**, paste your Expo access token and click **Save**
@@ -420,14 +435,28 @@ Uses push notifications from SQLite Cloud:
   }}
 >
 
-// Push mode (requires expo-notifications)
+// Push mode - foreground only (simplest)
 <SQLiteSyncProvider
   databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
   syncMode="push"
+  notificationListening="foreground" // default - only syncs when app is open
   // Automatically falls back to polling if permissions denied
+>
+
+// Push mode - always (foreground + background + terminated)
+<SQLiteSyncProvider
+  databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
+  databaseName="myapp.db"
+  apiKey="your-api-key"
+  tablesToBeSynced={[...]}
+  syncMode="push"
+  notificationListening="always" // syncs even when app is in background or terminated
+  renderPushPermissionPrompt={({ allow, deny }) => (
+    <YourCustomPermissionDialog onAllow={allow} onDeny={deny} />
+  )}
 >
 ```
 
