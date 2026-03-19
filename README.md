@@ -380,8 +380,8 @@ Main provider component that enables sync functionality.
 | `tablesToBeSynced`              | `TableConfig[]`             | ✅       | Array of tables to sync                                    |
 | `apiKey`                        | `string`                    | \*       | API key for authentication                                 |
 | `accessToken`                   | `string`                    | \*       | Access token for RLS authentication                        |
-| `syncMode`                      | `'polling' \| 'push'`       | ❌       | Sync mode (default: `'polling'`)                           |
-| `adaptivePolling`               | `AdaptivePollingConfig`     | ❌       | Adaptive polling configuration (polling mode only)         |
+| `syncMode`                      | `'polling' \| 'push'`       | ✅       | Sync mode                                                  |
+| `adaptivePolling`               | `AdaptivePollingConfig`     | ✅\*\*   | Adaptive polling configuration (required when `syncMode="polling"`) |
 | `notificationListening`         | `'foreground' \| 'always'`  | ❌       | When to listen for push notifications (default: `'foreground'`). See [Push Mode](#push-mode-expo-only) for details |
 | `renderPushPermissionPrompt`    | `(props: { allow: () => void; deny: () => void }) => ReactNode` | ❌ | Render prop for permission prompt UI (push mode only) |
 | `onDatabaseReady`               | `(db: DB) => Promise<void>` | ❌       | Callback after DB opens, before sync init (for migrations) |
@@ -390,17 +390,21 @@ Main provider component that enables sync functionality.
 
 \* Either `apiKey` or `accessToken` is required
 
+\*\* Not used in push mode
+
 #### Sync Modes
 
 The library supports two sync modes:
 
-**Polling Mode (Default)**
+**Polling Mode**
 Adaptive polling with intelligent interval adjustments:
 
 - Syncs on app foreground, network reconnect
 - Backs off when idle (no changes detected)
 - Exponential backoff on errors
 - Pauses when app is backgrounded
+
+At runtime, the provider falls back to polling defaults when values are omitted. However, the current exported TypeScript props require `syncMode` explicitly and require `adaptivePolling` when `syncMode="polling"`.
 
 **Push Mode (Expo only)**
 Uses push notifications from SQLite Cloud:
@@ -787,6 +791,14 @@ The library provides specialized hooks for different use cases. Choose the right
 Access the database connections and initialization errors **without subscribing to sync updates**. This hook is optimized for components that only need database access and won't re-render on every sync.
 
 ```typescript
+useSqliteDb(): {
+  writeDb: DB | null;
+  readDb: DB | null;
+  initError: Error | null;
+}
+```
+
+```typescript
 const { writeDb, readDb, initError } = useSqliteDb();
 ```
 
@@ -812,6 +824,22 @@ Both `writeDb` and `readDb` are `DB` instances from [`@op-engineering/op-sqlite`
 #### `useSyncStatus()`
 
 Access sync status information, use this when you need to display sync state in your UI.
+
+```typescript
+useSyncStatus(): {
+  syncMode: 'polling' | 'push';
+  isSyncReady: boolean;
+  isSyncing: boolean;
+  lastSyncTime: number | null;
+  lastSyncChanges: number;
+  syncError: Error | null;
+  currentSyncInterval: number | null;
+  consecutiveEmptySyncs: number;
+  consecutiveSyncErrors: number;
+  isAppInBackground: boolean;
+  isNetworkAvailable: boolean;
+}
+```
 
 ```typescript
 const { syncMode, isSyncing, lastSyncTime, syncError, currentSyncInterval } =
@@ -852,20 +880,41 @@ return (
 
 Access all sync functionality (database + status + actions). This is a convenience hook that combines all contexts.
 
-**Note:** This hook will re-render on every sync operation. If you only need `db`/`initError`, use `useSqliteDb()` instead.
+**Note:** This hook will re-render on every sync operation. If you only need `writeDb` / `readDb` / `initError`, use `useSqliteDb()` instead.
 
 ```typescript
-const { db, initError, isSyncing, lastSyncTime, triggerSync } = useSqliteSync();
+useSqliteSync(): {
+  writeDb: DB | null;
+  readDb: DB | null;
+  initError: Error | null;
+  syncMode: 'polling' | 'push';
+  isSyncReady: boolean;
+  isSyncing: boolean;
+  lastSyncTime: number | null;
+  lastSyncChanges: number;
+  syncError: Error | null;
+  currentSyncInterval: number | null;
+  consecutiveEmptySyncs: number;
+  consecutiveSyncErrors: number;
+  isAppInBackground: boolean;
+  isNetworkAvailable: boolean;
+  triggerSync: () => Promise<void>;
+}
+```
+
+```typescript
+const { writeDb, initError, isSyncing, lastSyncTime, triggerSync } =
+  useSqliteSync();
 
 return (
   <View>
-    <Text>Database: {db ? 'Ready' : 'Loading'}</Text>
+    <Text>Database: {writeDb ? 'Ready' : 'Loading'}</Text>
     <Button onPress={triggerSync} disabled={isSyncing} />
   </View>
 );
 ```
 
-**Returns:** All properties from `useSqliteDb()` + `useSyncStatus()` + `triggerSync` function
+**Returns:** All properties from `useSqliteDb()` + `useSyncStatus()` + `triggerSync`
 
 **Best for:** Components that need access to everything (use sparingly to avoid unnecessary re-renders).
 
@@ -874,6 +923,12 @@ return (
 Manually trigger a sync operation.
 
 **How it works:** This hook is a convenience wrapper that exposes the `triggerSync` function from the Provider. The actual sync logic lives in `SQLiteSyncProvider` to ensure that `isSyncing`, `lastSyncTime`, and `lastSyncChanges` state are updated correctly, allowing all hooks (`useSqliteSyncQuery`) to react properly.
+
+```typescript
+useTriggerSqliteSync(): {
+  triggerSync: () => Promise<void>;
+}
+```
 
 ```typescript
 const { triggerSync } = useTriggerSqliteSync();
@@ -891,12 +946,13 @@ const { isSyncing } = useSyncStatus(); // isSyncing comes from useSyncStatus
 
 Execute a reactive query with table-level granularity using op-sqlite's `reactiveExecute`.
 
-**How it works:** This hook uses [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) to automatically re-run the query when specified tables are modified via transactions. Always uses **writeDb** to ensure queries see sync changes immediately.
+**How it works:** This hook uses [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) to automatically re-run the query when specified tables are modified via transactions. It performs the initial fetch with **readDb** when available, then installs the reactive subscription on **writeDb** so sync-driven changes are observed immediately.
 
 **Key Features:**
 
 - **Automatic updates:** Query re-runs when monitored tables change
-- **Initial data loading:** Executes query immediately when database is ready
+- **Initial data loading:** Executes query immediately with `readDb`
+- **Reactive updates:** Subscribes with `writeDb`
 
 **Parameters:**
 
@@ -912,10 +968,8 @@ interface ReactiveQueryConfig {
 }
 ```
 
-**Returns:**
-
 ```typescript
-{
+useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig): {
   data: T[];              // Query results
   isLoading: boolean;     // True during initial load
   error: Error | null;    // Query error
@@ -987,6 +1041,10 @@ interface TableUpdateData<T = any> {
 }
 ```
 
+```typescript
+useOnTableUpdate<T = any>(config: TableUpdateConfig<T>): void
+```
+
 **Example:**
 
 ```typescript
@@ -1039,15 +1097,17 @@ Execute SQL commands with configurable connection selection (write or read-only)
 ```typescript
 interface SqliteExecuteOptions {
   readOnly?: boolean; // Use read-only connection (default: false)
+  autoSync?: boolean; // Write mode only. Default: true
 }
 ```
 
-**Returns:**
-
 ```typescript
-{
-  execute: (sql: string, params?: any[], options?: SqliteExecuteOptions) =>
-    Promise<QueryResult | undefined>;
+useSqliteExecute(): {
+  execute: (
+    sql: string,
+    params?: any[],
+    options?: SqliteExecuteOptions
+  ) => Promise<QueryResult | undefined>;
   isExecuting: boolean; // True while executing
   error: Error | null; // Execution error
 }
@@ -1103,15 +1163,26 @@ function TaskManager() {
 
 > **Note:** This hook automatically syncs changes to the cloud after each write, so your data is pushed immediately. If you use op-sqlite's `db.execute()` directly instead, changes will **not** be synced automatically — you would need to call `db.execute('SELECT cloudsync_network_send_changes()')` manually.
 
+You can disable automatic sync for a write by passing `{ autoSync: false }`:
+
+```typescript
+await execute(
+  'INSERT INTO local_cache (key, value) VALUES (?, ?)',
+  [key, value],
+  { autoSync: false }
+);
+```
+
 #### `useSqliteTransaction()`
 
 Execute SQL commands within a transaction for atomic write operations.
 
-**Returns:**
-
 ```typescript
-{
-  executeTransaction: (fn: (tx: Transaction) => Promise<void>) => Promise<void>;
+useSqliteTransaction(): {
+  executeTransaction: (
+    fn: (tx: Transaction) => Promise<void>,
+    options?: { autoSync?: boolean }
+  ) => Promise<void>;
   isExecuting: boolean; // True while executing
   error: Error | null; // Transaction error
 }
@@ -1145,6 +1216,18 @@ function TaskManager() {
     }
   };
 
+  const addLocalOnlyTask = async (title: string) => {
+    await executeTransaction(
+      async (tx) => {
+        await tx.execute('INSERT INTO tasks (id, title) VALUES (?, ?)', [
+          'local-id',
+          title,
+        ]);
+      },
+      { autoSync: false }
+    );
+  };
+
   return (
     <Button
       title="Add Task"
@@ -1159,6 +1242,20 @@ function TaskManager() {
 
 > **Note:** This hook automatically syncs changes to the cloud after each transaction commits, so your data is pushed immediately. If you use op-sqlite's `db.transaction()` directly instead, changes will **not** be synced automatically — you would need to call `db.execute('SELECT cloudsync_network_send_changes()')` manually.
 
+To skip automatic sync for a transaction:
+
+```typescript
+await executeTransaction(
+  async (tx) => {
+    await tx.execute('INSERT INTO local_cache (key, value) VALUES (?, ?)', [
+      key,
+      value,
+    ]);
+  },
+  { autoSync: false }
+);
+```
+
 ## 🚨 Error Handling
 
 The library separates **fatal database errors** from **recoverable sync errors** to enable true offline-first operation.
@@ -1168,7 +1265,7 @@ The library separates **fatal database errors** from **recoverable sync errors**
 **Fatal errors** that prevent the database from working at all. The app cannot function when these occur.
 
 ```typescript
-const { initError, db } = useSqliteDb();
+const { initError, writeDb } = useSqliteDb();
 
 if (initError) {
   return <ErrorScreen message="Database unavailable" />;
@@ -1182,19 +1279,19 @@ if (initError) {
 - Failed to open database file
 - Failed to create tables
 
-**When this happens:** The `db` instance will be `null` and the app cannot work offline or online.
+**When this happens:** Both `writeDb` and `readDb` will be `null`, and the app cannot work offline or online.
 
 ### Sync Errors (`syncError`)
 
 **Recoverable errors** that prevent syncing but allow full offline database access.
 
 ```typescript
-const { db } = useSqliteDb();
+const { writeDb } = useSqliteDb();
 const { syncError } = useSyncStatus();
 
 // Database still works offline even with syncError!
-if (db) {
-  await db.execute('INSERT INTO tasks ...');
+if (writeDb) {
+  await writeDb.execute('INSERT INTO tasks ...');
 }
 
 // Show non-blocking warning
@@ -1211,7 +1308,7 @@ if (db) {
 - Network initialization failed
 - Temporary network connectivity issues
 
-**When this happens:** The `db` instance is available and fully functional for local-only operations. Sync will be retried on the next interval or when credentials are provided.
+**When this happens:** `writeDb` / `readDb` remain available for local-only operations. Sync will be retried on the next interval or when credentials are provided.
 
 **Important:** Sync errors automatically clear on the next successful sync.
 
