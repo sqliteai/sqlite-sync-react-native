@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../common/logger';
-import { getCloudSyncBaseUrlOverride } from '../constants';
+import { CLOUDSYNC_BASE_URL } from '../constants';
 
 /**
  * Configuration for sync initialization
@@ -34,11 +34,7 @@ export async function initializeSyncExtension(
   const { tablesToBeSynced } = config;
 
   /** VALIDATE CONFIG */
-  if (
-    !databaseId ||
-    !databaseName ||
-    (!apiKey && !accessToken)
-  ) {
+  if (!databaseId || !databaseName || (!apiKey && !accessToken)) {
     throw new Error('Sync configuration incomplete');
   }
 
@@ -70,15 +66,10 @@ export async function initializeSyncExtension(
   }
 
   /** INITIALIZE NETWORK */
-  const baseUrlOverride = getCloudSyncBaseUrlOverride();
-  if (baseUrlOverride) {
-    await db.execute('SELECT cloudsync_network_init_custom(?, ?);', [
-      baseUrlOverride,
-      databaseId,
-    ]);
-  } else {
-    await db.execute('SELECT cloudsync_network_init(?);', [databaseId]);
-  }
+  await db.execute('SELECT cloudsync_network_init_custom(?, ?);', [
+    CLOUDSYNC_BASE_URL,
+    databaseId,
+  ]);
   logger.info('✅ Network initialized');
 
   /** SET AUTHENTICATION */
