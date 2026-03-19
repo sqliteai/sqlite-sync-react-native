@@ -52,7 +52,6 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
    ```bash
    cd examples/sync-demo-expo
    cp .env.example .env
-   cp eas.json.example eas.json
    ```
 
 2. **Set up an Expo project** (for push notifications)
@@ -78,25 +77,46 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
 
    **Note**: The `TABLE_NAME` must match the table you created in SQLite Cloud and enabled for OffSync.
 
-4. **Set up push notification credentials**
+### 4. Set Up Push Notifications
 
-   ```bash
-   # Configure iOS APNs credentials
-   eas credentials -p ios
+Push notifications enable **real-time sync** — your app receives instant updates when data changes in the cloud. Without push notifications, the library falls back to polling mode.
 
-   # Configure Android FCM credentials (optional)
-   eas credentials -p android
-   ```
+EAS will guide you through creating/uploading an APNs key. See the [Expo Push Notifications setup guide](https://docs.expo.dev/push-notifications/push-notifications-setup/) for detailed instructions.
 
-5. **Configure Firebase for Android (optional)**
+#### a. Configure iOS
 
-   If you want push notifications on Android:
+```bash
+eas credentials -p ios
+```
 
-   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
-   - Add an Android app with your package name
-   - Download `google-services.json` and place it in this directory
+#### b. Configure Android
 
-### 4. Install Dependencies
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project (or use an existing one)
+3. Add an Android app with your package name (matching `ANDROID_PACKAGE` in `.env`)
+4. Download `google-services.json` and place it in this directory (`examples/sync-demo-expo/`)
+5. Run `eas credentials -p android` to configure FCM credentials
+
+#### c. Configure your Expo Access Token on the SQLite Cloud Dashboard
+
+If you have [Expo enhanced security](https://docs.expo.dev/push-notifications/sending-notifications/#additional-security) enabled, you need to provide your Expo access token so that SQLite Cloud can send push notifications to your devices.
+
+1. Go to [Expo Access Tokens settings](https://expo.dev/accounts/[your-account]/settings/access-tokens)
+2. Generate a new access token (or use an existing one)
+3. Open the [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/)
+4. Navigate to your database > **OffSync** > **Configuration** tab
+5. Under the **Push Notifications** section, paste your Expo access token in the **Access Token** field and click **Save**
+
+> **Note:** The access token is only required if you have Expo enhanced security enabled. Without it, push notifications work out of the box. The access token adds an extra layer of security to prevent unauthorized push notifications.
+
+#### d. Verify push notification status
+
+On the SQLite Cloud Dashboard (**OffSync** > **Configuration**), check:
+
+- **Status**: Should show "Working"
+- **Access Token**: Should show "Configured" (if you added one)
+
+### 5. Install Dependencies
 
 ```bash
 # From repository root
@@ -104,6 +124,8 @@ yarn install
 ```
 
 ## Running the Example
+
+> Push notifications require a **real device**. They do not work on simulators/emulators.
 
 From the repository root:
 
@@ -126,12 +148,14 @@ The demo app demonstrates:
 ## Try It Out
 
 **Test Push Notification Sync:**
+
 1. Run the app on a real device (push notifications don't work on simulators)
 2. Grant push notification permissions when prompted
 3. Add data from the SQLite Cloud dashboard
 4. Watch the app sync instantly via push notification
 
 **Test Permission Denial Fallback:**
+
 1. Deny push notification permissions when prompted
 2. The app automatically falls back to polling mode
 3. Data still syncs, just on a polling interval instead of instantly

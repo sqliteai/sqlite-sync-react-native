@@ -308,8 +308,41 @@ Push notifications from SQLite Cloud trigger sync when there are changes to be s
 
 **Requirements:**
 
-- `expo-notifications` - for push notification handling
-- `expo-constants` - for EAS project ID required by push tokens
+- `expo-notifications` - push notification handling
+- `expo-constants` - EAS project ID required by push tokens
+- `expo-application` - device ID for push token registration
+- `expo-task-manager` - background/terminated notification handling (required for `notificationListening: 'always'`)
+- `expo-secure-store` - persisting sync config for background execution (required for `notificationListening: 'always'`)
+
+**Setup:**
+
+1. **Install the optional Expo packages** (see [Installation](#-installation))
+2. **Configure push credentials:**
+   - **iOS:** Run `eas credentials -p ios` to set up an APNs key
+   - **Android:** Create a [Firebase project](https://console.firebase.google.com/), add an Android app with your package name, download `google-services.json` and place it in your project root, then run `eas credentials -p android`
+   - See the [Expo Push Notifications guide](https://docs.expo.dev/push-notifications/push-notifications-setup/) for detailed instructions
+3. **Configure the Expo Access Token on the SQLite Cloud Dashboard** (if using [Expo enhanced security](https://docs.expo.dev/push-notifications/sending-notifications/#additional-security)):
+   - Generate an access token from your [Expo Access Tokens settings](https://expo.dev/settings/access-tokens)
+   - In the [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/), navigate to your database > **OffSync** > **Configuration**
+   - Under **Push Notifications**, paste your Expo access token and click **Save**
+   - Verify the status shows "Working" and the access token shows "Configured"
+
+> **Note:** The Expo access token is only required if you have Expo enhanced security enabled. Without it, push notifications work out of the box. The token adds an extra layer of security to prevent unauthorized push notifications.
+
+**How Push Notifications Work:**
+
+When data changes in your SQLite Cloud database, the server sends a push notification to all registered devices. What happens when the notification arrives depends on your app's state and the `notificationListening` prop:
+
+| App State | `notificationListening: 'foreground'` | `notificationListening: 'always'` |
+|-----------|--------------------------------------|-----------------------------------|
+| **Foreground** | Notification received → sync triggered immediately using the existing database connection | Same as foreground mode |
+| **Background** | Notification ignored | Notification received → background task opens a new database connection, syncs, then calls your `registerBackgroundSyncCallback` (if registered) |
+| **Terminated** | Notification ignored | Notification wakes the app → background task opens a new database connection, syncs, then calls your `registerBackgroundSyncCallback` (if registered) |
+
+**`notificationListening` modes:**
+
+- **`'foreground'`** — Only listens for notifications while the app is in the foreground. Simpler setup, no background dependencies needed. 
+- **`'always'`** — Listens in foreground, background, and even when the app was terminated. Requires `expo-task-manager` and `expo-secure-store` for background task execution.
 
 **Graceful Degradation:**
 
@@ -334,7 +367,7 @@ Main provider component that enables sync functionality.
 | `accessToken`                   | `string`                    | \*       | Access token for RLS authentication                        |
 | `syncMode`                      | `'polling' \| 'push'`       | ❌       | Sync mode (default: `'polling'`)                           |
 | `adaptivePolling`               | `AdaptivePollingConfig`     | ❌       | Adaptive polling configuration (polling mode only)         |
-| `notificationListening`         | `'foreground' \| 'always'`  | ❌       | When to listen for push notifications (push mode only)     |
+| `notificationListening`         | `'foreground' \| 'always'`  | ❌       | When to listen for push notifications (default: `'foreground'`). See [Push Mode](#push-mode-expo-only) for details |
 | `renderPushPermissionPrompt`    | `(props: { allow: () => void; deny: () => void }) => ReactNode` | ❌ | Render prop for permission prompt UI (push mode only) |
 | `onDatabaseReady`               | `(db: DB) => Promise<void>` | ❌       | Callback after DB opens, before sync init (for migrations) |
 | `debug`                         | `boolean`                   | ❌       | Enable debug logging (default: `false`)                    |
@@ -400,7 +433,7 @@ Uses push notifications from SQLite Cloud:
 
 #### Background Sync Callback (Push Mode)
 
-When using push mode with `notificationListening: 'always'`, you can register a callback that runs after background sync completes. This is useful for showing local notifications about new data:
+When using push mode with `notificationListening: 'always'`, you can register a callback that runs after background sync completes. For example, this is useful for showing local notifications about new data:
 
 ```typescript
 import { registerBackgroundSyncCallback } from '@sqliteai/sqlite-sync-react-native';
