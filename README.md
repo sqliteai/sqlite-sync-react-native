@@ -4,58 +4,69 @@
 [![npm version](https://img.shields.io/npm/v/@sqliteai/sqlite-sync-react-native.svg)](https://www.npmjs.com/package/@sqliteai/sqlite-sync-react-native)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Build real-time, collaborative mobile apps that work seamlessly offline and automatically sync when online. Powered by [SQLite Sync](https://github.com/sqliteai/sqlite-sync).
+Offline-first React Native sync for SQLite Cloud. This library gives you a local SQLite database on-device, keeps it usable offline, and synchronizes changes with SQLite Cloud when connectivity is available.
 
-## ✨ Features
+Powered by [SQLite Sync](https://github.com/sqliteai/sqlite-sync) and [OP-SQLite](https://github.com/OP-Engineering/op-sqlite).
 
-- 🧩 **Offline-First, Automatic Sync**  
-  Wrap your app with `SQLiteSyncProvider` to get a local database with automatic, bi-directional synchronization. Your app works fully offline, and all local changes are synced seamlessly when online.
+## Table of Contents
 
-- 🪝 **React Hooks with Reactive Queries**
-  Use `useSqliteSyncQuery` for table-level reactivity and `useOnTableUpdate` for row-level notifications. Your UI automatically updates when data changes, locally or from the cloud — no manual refresh needed.
+- [Compatibility](#compatibility)
+- [Choose Your Auth Model](#choose-your-auth-model)
+- [Choose Your Sync Mode](#choose-your-sync-mode)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Sync Behavior](#sync-behavior)
+- [API Reference](#api-reference)
+- [Error Handling](#error-handling)
+- [Debug Logging](#debug-logging)
+- [Known Issues & Improvements](#known-issues--improvements)
+- [Examples](#examples)
+- [Links](#links)
 
-- 🔧 **Zero-Configuration Extension Loading**  
-  The SQLite Sync extension is automatically loaded and configured for you.
-  No manual setup required — just access the full [SQLite Sync API](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) directly through the `writeDb` / `readDb` instances.
+## Compatibility
 
-- 📱 **Native-Only, Ultra-Fast**  
-  Under the hood, we use OP-SQLite — a low-level, JSI-enabled SQLite engine for React Native. With OP-SQLite, database operations run at near-native speed on iOS and Android.
+| Requirement    | Status / Minimum                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| React Native   | Native projects and Expo development builds                                                                 |
+| iOS            | 13.0+                                                                                                       |
+| Android        | API 26+                                                                                                     |
+| Web            | Not supported                                                                                               |
+| Expo Go        | Not supported                                                                                               |
+| SQLite engine  | [`@op-engineering/op-sqlite`](https://github.com/OP-Engineering/op-sqlite) `^15.1.14`                       |
+| Network status | [`@react-native-community/netinfo`](https://github.com/react-native-netinfo/react-native-netinfo) `^11.0.0` |
+| Cloud backend  | [SQLite Cloud](https://sqlitecloud.io/)                                                                     |
 
-## 📚 Table of Contents
+Optional Expo dependencies for push mode:
 
-- [Requirements](#-requirements)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Sync Behavior](#-sync-behavior)
-- [API Reference](#-api-reference)
-  - [SQLiteSyncProvider](#sqlitesyncprovider)
-  - [Contexts](#contexts)
-  - [Hooks](#hooks)
-- [Error Handling](#-error-handling)
-- [Debug Logging](#-debug-logging)
-- [Known Issues & Improvements](#-known-issues--improvements)
-- [Examples](#-examples)
-- [Links](#-links)
+- [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/)
+- [`expo-constants`](https://docs.expo.dev/versions/latest/sdk/constants/)
+- [`expo-application`](https://docs.expo.dev/versions/latest/sdk/application/)
+- [`expo-secure-store`](https://docs.expo.dev/versions/latest/sdk/securestore/)
+- [`expo-task-manager`](https://docs.expo.dev/versions/latest/sdk/task-manager/)
 
-## 📋 Requirements
+Notes:
 
-- iOS **13.0+**
-- Android **API 26+**
-- [`@op-engineering/op-sqlite`](https://github.com/OP-Engineering/op-sqlite) **^15.1.14**
-- [`@react-native-community/netinfo`](https://github.com/react-native-netinfo/react-native-netinfo) **^11.0.0**
-- [SQLite Cloud](https://sqlitecloud.io/) account
-- **Optional (for push mode):**
-  - [`expo-notifications`](https://docs.expo.dev/versions/latest/sdk/notifications/) - Push notification handling
-  - [`expo-constants`](https://docs.expo.dev/versions/latest/sdk/constants/) - EAS project ID for push tokens
-  - [`expo-application`](https://docs.expo.dev/versions/latest/sdk/application/) - Device ID for push token registration
-  - [`expo-secure-store`](https://docs.expo.dev/versions/latest/sdk/securestore/) - Persisting background sync config and push token state
-  - [`expo-task-manager`](https://docs.expo.dev/versions/latest/sdk/task-manager/) - Background/terminated notification sync
+- `expo-notifications`, `expo-constants`, and `expo-application` are needed for push token registration.
+- `expo-task-manager` and `expo-secure-store` are additionally required for `notificationListening="always"`.
+- Testing push notifications require a real device. Simulators and emulators are not enough for a full push flow.
 
-> **Note:** This library is **native-only** (iOS/Android). Web is not supported.
+## Choose Your Auth Model
 
-## 📦 Installation
+| Auth prop     | Use when                                       | Notes                            |
+| ------------- | ---------------------------------------------- | -------------------------------- |
+| `apiKey`      | Your app uses database-level access            | Simpler setup                    |
+| `accessToken` | Your app uses SQLite Cloud access tokens / RLS | Use this for signed-in user auth |
 
-### 1. Install Dependencies
+## Choose Your Sync Mode
+
+| Mode      | Best for                                       | Requirements                    | Tradeoffs                                |
+| --------- | ---------------------------------------------- | ------------------------------- | ---------------------------------------- |
+| `polling` | Most apps, easiest setup, predictable behavior | No Expo push packages required  | Checks periodically instead of instantly |
+| `push`    | Apps that need near real-time sync triggers    | Expo push setup and permissions | More setup, may fall back to polling     |
+
+## Installation
+
+### 1. Install Required Dependencies
 
 ```bash
 npm install @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-native-community/netinfo
@@ -63,7 +74,7 @@ npm install @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-
 yarn add @sqliteai/sqlite-sync-react-native @op-engineering/op-sqlite @react-native-community/netinfo
 ```
 
-**Optional: For push mode (Expo projects only)**
+Optional Expo packages for push mode:
 
 ```bash
 npx expo install expo-notifications expo-constants expo-application expo-secure-store expo-task-manager
@@ -71,66 +82,40 @@ npx expo install expo-notifications expo-constants expo-application expo-secure-
 
 ### 2. Platform Setup
 
-#### iOS
-
-```bash
-cd ios && pod install
-```
-
-#### Android
-
-No additional setup required. Native modules are linked automatically.
-
 #### Expo
 
-If using Expo, you must use **development builds** (Expo Go is not supported).
+If you use Expo, you must use development builds. Expo Go is not supported because this library depends on native modules.
 
-**1. Set Android `minSdkVersion` to 26** (Expo defaults to 24, which will cause a build failure):
+Set Android `minSdkVersion` to `26`:
 
 ```bash
 npx expo install expo-build-properties
 ```
 
-Add to your `app.json` or `app.config.js` plugins:
+Add this plugin to `app.json` or `app.config.js`:
 
 ```json
 ["expo-build-properties", { "android": { "minSdkVersion": 26 } }]
 ```
 
-**2. Build and run:**
-
-```bash
-# Generate native directories
-npx expo prebuild
-
-# Run on iOS/Android
-npx expo run:ios
-# or
-npx expo run:android
-```
-
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Set Up SQLite Cloud
 
-1. **Create an account**  
-   Sign up at the [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/).
+1. Create an account at the [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/).
+2. Create a database by following the [database creation guide](https://docs.sqlitecloud.io/docs/create-database).
+3. Create your tables in SQLite Cloud.
+4. Enable OffSync by following the [OffSync setup guide](https://docs.sqlitecloud.io/docs/offsync#:~:text=in%20the%20cloud.-,Configuring%20OffSync,-You%20can%20enable).
+5. Copy your `databaseId` and either your `apiKey` or plan to provide the current signed-in user's `accessToken`.
 
-2. **Create a database**  
-   Follow the [database creation guide](https://docs.sqlitecloud.io/docs/create-database).
+Schema requirements matter:
 
-   > Ensure your tables have identical schemas in both local and cloud databases. See [SQLite Sync Best Practices](https://docs.sqlitecloud.io/docs/sqlite-sync-best-practices) for schema requirements (e.g., all non-primary-key `NOT NULL` columns must have a `DEFAULT` value).
-
-3. **Enable OffSync**  
-   Configure OffSync by following the [OffSync setup guide](https://docs.sqlitecloud.io/docs/offsync#:~:text=in%20the%20cloud.-,Configuring%20OffSync,-You%20can%20enable).
-
-4. **Get credentials**  
-   Copy your **database ID** and **API key** from the dashboard.  
-   - Alternatively, you can use [access tokens](https://docs.sqlitecloud.io/docs/access-tokens) for [Row-Level Security](https://docs.sqlitecloud.io/docs/rls).
+- Your local table schema must exactly match the cloud table schema.
+- For SQLite Sync schema best practices, see [SQLite Sync Best Practices](https://docs.sqlitecloud.io/docs/sqlite-sync-best-practices).
 
 ### 2. Wrap Your App
 
-The `SQLiteSyncProvider` needs a `createTableSql` statement for each table you want to sync. This is required because tables must exist before SQLiteSync initialization.
+The provider needs a `createTableSql` statement for every table you want synchronized. That SQL is executed locally before sync initialization.
 
 ```typescript
 import { SQLiteSyncProvider } from '@sqliteai/sqlite-sync-react-native';
@@ -142,7 +127,6 @@ export default function App() {
       databaseName="myapp.db"
       apiKey="your-api-key"
       syncMode="polling"
-      adaptivePolling={{ baseInterval: 5000 }}
       tablesToBeSynced={[
         {
           name: 'tasks',
@@ -163,9 +147,9 @@ export default function App() {
 }
 ```
 
-### 3. Read Data
+### 3. Read Data Reactively
 
-Use `useSqliteSyncQuery` to run a reactive query that automatically updates when the table changes — no manual refresh needed.
+Use `useSqliteSyncQuery` for UI reads that should automatically update when data changes locally or from sync.
 
 ```typescript
 import { useSqliteSyncQuery } from '@sqliteai/sqlite-sync-react-native';
@@ -177,7 +161,11 @@ interface Task {
 }
 
 function TaskList() {
-  const { data: tasks, isLoading, error } = useSqliteSyncQuery<Task>({
+  const {
+    data: tasks,
+    isLoading,
+    error,
+  } = useSqliteSyncQuery<Task>({
     query: 'SELECT * FROM tasks ORDER BY created_at DESC',
     arguments: [],
     fireOn: [{ table: 'tasks' }],
@@ -196,9 +184,9 @@ function TaskList() {
 }
 ```
 
-### 4. Write Data
+### 4. Write Data With Transactions
 
-Use `useSqliteTransaction` to insert or update rows. Transactions automatically trigger reactive queries to re-run.
+Use `useSqliteTransaction` for app writes that should trigger reactive queries.
 
 ```typescript
 import { useSqliteTransaction } from '@sqliteai/sqlite-sync-react-native';
@@ -213,16 +201,15 @@ function AddTaskButton() {
         [title]
       );
     });
-    // The reactive query in TaskList updates automatically!
   };
 
   return <Button title="Add Task" onPress={() => addTask('New Task')} />;
 }
 ```
 
-### 5. Sync & Status
+### 5. Show Sync Status And Manual Sync
 
-Use `useTriggerSqliteSync` to manually trigger a sync, and `useSyncStatus` to display sync state in your UI.
+Use `useTriggerSqliteSync` for manual sync and `useSyncStatus` to render status.
 
 ```typescript
 import {
@@ -232,10 +219,11 @@ import {
 
 function SyncControls() {
   const { triggerSync } = useTriggerSqliteSync();
-  const { isSyncing, lastSyncTime, syncError } = useSyncStatus();
+  const { isSyncing, lastSyncTime, syncError, syncMode } = useSyncStatus();
 
   return (
     <View>
+      <Text>Mode: {syncMode}</Text>
       <Button
         title={isSyncing ? 'Syncing...' : 'Sync Now'}
         onPress={triggerSync}
@@ -250,122 +238,115 @@ function SyncControls() {
 }
 ```
 
-## 🔄 Sync Behavior
+## Sync Behavior
 
-The library provides intelligent, lifecycle-aware synchronization that adapts to app state, network conditions, and sync activity.
+The library provides lifecycle-aware synchronization that adapts to app state, network availability, and previous sync activity.
 
 ### Sync Triggers
 
-Synchronization happens automatically in response to meaningful events:
+Primary triggers:
 
-**Primary Triggers:**
+- App start -> immediate sync
+- App resume from background -> immediate sync, debounced to 5 seconds
+- Network reconnection -> immediate sync
 
-- **App start** → immediate sync
-- **App resume from background** → immediate sync (debounced to 5s)
-- **Network reconnection** → immediate sync
+Secondary triggers:
 
-**Secondary Triggers:**
-
-_Polling Mode:_
-
-- **Periodic polling while foreground** → interval adapts based on activity
-- **No polling when backgrounded**
-
-_Push Mode (Expo only):_
-
-- **Push notification from SQLite Cloud** → immediate sync when changes detected on server
+- Polling mode: Periodic polling while app is foregrounded
+- Push mode: Push notification from SQLite Cloud triggers sync when server changes are available
 
 ### Adaptive Polling Algorithm
 
-In polling mode, the sync interval intelligently adjusts based on activity:
+In polling mode, the sync interval changes based on activity:
 
-1. **Default State:** Uses `baseInterval` (default: 5s)
-2. **Idle Backoff:** After `emptyThreshold` consecutive empty syncs (default: 5), interval increases gradually
-   - Example: 5s → 7.5s → 11.25s → ... (capped at `maxInterval`)
-3. **Error Backoff:** On sync failures, interval doubles exponentially
-   - Example: 5s → 10s → 20s → 40s → ... (capped at `maxInterval`)
-4. **Reset on Activity:** Any sync with changes resets interval to `baseInterval`
-5. **Foreground Priority:** App resume triggers immediate sync and resets interval
+1. Default state: use `baseInterval` (default `5000`)
+2. Idle backoff: after `emptyThreshold` consecutive empty syncs (default `5`), the interval increases gradually based on `idleBackoffMultiplier`
+3. Error backoff: on sync failures, the interval increases more aggressively based on `errorBackoffMultiplier`
+4. Reset on activity: any sync with changes resets the interval to `baseInterval`
+5. Foreground priority: resuming the app triggers an immediate sync and resets the interval
 
-**Example Timeline:**
+Example idle progression:
 
+```text
+5s -> 7.5s -> 11.25s -> ...
 ```
-App Start:        Sync (0 changes) → Next in 5s
-5s later:         Sync (0 changes) → Next in 5s
-10s later:        Sync (0 changes) → Next in 5s
-15s later:        Sync (0 changes) → Next in 5s
-20s later:        Sync (0 changes) → Next in 5s
-25s later:        Sync (0 changes) → Next in 7.5s (idle backoff started)
-32.5s later:      Sync (0 changes) → Next in 11.25s
-43.75s later:     Sync (5 changes) → Next in 5s (reset to base)
+
+Example error progression:
+
+```text
+5s -> 10s -> 20s -> 40s -> ...
+```
+
+Example timeline:
+
+```text
+App Start:        Sync (0 changes) -> Next in 5s
+5s later:         Sync (0 changes) -> Next in 5s
+10s later:        Sync (0 changes) -> Next in 5s
+15s later:        Sync (0 changes) -> Next in 5s
+20s later:        Sync (0 changes) -> Next in 5s
+25s later:        Sync (0 changes) -> Next in 7.5s
+32.5s later:      Sync (0 changes) -> Next in 11.25s
+43.75s later:     Sync (5 changes) -> Next in 5s
 App backgrounded: Polling paused
-App foregrounded: Sync immediately → Next in 5s
+App foregrounded: Sync immediately -> Next in 5s
 ```
 
-### Push Mode (Expo Only)
+### Push Mode
 
-Push notifications from SQLite Cloud trigger sync when there are changes to be synced. Sync still happens on foreground/network reconnect for reliability.
+Push notifications from SQLite Cloud trigger sync when there are changes to fetch. Sync still happens on app start, foreground, and network reconnect for reliability.
 
-**Requirements:**
+Requirements:
 
-- `expo-notifications` - push notification handling
-- `expo-constants` - EAS project ID required by push tokens
-- `expo-application` - device ID for push token registration
-- `expo-task-manager` - background/terminated notification handling (required for `notificationListening: 'always'`)
-- `expo-secure-store` - persisting sync config for background execution (required for `notificationListening: 'always'`)
+- `expo-notifications` for push notification handling
+- `expo-constants` for EAS project ID lookup
+- `expo-application` for device ID during push token registration
+- `expo-task-manager` for background/terminated notification handling when `notificationListening="always"`
+- `expo-secure-store` for persisted background sync config when `notificationListening="always"`
 
-**Setup:**
+Setup:
 
-1. **Install the required Expo packages for push mode** (see [Installation](#-installation))
-2. **Configure `app.json` / `app.config.js` for background notifications** (only needed for `notificationListening: 'always'`):
-   ```json
-   {
-     "expo": {
-       "plugins": [
-         ["expo-notifications", { "enableBackgroundRemoteNotifications": true }]
-       ],
-       "ios": {
-         "infoPlist": {
-           "UIBackgroundModes": ["remote-notification"]
-         }
-       }
-     }
-   }
-   ```
-3. **Configure push credentials:**
-   - **iOS:** Run `eas credentials -p ios` to set up an APNs key
-   - **Android:** Create a [Firebase project](https://console.firebase.google.com/), add an Android app with your package name, download `google-services.json` and place it in your project root, then run `eas credentials -p android`
-   - See the [Expo Push Notifications guide](https://docs.expo.dev/push-notifications/push-notifications-setup/) for detailed instructions
-4. **Configure the Expo Access Token on the SQLite Cloud Dashboard** (if using [Expo enhanced security](https://docs.expo.dev/push-notifications/sending-notifications/#additional-security)):
-   - Generate an access token from your [Expo Access Tokens settings](https://expo.dev/settings/access-tokens)
-   - In the [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/), navigate to your database > **OffSync** > **Configuration**
-   - Under **Push Notifications**, paste your Expo access token and click **Save**
-   - Verify the status shows "Working" and the access token shows "Configured"
+1. Install the Expo packages listed above:
 
-> **Note:** The Expo access token is only required if you have Expo enhanced security enabled. Without it, push notifications work out of the box. The token adds an extra layer of security to prevent unauthorized push notifications.
+```bash
+npx expo install expo-notifications expo-constants expo-application expo-secure-store expo-task-manager
+```
 
-**How Push Notifications Work:**
+2. If you use `notificationListening="always"`, configure background notifications in `app.json` / `app.config.js`:
 
-When data changes in your SQLite Cloud database, the server sends a push notification to all registered devices. What happens when the notification arrives depends on your app's state and the `notificationListening` prop:
+```json
+{
+  "expo": {
+    "plugins": [
+      ["expo-notifications", { "enableBackgroundRemoteNotifications": true }]
+    ],
+    "ios": {
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
+    }
+  }
+}
+```
 
-| App State | `notificationListening: 'foreground'` | `notificationListening: 'always'` |
-|-----------|--------------------------------------|-----------------------------------|
-| **Foreground** | Notification received → sync triggered immediately using the existing database connection | Same as foreground mode |
-| **Background** | Notification ignored | Notification received → background task opens a new database connection, syncs, then calls your `registerBackgroundSyncCallback` (if registered) |
-| **Terminated** | Notification ignored | Notification wakes the app → background task opens a new database connection, syncs, then calls your `registerBackgroundSyncCallback` (if registered) |
+3. Configure push credentials by following the [Expo Push Notifications setup guide](https://docs.expo.dev/push-notifications/push-notifications-setup/).
 
-**`notificationListening` modes:**
+- iOS: use a paid Apple Developer account, register the physical iOS device you want to test on, and let EAS set up push notifications and generate an APNs key for the app during your first development build
+- Android: create a Firebase project, add an Android app in Firebase with the same package name as your Expo app, set up FCM V1 credentials, then place the generated `google-services.json` in your project and connect those credentials to Expo
 
-- **`'foreground'`** — Only listens for notifications while the app is in the foreground. Simpler setup, no background dependencies needed. 
-- **`'always'`** — Listens in foreground, background, and even when the app was terminated. Requires `expo-task-manager` and `expo-secure-store` for background task execution.
+4. If you use [Expo enhanced security](https://docs.expo.dev/push-notifications/sending-notifications/#additional-security), configure your Expo access token in SQLite Cloud Dashboard > OffSync > Configuration. The Expo access token is optional unless enhanced security is enabled.
 
-**Graceful Degradation:**
+### `notificationListening` Modes
 
-- If packages not installed → warning logged, push mode disabled
-- If permissions denied → automatic fallback to polling mode
-- If token retrieval fails → automatic fallback to polling mode
+| App State  | `notificationListening="foreground"`                     | `notificationListening="always"`                                                                                       |
+| ---------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Foreground | Notification triggers sync on the existing DB connection | Same behavior                                                                                                          |
+| Background | Notification ignored                                     | Background task opens a DB connection, syncs, then calls `registerBackgroundSyncCallback` if registered                |
+| Terminated | Notification ignored                                     | Background task wakes the app, opens a DB connection, syncs, then calls `registerBackgroundSyncCallback` if registered |
 
-## 🎯 API Reference
+> Note: If push mode cannot be used because required Expo packages are missing, notification permissions are denied, or push token retrieval fails, the provider logs a warning and falls back to polling mode.
+
+## API Reference
 
 ### `SQLiteSyncProvider`
 
@@ -373,56 +354,31 @@ Main provider component that enables sync functionality.
 
 #### Props
 
-| Prop                            | Type                        | Required | Description                                                |
-| ------------------------------- | --------------------------- | -------- | ---------------------------------------------------------- |
-| `databaseId`                    | `string`                    | ✅       | SQLite Sync database ID used by runtime sync APIs          |
-| `databaseName`                  | `string`                    | ✅       | Local database file name                                   |
-| `tablesToBeSynced`              | `TableConfig[]`             | ✅       | Array of tables to sync                                    |
-| `apiKey`                        | `string`                    | \*       | API key for authentication                                 |
-| `accessToken`                   | `string`                    | \*       | Access token for RLS authentication                        |
-| `syncMode`                      | `'polling' \| 'push'`       | ✅       | Sync mode                                                  |
-| `adaptivePolling`               | `AdaptivePollingConfig`     | ✅\*\*   | Adaptive polling configuration (required when `syncMode="polling"`) |
-| `notificationListening`         | `'foreground' \| 'always'`  | ❌       | When to listen for push notifications (default: `'foreground'`). See [Push Mode](#push-mode-expo-only) for details |
-| `renderPushPermissionPrompt`    | `(props: { allow: () => void; deny: () => void }) => ReactNode` | ❌ | Render prop for permission prompt UI (push mode only) |
-| `onDatabaseReady`               | `(db: DB) => Promise<void>` | ❌       | Callback after DB opens, before sync init (for migrations) |
-| `debug`                         | `boolean`                   | ❌       | Enable debug logging (default: `false`)                    |
-| `children`                      | `ReactNode`                 | ✅       | Child components                                           |
-
-\* Either `apiKey` or `accessToken` is required
-
-\*\* Not used in push mode
+| Prop                         | Type                                                            | Required      | Description                                           |
+| ---------------------------- | --------------------------------------------------------------- | ------------- | ----------------------------------------------------- |
+| `databaseId`                 | `string`                                                        | Yes           | SQLite Sync database ID used by runtime sync APIs     |
+| `databaseName`               | `string`                                                        | Yes           | Local database file name                              |
+| `tablesToBeSynced`           | `TableConfig[]`                                                 | Yes           | Array of tables to sync                               |
+| `apiKey`                     | `string`                                                        | Conditionally | API key authentication                                |
+| `accessToken`                | `string`                                                        | Conditionally | Signed-in user access token authentication            |
+| `syncMode`                   | `'polling' \| 'push'`                                           | Yes           | Sync mode                                             |
+| `adaptivePolling`            | `AdaptivePollingConfig`                                         | No            | Polling configuration; defaults are used when omitted |
+| `notificationListening`      | `'foreground' \| 'always'`                                      | No            | Push listening behavior                               |
+| `renderPushPermissionPrompt` | `(props: { allow: () => void; deny: () => void }) => ReactNode` | No            | Custom pre-permission UI for push mode                |
+| `onDatabaseReady`            | `(db: DB) => Promise<void>`                                     | No            | Called after DB opens and before sync init            |
+| `debug`                      | `boolean`                                                       | No            | Enable debug logs                                     |
+| `children`                   | `ReactNode`                                                     | Yes           | App content                                           |
 
 #### Sync Modes
 
-The library supports two sync modes:
-
-**Polling Mode**
-Adaptive polling with intelligent interval adjustments:
-
-- Syncs on app foreground, network reconnect
-- Backs off when idle (no changes detected)
-- Exponential backoff on errors
-- Pauses when app is backgrounded
-
-At runtime, the provider falls back to polling defaults when values are omitted. However, the current exported TypeScript props require `syncMode` explicitly and require `adaptivePolling` when `syncMode="polling"`.
-
-**Push Mode (Expo only)**
-Uses push notifications from SQLite Cloud:
-
-- Automatically falls back to polling if permissions denied
-- Still syncs on foreground/network reconnect for reliability
-
-**Example configurations:**
-
 ```typescript
-// Polling mode with default settings (recommended)
+// Polling mode with runtime defaults
 <SQLiteSyncProvider
   databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
   syncMode="polling"
-  // Uses defaults: baseInterval=5s, maxInterval=5min, emptyThreshold=5
 >
 
 // Polling mode with custom intervals
@@ -433,60 +389,57 @@ Uses push notifications from SQLite Cloud:
   tablesToBeSynced={[...]}
   syncMode="polling"
   adaptivePolling={{
-    baseInterval: 3000,    // 3s base interval
-    maxInterval: 60000,    // 1min maximum backoff
-    emptyThreshold: 3      // Back off after 3 empty syncs
+    baseInterval: 3000,
+    maxInterval: 60000,
+    emptyThreshold: 3
   }}
 >
 
-// Push mode - foreground only (simplest)
+// Push mode - foreground only
 <SQLiteSyncProvider
   databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
   syncMode="push"
-  notificationListening="foreground" // default - only syncs when app is open
-  // Automatically falls back to polling if permissions denied
+  notificationListening="foreground"
 >
 
-// Push mode - always (foreground + background + terminated)
+// Push mode - foreground + background + terminated
 <SQLiteSyncProvider
   databaseId="db_xxxxxxxxxxxxxxxxxxxxxxxx"
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
   syncMode="push"
-  notificationListening="always" // syncs even when app is in background or terminated
+  notificationListening="always"
   renderPushPermissionPrompt={({ allow, deny }) => (
     <YourCustomPermissionDialog onAllow={allow} onDeny={deny} />
   )}
 >
 ```
 
-#### Background Sync Callback (Push Mode)
+#### Background Sync Callback
 
-When using push mode with `notificationListening: 'always'`, you can register a callback that runs after background sync completes. For example, this is useful for showing local notifications about new data:
+When using push mode with `notificationListening="always"`, you can register a callback that runs after a background sync completes.
 
 ```typescript
 import { registerBackgroundSyncCallback } from '@sqliteai/sqlite-sync-react-native';
 import * as Notifications from 'expo-notifications';
 
-// Register at module level (outside components)
 registerBackgroundSyncCallback(async ({ changes, db }) => {
-  // Find new inserts in your table
   const newItems = changes.filter(
     (c) => c.table === 'tasks' && c.operation === 'INSERT'
   );
 
   if (newItems.length === 0) return;
 
-  // Query the synced data
   const result = await db.execute(
-    `SELECT * FROM tasks WHERE rowid IN (${newItems.map((c) => c.rowId).join(',')})`
+    `SELECT * FROM tasks WHERE rowid IN (${newItems
+      .map((c) => c.rowId)
+      .join(',')})`
   );
 
-  // Show a local notification
   await Notifications.scheduleNotificationAsync({
     content: {
       title: `${newItems.length} new tasks synced`,
@@ -497,9 +450,9 @@ registerBackgroundSyncCallback(async ({ changes, db }) => {
 });
 ```
 
-#### Database Migrations with `onDatabaseReady`
+#### Database Migrations With `onDatabaseReady`
 
-Use `onDatabaseReady` to run migrations or other setup after the database opens but before sync initialization:
+Use `onDatabaseReady` to run migrations or setup after the database opens and before sync initialization.
 
 ```typescript
 <SQLiteSyncProvider
@@ -508,11 +461,9 @@ Use `onDatabaseReady` to run migrations or other setup after the database opens 
   apiKey="..."
   tablesToBeSynced={[...]}
   onDatabaseReady={async (db) => {
-    // Check current schema version
     const { rows } = await db.execute('PRAGMA user_version');
     const version = rows?.[0]?.user_version ?? 0;
 
-    // Run migrations
     if (version < 1) {
       await db.execute('ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 0');
       await db.execute('PRAGMA user_version = 1');
@@ -521,9 +472,9 @@ Use `onDatabaseReady` to run migrations or other setup after the database opens 
 >
 ```
 
-#### Custom Push Permission UI with `renderPushPermissionPrompt`
+#### Custom Push Permission UI With `renderPushPermissionPrompt`
 
-When using push mode, the system will prompt the user for notification permissions. Use `renderPushPermissionPrompt` to show your own UI before the system prompt appears. The render prop receives `allow` and `deny` callbacks — no Promise or ref boilerplate needed.
+Use `renderPushPermissionPrompt` to show your own UI before the system notification permission prompt appears.
 
 ```tsx
 <SQLiteSyncProvider
@@ -552,52 +503,34 @@ When using push mode, the system will prompt the user for notification permissio
 
 #### `AdaptivePollingConfig`
 
-Configuration for adaptive polling behavior (polling mode only).
-
 ```typescript
 interface AdaptivePollingConfig {
-  /**
-   * Base sync interval in milliseconds
-   * Default: 5000 (5 seconds)
-   */
   baseInterval?: number;
-
-  /**
-   * Maximum interval during backoff in milliseconds
-   * Default: 300000 (5 minutes)
-   */
   maxInterval?: number;
-
-  /**
-   * Number of consecutive empty syncs before backing off
-   * Default: 5
-   */
   emptyThreshold?: number;
-
-  /**
-   * Multiplier for idle backoff (when no changes detected)
-   * Default: 1.5 (gentle backoff)
-   */
   idleBackoffMultiplier?: number;
-
-  /**
-   * Multiplier for error backoff (when sync fails)
-   * Default: 2.0 (aggressive backoff)
-   */
   errorBackoffMultiplier?: number;
 }
 ```
+
+Defaults:
+
+- `baseInterval`: `5000`
+- `maxInterval`: `300000`
+- `emptyThreshold`: `5`
+- `idleBackoffMultiplier`: `1.5`
+- `errorBackoffMultiplier`: `2.0`
 
 #### `TableConfig`
 
 ```typescript
 interface TableConfig {
-  name: string; // Table name (must match cloud table)
-  createTableSql: string; // CREATE TABLE SQL statement
+  name: string;
+  createTableSql: string;
 }
 ```
 
-**Example:**
+Example:
 
 ```typescript
 {
@@ -613,35 +546,20 @@ interface TableConfig {
 }
 ```
 
-**Important:**
+Important:
 
-- Always include `IF NOT EXISTS` to prevent errors if the table already exists
-- The table schema must match exactly to your remote table schema in SQLite Cloud
-- The library executes this SQL during initialization, before SQLiteSync setup
+- Include `IF NOT EXISTS`
+- Match the remote schema exactly
+- The library executes this SQL during initialization before SQLite Sync setup
 
 #### `ReactiveQueryConfig`
 
-Configuration for reactive queries with table-level granularity.
-
 ```typescript
 interface ReactiveQueryConfig {
-  /**
-   * The SQL query to execute
-   */
   query: string;
-
-  /**
-   * Query parameters/arguments (optional)
-   */
   arguments?: any[];
-
-  /**
-   * Tables to monitor for changes
-   */
   fireOn: Array<{
-    /** Table name to monitor */
     table: string;
-    /** Optional: specific operation to monitor (INSERT, UPDATE, or DELETE) */
     operation?: 'INSERT' | 'UPDATE' | 'DELETE';
   }>;
 }
@@ -649,76 +567,43 @@ interface ReactiveQueryConfig {
 
 #### `TableUpdateData<T>`
 
-Row-level update event data from op-sqlite's updateHook.
-
 ```typescript
 interface TableUpdateData<T = any> {
-  /**
-   * The table that was modified
-   */
   table: string;
-
-  /**
-   * The type of operation that occurred
-   *
-   * Possible values:
-   * - 'DELETE' - Row was deleted
-   * - 'INSERT' - Row was inserted
-   * - 'UPDATE' - Row was updated
-   */
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
-
-  /**
-   * SQLite's internal rowid (NOT your table's primary key)
-   */
   rowId: number;
-
-  /**
-   * The row data retrieved from the database
-   *
-   * The hook automatically queries the database to fetch the row data.
-   * For DELETE operations, this will be null since the row no longer exists.
-   */
   row: T | null;
 }
 ```
 
-#### `TableUpdateConfig<T>`
+Notes:
 
-Configuration for row-level table update listeners.
+- `rowId` is SQLite's internal `rowid`, not your application primary key
+- For `DELETE`, `row` is `null`
+
+#### `TableUpdateConfig<T>`
 
 ```typescript
 interface TableUpdateConfig<T = any> {
-  /**
-   * List of table names to monitor for changes
-   */
   tables: string[];
-
-  /**
-   * Callback function executed when a monitored table is updated
-   *
-   * Receives detailed information about the row-level change
-   * including the operation type (INSERT/UPDATE/DELETE) and row data
-   */
   onUpdate: (data: TableUpdateData<T>) => void;
 }
 ```
 
 ### Contexts
 
-The library provides three separate React Contexts for optimized re-renders:
+The library exposes three React contexts.
 
 #### `SQLiteDbContext`
 
-Provides database connections and initialization errors. **Rarely changes** (only on init/error).
+Provides database connections and fatal initialization errors. This context changes rarely.
 
-**Dual Connection Architecture:**
-The library opens **two connections** to the same database file for optimal performance:
+Dual-connection architecture:
 
-- **writeDb** - Write connection for sync operations, reactive queries, update hooks, and write operations
-- **readDb** - Read-only connection for read-only queries (optional for performance)
+- `writeDb`: write connection used for sync operations, reactive subscriptions, update hooks, and writes
+- `readDb`: read-only connection for read-only queries
 
-Both connections use SQLite's WAL (Write-Ahead Logging) mode to enable concurrent read/write access without blocking.
+Both connections target the same database file and use WAL mode for concurrent access.
 
 ```typescript
 import { useContext } from 'react';
@@ -727,17 +612,15 @@ import { SQLiteDbContext } from '@sqliteai/sqlite-sync-react-native';
 const { writeDb, readDb, initError } = useContext(SQLiteDbContext);
 ```
 
-**Values:**
-
-| Property    | Type            | Description                                                                                                            |
-| ----------- | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `writeDb`   | `DB \| null`    | Write [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) connection with SQLite Sync extension loaded    |
-| `readDb`    | `DB \| null`    | Read-only [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) connection for read-only queries (optional) |
-| `initError` | `Error \| null` | Fatal database error (connections unavailable)                                                                         |
+| Property    | Type            | Description                                                                                               |
+| ----------- | --------------- | --------------------------------------------------------------------------------------------------------- |
+| `writeDb`   | `DB \| null`    | Write [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) connection with SQLite Sync loaded |
+| `readDb`    | `DB \| null`    | Read-only [op-sqlite](https://op-engineering.github.io/op-sqlite/docs/api) connection                     |
+| `initError` | `Error \| null` | Fatal database initialization error                                                                       |
 
 #### `SQLiteSyncStatusContext`
 
-Provides sync status information. **Changes frequently** (on every sync).
+Provides sync status information. This context changes frequently.
 
 ```typescript
 import { useContext } from 'react';
@@ -747,25 +630,23 @@ const { isSyncing, lastSyncTime, syncError, syncMode, currentSyncInterval } =
   useContext(SQLiteSyncStatusContext);
 ```
 
-**Values:**
-
-| Property                | Type                  | Description                                                          |
-| ----------------------- | --------------------- | -------------------------------------------------------------------- |
-| `syncMode`              | `'polling' \| 'push'` | Current sync mode (may differ from prop if push fallback to polling) |
-| `isSyncReady`           | `boolean`             | Whether sync is configured and ready                                 |
-| `isSyncing`             | `boolean`             | Whether sync is currently in progress                                |
-| `lastSyncTime`          | `number \| null`      | Timestamp of last successful sync                                    |
-| `lastSyncChanges`       | `number`              | Number of changes in last sync                                       |
-| `syncError`             | `Error \| null`       | Recoverable sync error (db works offline-only)                       |
-| `currentSyncInterval`   | `number \| null`      | Current polling interval in ms (null in push mode)                   |
-| `consecutiveEmptySyncs` | `number`              | Number of consecutive syncs with no changes                          |
-| `consecutiveSyncErrors` | `number`              | Number of consecutive sync errors                                    |
-| `isAppInBackground`     | `boolean`             | Whether app is currently in background                               |
-| `isNetworkAvailable`    | `boolean`             | Whether network connection is available                              |
+| Property                | Type                  | Description                                      |
+| ----------------------- | --------------------- | ------------------------------------------------ |
+| `syncMode`              | `'polling' \| 'push'` | Effective runtime sync mode                      |
+| `isSyncReady`           | `boolean`             | Whether sync is configured and ready             |
+| `isSyncing`             | `boolean`             | Whether sync is in progress                      |
+| `lastSyncTime`          | `number \| null`      | Timestamp of last successful sync                |
+| `lastSyncChanges`       | `number`              | Number of changes in last sync                   |
+| `syncError`             | `Error \| null`       | Recoverable sync error                           |
+| `currentSyncInterval`   | `number \| null`      | Current polling interval, or `null` in push mode |
+| `consecutiveEmptySyncs` | `number`              | Consecutive syncs with no changes                |
+| `consecutiveSyncErrors` | `number`              | Consecutive sync errors                          |
+| `isAppInBackground`     | `boolean`             | Whether the app is currently backgrounded        |
+| `isNetworkAvailable`    | `boolean`             | Whether network connectivity is available        |
 
 #### `SQLiteSyncActionsContext`
 
-Provides stable sync action functions. **Never changes**.
+Provides stable sync action functions.
 
 ```typescript
 import { useContext } from 'react';
@@ -774,21 +655,17 @@ import { SQLiteSyncActionsContext } from '@sqliteai/sqlite-sync-react-native';
 const { triggerSync } = useContext(SQLiteSyncActionsContext);
 ```
 
-**Values:**
+| Property      | Type                  | Description             |
+| ------------- | --------------------- | ----------------------- |
+| `triggerSync` | `() => Promise<void>` | Manually trigger a sync |
 
-| Property      | Type                  | Description                                   |
-| ------------- | --------------------- | --------------------------------------------- |
-| `triggerSync` | `() => Promise<void>` | Function to manually trigger a sync operation |
-
-**Note:** Most users should use the [specialized hooks](#hooks) instead of accessing contexts directly.
+Most applications should prefer the specialized hooks instead of consuming contexts directly.
 
 ### Hooks
 
-The library provides specialized hooks for different use cases. Choose the right hook based on what data your component needs to avoid unnecessary re-renders.
-
 #### `useSqliteDb()`
 
-Access the database connections and initialization errors **without subscribing to sync updates**. This hook is optimized for components that only need database access and won't re-render on every sync.
+Access the database connections and initialization errors without subscribing to sync status updates.
 
 ```typescript
 useSqliteDb(): {
@@ -802,28 +679,22 @@ useSqliteDb(): {
 const { writeDb, readDb, initError } = useSqliteDb();
 ```
 
-**Returns:**
+Returns:
 
-- `writeDb`: Write database connection
-- `readDb`: Read-only database connection
-- `initError`: Fatal initialization error
+- `writeDb`: write database connection
+- `readDb`: read-only database connection
+- `initError`: fatal initialization error
 
-**Best for:** Components that need database access but don't need sync status.
+Use this when:
 
-**Note:** In most cases, you should use the specialized hooks (`useSqliteExecute`, `useSqliteTransaction`, `useSqliteSyncQuery`) instead of accessing database connections directly.
+- You need direct DB access
+- You do not want re-renders on sync state changes
 
-**About the database connections:**
-
-Both `writeDb` and `readDb` are `DB` instances from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api). The `writeDb` connection has the **SQLite Sync extension loaded**. This means you can:
-
-- Use the full [op-sqlite API](https://op-engineering.github.io/op-sqlite/docs/api) for standard database operations
-- Use any [SQLite Sync functions](https://github.com/sqliteai/sqlite-sync/blob/main/API.md) like `cloudsync_uuid()`, `cloudsync_changes()`, etc.
-- Use `writeDb` for all sync operations, reactive queries, and writes
-- Use `readDb` for read-only queries (optional performance optimization)
+> Note: `writeDb` and `readDb` are `DB` instances from [`@op-engineering/op-sqlite`](https://op-engineering.github.io/op-sqlite/docs/api). The `writeDb` connection has SQLite Sync loaded, so you can call standard OP-SQLite APIs and SQLite Sync functions such as `cloudsync_uuid()` or `cloudsync_changes()`.
 
 #### `useSyncStatus()`
 
-Access sync status information, use this when you need to display sync state in your UI.
+Access sync status information for UI state.
 
 ```typescript
 useSyncStatus(): {
@@ -860,27 +731,14 @@ return (
 );
 ```
 
-**Returns:**
+Use this when:
 
-- `syncMode`: Current sync mode (`'polling'` or `'push'`)
-- `isSyncReady`: Whether sync is configured
-- `isSyncing`: Whether sync is in progress
-- `lastSyncTime`: Last successful sync timestamp
-- `lastSyncChanges`: Number of changes in last sync
-- `syncError`: Recoverable sync error
-- `currentSyncInterval`: Current polling interval (null in push mode)
-- `consecutiveEmptySyncs`: Number of consecutive syncs with no changes
-- `consecutiveSyncErrors`: Number of consecutive sync errors
-- `isAppInBackground`: Whether app is in background
-- `isNetworkAvailable`: Whether network is available
-
-**Best for:** Status displays, sync indicators, monitoring components.
+- You need to render sync state
+- You want to inspect the effective runtime `syncMode`
 
 #### `useSqliteSync()`
 
-Access all sync functionality (database + status + actions). This is a convenience hook that combines all contexts.
-
-**Note:** This hook will re-render on every sync operation. If you only need `writeDb` / `readDb` / `initError`, use `useSqliteDb()` instead.
+Convenience hook that combines DB access, sync status, and actions.
 
 ```typescript
 useSqliteSync(): {
@@ -914,15 +772,14 @@ return (
 );
 ```
 
-**Returns:** All properties from `useSqliteDb()` + `useSyncStatus()` + `triggerSync`
+Use this when:
 
-**Best for:** Components that need access to everything (use sparingly to avoid unnecessary re-renders).
+- You want one hook for everything
+- You accept more frequent re-renders
 
 #### `useTriggerSqliteSync()`
 
 Manually trigger a sync operation.
-
-**How it works:** This hook is a convenience wrapper that exposes the `triggerSync` function from the Provider. The actual sync logic lives in `SQLiteSyncProvider` to ensure that `isSyncing`, `lastSyncTime`, and `lastSyncChanges` state are updated correctly, allowing all hooks (`useSqliteSyncQuery`) to react properly.
 
 ```typescript
 useTriggerSqliteSync(): {
@@ -932,9 +789,8 @@ useTriggerSqliteSync(): {
 
 ```typescript
 const { triggerSync } = useTriggerSqliteSync();
-const { isSyncing } = useSyncStatus(); // isSyncing comes from useSyncStatus
+const { isSyncing } = useSyncStatus();
 
-// Trigger sync on button press
 <Button
   onPress={triggerSync}
   disabled={isSyncing}
@@ -944,40 +800,35 @@ const { isSyncing } = useSyncStatus(); // isSyncing comes from useSyncStatus
 
 #### `useSqliteSyncQuery(config)`
 
-Execute a reactive query with table-level granularity using op-sqlite's `reactiveExecute`.
+Execute a reactive query using OP-SQLite's `reactiveExecute`.
 
-**How it works:** This hook uses [op-sqlite's reactive queries](https://op-engineering.github.io/op-sqlite/docs/reactive_queries) to automatically re-run the query when specified tables are modified via transactions. It performs the initial fetch with **readDb** when available, then installs the reactive subscription on **writeDb** so sync-driven changes are observed immediately.
+How it works:
 
-**Key Features:**
-
-- **Automatic updates:** Query re-runs when monitored tables change
-- **Initial data loading:** Executes query immediately with `readDb`
-- **Reactive updates:** Subscribes with `writeDb`
-
-**Parameters:**
+- Performs the initial fetch with `readDb` when available
+- Installs the reactive subscription on `writeDb`
+- Re-runs the query when watched tables change
 
 ```typescript
 interface ReactiveQueryConfig {
-  query: string; // SQL query to execute
-  arguments?: any[]; // Query parameters (optional)
+  query: string;
+  arguments?: any[];
   fireOn: Array<{
-    // Tables to monitor
     table: string;
-    operation?: 'INSERT' | 'UPDATE' | 'DELETE'; // Optional: specific operation
+    operation?: 'INSERT' | 'UPDATE' | 'DELETE';
   }>;
 }
 ```
 
 ```typescript
 useSqliteSyncQuery<T = any>(config: ReactiveQueryConfig): {
-  data: T[];              // Query results
-  isLoading: boolean;     // True during initial load
-  error: Error | null;    // Query error
-  unsubscribe: () => void; // Manually unsubscribe (auto-cleanup on unmount)
+  data: T[];
+  isLoading: boolean;
+  error: Error | null;
+  unsubscribe: () => void;
 }
 ```
 
-**Example:**
+Example:
 
 ```typescript
 const { data, isLoading, error } = useSqliteSyncQuery<Task>({
@@ -994,50 +845,41 @@ return (
 );
 ```
 
-**Important: Use Transactions for Writes**
+Important:
 
-Reactive queries **only fire on committed transactions**. When writing data, always use transactions:
+- Reactive queries fire on committed transactions
+- Use `useSqliteTransaction()` for writes that should invalidate reactive queries
 
 ```typescript
 const { execute } = useSqliteExecute();
 const { executeTransaction } = useSqliteTransaction();
 
-// ✅ This will trigger reactive queries
+// Triggers reactive queries
 await executeTransaction(async (tx) => {
   await tx.execute('INSERT INTO tasks (id, title) VALUES (?, ?)', [id, title]);
 });
 
-// ❌ This will NOT trigger reactive queries
+// Does not trigger reactive queries
 await execute('INSERT INTO tasks (id, title) VALUES (?, ?)', [id, title]);
 ```
 
-The library automatically wraps sync operations in transactions, so reactive queries update when cloud changes arrive.
+Sync operations are already wrapped in transactions internally, so cloud-driven changes will update reactive queries.
 
 #### `useOnTableUpdate(config)`
 
-Listen for row-level changes (INSERT, UPDATE, DELETE) on specified tables using op-sqlite's `updateHook`.
-
-**How it works:** This hook uses op-sqlite's `updateHook` to receive individual row change notifications. Unlike reactive queries which re-run the entire query, this hook fires for each row modification and automatically fetches the complete row data for you. Always uses **writeDb** to ensure update hooks see sync changes immediately.
-
-**Key Features:**
-
-- **Row-level granularity:** Callback fires for each individual row change
-- **Operation details:** Know exactly what operation (INSERT/UPDATE/DELETE) occurred
-- **Automatic row fetching:** Row data is queried and provided in the callback
-
-**Parameters:**
+Listen for row-level `INSERT`, `UPDATE`, and `DELETE` events using OP-SQLite's `updateHook`.
 
 ```typescript
 interface TableUpdateConfig<T = any> {
-  tables: string[]; // Tables to monitor
-  onUpdate: (data: TableUpdateData<T>) => void; // Callback function
+  tables: string[];
+  onUpdate: (data: TableUpdateData<T>) => void;
 }
 
 interface TableUpdateData<T = any> {
-  table: string; // Table that was modified
-  operation: 'INSERT' | 'UPDATE' | 'DELETE'; // Operation type
-  rowId: number; // SQLite internal rowid (not your primary key)
-  row: T | null; // Row data (null for DELETE operations)
+  table: string;
+  operation: 'INSERT' | 'UPDATE' | 'DELETE';
+  rowId: number;
+  row: T | null;
 }
 ```
 
@@ -1045,7 +887,7 @@ interface TableUpdateData<T = any> {
 useOnTableUpdate<T = any>(config: TableUpdateConfig<T>): void
 ```
 
-**Example:**
+Example:
 
 ```typescript
 interface Task {
@@ -1061,43 +903,39 @@ useOnTableUpdate<Task>({
     console.log(`Operation: ${data.operation}`);
 
     if (data.row) {
-      // Row data is automatically fetched and typed
       Toast.show(
         `Task "${data.row.title}" was ${data.operation.toLowerCase()}d`
       );
 
-      // Update analytics
       analytics.track('task_modified', {
         operation: data.operation,
         taskId: data.row.id,
       });
     } else {
-      // DELETE operations have null row
       console.log('Row was deleted');
     }
   },
 });
 ```
 
-**Note:** For DELETE operations, `row` will be `null` since the row no longer exists in the database.
+Note:
+
+- For `DELETE`, `row` is `null`
+- `rowId` is SQLite internal state, not your domain ID
 
 #### `useSqliteExecute()`
 
-Execute SQL commands with configurable connection selection (write or read-only).
+Execute SQL imperatively with configurable connection selection.
 
-**How it works:** This hook provides an imperative way to execute SQL commands. Unlike `useSqliteSyncQuery` (which is declarative and reactive), this hook ensures all requests are processed by SQLite in the order they're called.
+Connection selection:
 
-**Connection Selection:**
-
-- By default, uses **writeDb** (sees sync changes, can write)
-- Pass `{ readOnly: true }` to use **readDb** (read-only queries)
-
-**Parameters:**
+- Default: `writeDb`
+- Pass `{ readOnly: true }` to use `readDb`
 
 ```typescript
 interface SqliteExecuteOptions {
-  readOnly?: boolean; // Use read-only connection (default: false)
-  autoSync?: boolean; // Write mode only. Default: true
+  readOnly?: boolean;
+  autoSync?: boolean;
 }
 ```
 
@@ -1108,12 +946,12 @@ useSqliteExecute(): {
     params?: any[],
     options?: SqliteExecuteOptions
   ) => Promise<QueryResult | undefined>;
-  isExecuting: boolean; // True while executing
-  error: Error | null; // Execution error
+  isExecuting: boolean;
+  error: Error | null;
 }
 ```
 
-**Example:**
+Example:
 
 ```typescript
 import { useSqliteExecute } from '@sqliteai/sqlite-sync-react-native';
@@ -1123,7 +961,6 @@ function TaskManager() {
 
   const addTask = async (title: string) => {
     try {
-      // Write operation (uses writeDb by default)
       const result = await execute(
         'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?)',
         [title]
@@ -1136,7 +973,6 @@ function TaskManager() {
 
   const getTask = async (id: string) => {
     try {
-      // Read operation (explicitly use readDb for performance)
       const result = await execute('SELECT * FROM tasks WHERE id = ?', [id], {
         readOnly: true,
       });
@@ -1159,11 +995,12 @@ function TaskManager() {
 }
 ```
 
-**Important:** Direct `execute()` calls do NOT trigger reactive queries. To trigger reactive queries, use `useSqliteTransaction()` instead.
+Important:
 
-> **Note:** This hook automatically syncs changes to the cloud after each write, so your data is pushed immediately. If you use op-sqlite's `db.execute()` directly instead, changes will **not** be synced automatically — you would need to call `db.execute('SELECT cloudsync_network_send_changes()')` manually.
+- Direct `execute()` writes do not trigger reactive queries
+- Use `useSqliteTransaction()` when you need reactive invalidation
 
-You can disable automatic sync for a write by passing `{ autoSync: false }`:
+This hook automatically sends local write changes to the cloud unless you disable it:
 
 ```typescript
 await execute(
@@ -1173,9 +1010,11 @@ await execute(
 );
 ```
 
+If you call `db.execute()` directly through OP-SQLite, automatic cloud send does not happen for you.
+
 #### `useSqliteTransaction()`
 
-Execute SQL commands within a transaction for atomic write operations.
+Execute SQL commands within a transaction for atomic writes.
 
 ```typescript
 useSqliteTransaction(): {
@@ -1183,12 +1022,12 @@ useSqliteTransaction(): {
     fn: (tx: Transaction) => Promise<void>,
     options?: { autoSync?: boolean }
   ) => Promise<void>;
-  isExecuting: boolean; // True while executing
-  error: Error | null; // Transaction error
+  isExecuting: boolean;
+  error: Error | null;
 }
 ```
 
-**Example:**
+Example:
 
 ```typescript
 import { useSqliteTransaction } from '@sqliteai/sqlite-sync-react-native';
@@ -1198,8 +1037,6 @@ function TaskManager() {
 
   const addTaskWithLog = async (title: string) => {
     try {
-      // Execute multiple writes atomically
-      // This will trigger reactive queries when it commits
       await executeTransaction(async (tx) => {
         await tx.execute(
           'INSERT INTO tasks (id, title) VALUES (cloudsync_uuid(), ?)',
@@ -1238,11 +1075,13 @@ function TaskManager() {
 }
 ```
 
-**Important:** Transactions automatically trigger reactive queries when they commit successfully. This is the recommended way to write data when using `useSqliteSyncQuery`.
+Important:
 
-> **Note:** This hook automatically syncs changes to the cloud after each transaction commits, so your data is pushed immediately. If you use op-sqlite's `db.transaction()` directly instead, changes will **not** be synced automatically — you would need to call `db.execute('SELECT cloudsync_network_send_changes()')` manually.
+- Transactions trigger reactive queries on successful commit
+- This is the recommended write path for data displayed with `useSqliteSyncQuery`
+- The hook auto-sends changes to the cloud after commit unless `autoSync` is `false`
 
-To skip automatic sync for a transaction:
+To skip automatic sync:
 
 ```typescript
 await executeTransaction(
@@ -1256,13 +1095,15 @@ await executeTransaction(
 );
 ```
 
-## 🚨 Error Handling
+> Note: If you use `db.transaction()` directly through OP-SQLite, automatic cloud send does not happen for you.
 
-The library separates **fatal database errors** from **recoverable sync errors** to enable true offline-first operation.
+## Error Handling
+
+The library separates fatal database errors from recoverable sync errors so the app can continue to work offline whenever possible.
 
 ### Database Errors (`initError`)
 
-**Fatal errors** that prevent the database from working at all. The app cannot function when these occur.
+These are fatal. The database is unavailable.
 
 ```typescript
 const { initError, writeDb } = useSqliteDb();
@@ -1272,49 +1113,55 @@ if (initError) {
 }
 ```
 
-**Common causes:**
+Common causes:
 
-- Unsupported platform (web, Windows, etc.)
+- Unsupported platform
 - Missing database name
-- Failed to open database file
+- Failed to open the database file
 - Failed to create tables
 
-**When this happens:** Both `writeDb` and `readDb` will be `null`, and the app cannot work offline or online.
+When this happens:
+
+- `writeDb` is `null`
+- `readDb` is `null`
+- The app cannot operate offline or online
 
 ### Sync Errors (`syncError`)
 
-**Recoverable errors** that prevent syncing but allow full offline database access.
+These are recoverable. The local database still works.
 
 ```typescript
 const { writeDb } = useSqliteDb();
 const { syncError } = useSyncStatus();
 
-// Database still works offline even with syncError!
 if (writeDb) {
   await writeDb.execute('INSERT INTO tasks ...');
 }
 
-// Show non-blocking warning
 {
   syncError && <Banner warning={syncError.message} />;
 }
 ```
 
-**Common causes:**
+Common causes:
 
-- Missing or invalid connection string
-- Missing or invalid API key/access token
-- SQLiteSync extension failed to load
+- Invalid `databaseId`
+- Invalid `apiKey` or `accessToken`
+- SQLite Sync extension failed to load
 - Network initialization failed
 - Temporary network connectivity issues
 
-**When this happens:** `writeDb` / `readDb` remain available for local-only operations. Sync will be retried on the next interval or when credentials are provided.
+When this happens:
 
-**Important:** Sync errors automatically clear on the next successful sync.
+- `writeDb` and `readDb` remain available
+- The app still works offline
+- Sync retries later when conditions improve
 
-## 🐛 Debug Logging
+Sync errors clear automatically after the next successful sync.
 
-Enable detailed logging during development:
+## Debug Logging
+
+Enable verbose development logging with the `debug` prop:
 
 ```typescript
 <SQLiteSyncProvider
@@ -1322,11 +1169,12 @@ Enable detailed logging during development:
   databaseName="myapp.db"
   apiKey="your-api-key"
   tablesToBeSynced={[...]}
-  debug={__DEV__} // Enable in development only
+  syncMode="polling"
+  debug={__DEV__}
 >
 ```
 
-**When enabled, logs:**
+When enabled, logs include:
 
 - Database initialization steps
 - Extension loading
@@ -1335,35 +1183,51 @@ Enable detailed logging during development:
 - Sync operations
 - Change counts
 
-## ⚠️ Known Issues & Improvements
+## Known Issues & Improvements
 
-### Reactive Queries & Write Connection Contention
+### Reactive Queries And Write Connection Contention
 
-**Issue:** `useSqliteSyncQuery` uses `writeDb` with op-sqlite's `reactiveExecute` to ensure queries see sync changes immediately. However, when data changes frequently (e.g., during active sync), the write connection can become a bottleneck.
+Issue:
 
-**Potential improvement:** Have `cloudsync_network_sync()` return the list of updated tables. This would allow reactive queries to use `readDb` instead, with manual invalidation when sync completes for specific tables. Trade-off: manual invalidation logic vs. op-sqlite's built-in `reactiveExecute`.
+`useSqliteSyncQuery` uses `writeDb` with OP-SQLite's `reactiveExecute` so queries see sync changes immediately. Under heavy write or sync activity, the write connection can become a bottleneck.
 
-### Optimistic Updates & Sync Blocking
+Potential improvement:
 
-**Issue:** With push notifications, sync can be triggered frequently. Since sync operations use `writeDb`, a user writing to the local database at the same time may experience delayed UI updates while waiting for the sync transaction to complete.
+Have `cloudsync_network_sync()` return updated table names so reactive queries could read from `readDb` and invalidate manually.
 
-**Potential improvement:** Implement optimistic updates where local writes update the UI immediately, independent of sync status. This requires careful handling of conflict resolution when sync completes.
+### Optimistic Updates And Sync Blocking
+
+Issue:
+
+In push-heavy scenarios, sync can occupy `writeDb` frequently enough that local writes may feel delayed.
+
+Potential improvement:
+
+Introduce optimistic UI updates independent of sync completion, with conflict-resolution rules when sync finishes.
 
 ### First Install Empty State
 
-**Issue:** On first app install, the initial sync may not return changes immediately (server may need time to prepare data). The app stops showing the loader and displays empty content, then shows the actual data on the second sync interval.
+Issue:
 
-**Potential improvement:** Keep showing a loader until the first successful sync with data, or until a timeout since there might not be any data to fetch 
+On first install, the initial sync may not immediately return data, so the app can briefly render an empty state before a later sync populates it.
 
-## 📖 Examples
+Potential improvement:
 
-Check out the [examples](./examples) directory for complete working examples:
+Keep showing a loader until the first successful sync with data, or until a timeout expires.
 
-- **[sync-demo-expo](./examples/sync-demo-expo)** - Expo development build with sync demonstration using push notifications
-- **[sync-demo-bare](./examples/sync-demo-bare)** - Bare React Native project with sync demonstration using polling
+## Examples
 
-## 🔗 Links
+See the [`examples`](./examples) directory:
 
-- [SQLite Sync Documentation](https://docs.sqlitecloud.io/docs/sqlite-sync-introduction) - Detailed sync docs with API references and best practices
-- [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/) - Manage your databases
+- [`examples/sync-demo-expo`](./examples/sync-demo-expo): Expo development build using push notifications
+- [`examples/sync-demo-bare`](./examples/sync-demo-bare): Bare React Native example using polling
+
+## Links
+
+- [SQLite Sync - Library Documentation](https://docs.sqlitecloud.io/docs/sqlite-sync-introduction)
+- [SQLite Sync - Dashboard Documentation](https://docs.sqlitecloud.io/docs/offsync)
+- [SQLite Cloud Dashboard](https://dashboard.sqlitecloud.io/)
+- [SQLite Sync Best Practices](https://docs.sqlitecloud.io/docs/sqlite-sync-best-practices)
+- [SQLite Cloud Access Tokens](https://docs.sqlitecloud.io/docs/access-tokens)
+- [SQLite Cloud RLS](https://docs.sqlitecloud.io/docs/rls)
 - [OP-SQLite API Reference](https://op-engineering.github.io/op-sqlite/docs/api)

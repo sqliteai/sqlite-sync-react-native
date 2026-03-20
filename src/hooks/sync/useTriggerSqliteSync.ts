@@ -10,11 +10,12 @@ import { SQLiteSyncActionsContext } from '../../contexts/SQLiteSyncActionsContex
  * updated correctly, allowing all hooks (useSqliteSyncQuery)
  * to react properly.
  *
- * @returns Object containing triggerSync function and current syncing state
+ * @returns Object containing the triggerSync function
  *
  * @example
  * ```typescript
- * const { triggerSync, isSyncing } = useTriggerSqliteSync();
+ * const { triggerSync } = useTriggerSqliteSync();
+ * const { isSyncing } = useSyncStatus();
  *
  * return (
  *   <Button

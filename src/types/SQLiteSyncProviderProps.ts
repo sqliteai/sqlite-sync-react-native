@@ -130,7 +130,7 @@ interface WithAccessToken {
 
 /**
  * Polling mode configuration
- * Adaptive polling is required when using polling mode
+ * Adaptive polling is optional and falls back to runtime defaults
  */
 interface PollingMode {
   /**
@@ -140,10 +140,10 @@ interface PollingMode {
   syncMode: 'polling';
 
   /**
-   * Adaptive polling configuration (required in polling mode)
-   * Controls polling intervals and backoff behavior
+   * Adaptive polling configuration (optional in polling mode)
+   * When omitted, runtime defaults are used
    */
-  adaptivePolling: AdaptivePollingConfig;
+  adaptivePolling?: AdaptivePollingConfig;
 
   /**
    * Not available in polling mode
