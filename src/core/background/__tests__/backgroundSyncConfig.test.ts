@@ -95,6 +95,16 @@ describe('backgroundSyncConfig', () => {
 
       expect(result).toBeNull();
     });
+
+    it('returns null for parsed config missing required fields', async () => {
+      mockSecureStore.getItemAsync.mockResolvedValue(
+        JSON.stringify({ databaseId: 'db_only' })
+      );
+
+      const result = await getPersistedConfig();
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('persistConfig', () => {

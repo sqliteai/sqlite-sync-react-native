@@ -116,6 +116,22 @@ describe('usePushNotificationSync', () => {
     expect(mockExpoNotifications.getPermissionsAsync).not.toHaveBeenCalled();
   });
 
+  it('does nothing when expo-notifications is unavailable', async () => {
+    const deps = require('../../common/optionalDependencies');
+    const originalExpoNotifications = deps.ExpoNotifications;
+    deps.ExpoNotifications = null;
+
+    try {
+      renderHook(() => usePushNotificationSync(createDefaultParams()));
+
+      await act(async () => {});
+
+      expect(registerPushToken).not.toHaveBeenCalled();
+    } finally {
+      deps.ExpoNotifications = originalExpoNotifications;
+    }
+  });
+
   it('requests permissions when push mode', async () => {
     renderHook(() => usePushNotificationSync(createDefaultParams()));
 
@@ -153,6 +169,58 @@ describe('usePushNotificationSync', () => {
     await act(async () => {});
 
     expect(onPermissionsDenied).toHaveBeenCalled();
+  });
+
+  it('shows custom permission prompt and requests permissions after allow', async () => {
+    mockExpoNotifications.getPermissionsAsync.mockResolvedValue({
+      status: 'undetermined',
+    });
+    const renderPushPermissionPrompt = jest.fn(({ allow }: any) => {
+      allow();
+      return 'permission-ui';
+    });
+
+    const { result } = renderHook(() =>
+      usePushNotificationSync(
+        createDefaultParams({ renderPushPermissionPrompt })
+      )
+    );
+
+    await act(async () => {});
+
+    expect(renderPushPermissionPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allow: expect.any(Function),
+        deny: expect.any(Function),
+      })
+    );
+    expect(result.current.permissionPromptNode).toBeNull();
+    expect(mockExpoNotifications.requestPermissionsAsync).toHaveBeenCalled();
+  });
+
+  it('shows custom permission prompt and falls back when denied from custom UI', async () => {
+    mockExpoNotifications.getPermissionsAsync.mockResolvedValue({
+      status: 'undetermined',
+    });
+    const onPermissionsDenied = jest.fn();
+    const renderPushPermissionPrompt = jest.fn(({ deny }: any) => {
+      deny();
+      return 'permission-ui';
+    });
+
+    renderHook(() =>
+      usePushNotificationSync(
+        createDefaultParams({
+          renderPushPermissionPrompt,
+          onPermissionsDenied,
+        })
+      )
+    );
+
+    await act(async () => {});
+
+    expect(onPermissionsDenied).toHaveBeenCalled();
+    expect(mockExpoNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
   });
 
   it('adds foreground listener in foreground mode', async () => {
@@ -264,6 +332,23 @@ describe('usePushNotificationSync', () => {
     ).toHaveBeenCalled();
   });
 
+  it('does not register background sync in always mode when deps are missing', async () => {
+    (isBackgroundSyncAvailable as jest.Mock).mockReturnValue(false);
+
+    renderHook(() =>
+      usePushNotificationSync(
+        createDefaultParams({ notificationListening: 'always' })
+      )
+    );
+
+    await act(async () => {});
+
+    expect(registerBackgroundSync).not.toHaveBeenCalled();
+    expect(setForegroundSyncCallback).not.toHaveBeenCalledWith(
+      expect.any(Function)
+    );
+  });
+
   it('unregisters background sync when switching from push to polling', async () => {
     const { rerender } = renderHook(
       ({ syncMode }: { syncMode: 'push' | 'polling' }) =>
@@ -357,6 +442,21 @@ describe('usePushNotificationSync', () => {
     unmount();
 
     expect(removeMock).toHaveBeenCalled();
+    expect(setForegroundSyncCallback).toHaveBeenCalledWith(null);
+  });
+
+  it('clears foreground callback on unmount in always mode', async () => {
+    (isBackgroundSyncAvailable as jest.Mock).mockReturnValue(true);
+
+    const { unmount } = renderHook(() =>
+      usePushNotificationSync(
+        createDefaultParams({ notificationListening: 'always' })
+      )
+    );
+
+    await act(async () => {});
+    unmount();
+
     expect(setForegroundSyncCallback).toHaveBeenCalledWith(null);
   });
 });

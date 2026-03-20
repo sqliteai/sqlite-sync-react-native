@@ -87,6 +87,23 @@ describe('useSqliteTransaction', () => {
     );
   });
 
+  it('does not auto-sync when transaction fails', async () => {
+    const mockDb = createMockDB();
+    (mockDb.transaction as jest.Mock).mockRejectedValue(new Error('tx fail'));
+    const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
+    const { result } = renderHook(() => useSqliteTransaction(), { wrapper });
+
+    await act(async () => {
+      await expect(
+        result.current.executeTransaction(async () => {})
+      ).rejects.toThrow('tx fail');
+    });
+
+    expect(mockDb.execute).not.toHaveBeenCalledWith(
+      'SELECT cloudsync_network_send_changes();'
+    );
+  });
+
   it('skips auto-sync when autoSync=false', async () => {
     const mockDb = createMockDB();
     (mockDb.execute as jest.Mock).mockResolvedValue({ rows: [] });
@@ -126,5 +143,33 @@ describe('useSqliteTransaction', () => {
       ).rejects.toThrow('Transaction failed');
     });
     expect(result.current.error?.message).toBe('Transaction failed');
+  });
+
+  it('sets isExecuting while transaction is in flight', async () => {
+    let resolveTransaction: (() => void) | undefined;
+    const mockDb = createMockDB();
+    (mockDb.transaction as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveTransaction = resolve;
+        })
+    );
+    (mockDb.execute as jest.Mock).mockResolvedValue({ rows: [] });
+    const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
+    const { result } = renderHook(() => useSqliteTransaction(), { wrapper });
+
+    let pendingPromise: Promise<void> | undefined;
+    act(() => {
+      pendingPromise = result.current.executeTransaction(async () => {});
+    });
+
+    expect(result.current.isExecuting).toBe(true);
+
+    await act(async () => {
+      resolveTransaction?.();
+      await pendingPromise;
+    });
+
+    expect(result.current.isExecuting).toBe(false);
   });
 });

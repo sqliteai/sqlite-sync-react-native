@@ -38,6 +38,35 @@ describe('useOnTableUpdate', () => {
     expect(mockDb.updateHook).toHaveBeenCalledWith(null);
   });
 
+  it('uses updated table config after rerender without re-registering the hook', async () => {
+    const mockDb = createMockDB();
+    let hookHandler: any;
+    (mockDb.updateHook as jest.Mock).mockImplementation((fn: any) => {
+      if (typeof fn === 'function') hookHandler = fn;
+    });
+    const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
+    const onUpdate = jest.fn();
+
+    const { rerender } = renderHook(
+      ({ tables }: { tables: string[] }) =>
+        useOnTableUpdate({ tables, onUpdate }),
+      { wrapper, initialProps: { tables: ['users'] } }
+    );
+
+    rerender({ tables: ['orders'] });
+
+    await act(async () => {
+      await hookHandler({ operation: 'INSERT', table: 'users', rowId: 1 });
+      await hookHandler({ operation: 'INSERT', table: 'orders', rowId: 2 });
+    });
+
+    expect(mockDb.updateHook).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ table: 'orders', rowId: 2 })
+    );
+  });
+
   it('calls callback for watched table', async () => {
     const mockDb = createMockDB();
     let hookHandler: any;

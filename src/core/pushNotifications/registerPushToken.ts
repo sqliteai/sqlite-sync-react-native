@@ -73,6 +73,10 @@ export async function registerPushToken(
     headers.Authorization = `Bearer ${accessToken}`;
   } else if (apiKey) {
     headers.Authorization = `Bearer ${apiKey}`;
+  } else {
+    throw new Error(
+      'Push token registration requires either apiKey or accessToken'
+    );
   }
 
   /** PREPARE REQUEST BODY */

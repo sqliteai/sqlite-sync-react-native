@@ -54,6 +54,22 @@ describe('useSqliteExecute', () => {
     expect(writeDb.execute).not.toHaveBeenCalled();
   });
 
+  it('returns undefined for readOnly query when readDb is missing', async () => {
+    const writeDb = createMockDB();
+    const wrapper = createTestWrapper({
+      db: { writeDb: writeDb as any, readDb: null },
+    });
+    const { result } = renderHook(() => useSqliteExecute(), { wrapper });
+
+    let res: any;
+    await act(async () => {
+      res = await result.current.execute('SELECT 1', [], { readOnly: true });
+    });
+
+    expect(res).toBeUndefined();
+    expect(writeDb.execute).not.toHaveBeenCalled();
+  });
+
   it('sets error on failure and throws', async () => {
     const mockDb = createMockDB();
     (mockDb.execute as jest.Mock).mockRejectedValue(new Error('exec fail'));
@@ -158,5 +174,34 @@ describe('useSqliteExecute', () => {
       );
     });
     expect(result.current.error?.message).toBe('Execution failed');
+  });
+
+  it('sets isExecuting while execute is in flight', async () => {
+    let resolveExecute: ((value: any) => void) | undefined;
+    const mockDb = createMockDB();
+    (mockDb.execute as jest.Mock).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveExecute = resolve;
+        })
+    );
+    const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
+    const { result } = renderHook(() => useSqliteExecute(), { wrapper });
+
+    let pendingPromise: Promise<any> | undefined;
+    act(() => {
+      pendingPromise = result.current.execute('SELECT 1', [], {
+        autoSync: false,
+      });
+    });
+
+    expect(result.current.isExecuting).toBe(true);
+
+    await act(async () => {
+      resolveExecute?.({ rows: [] });
+      await pendingPromise;
+    });
+
+    expect(result.current.isExecuting).toBe(false);
   });
 });

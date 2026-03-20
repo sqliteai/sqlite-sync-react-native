@@ -196,6 +196,39 @@ describe('useAppLifecycle', () => {
     expect(result.current.isInBackground).toBe(true);
   });
 
+  it('does not trigger sync on active to active transition', () => {
+    const performSync = jest.fn().mockResolvedValue(undefined);
+    const params = createDefaultParams({
+      performSyncRef: { current: performSync },
+    });
+
+    renderHook(() => useAppLifecycle(params));
+
+    act(() => {
+      appStateHandler?.('active');
+    });
+
+    expect(performSync).not.toHaveBeenCalled();
+  });
+
+  it('triggers sync on inactive to active transition', () => {
+    const performSync = jest.fn().mockResolvedValue(undefined);
+    const params = createDefaultParams({
+      performSyncRef: { current: performSync },
+    });
+
+    renderHook(() => useAppLifecycle(params));
+
+    act(() => {
+      appStateHandler?.('inactive');
+    });
+    act(() => {
+      appStateHandler?.('active');
+    });
+
+    expect(performSync).toHaveBeenCalledTimes(1);
+  });
+
   it('debounce allows foreground sync after FOREGROUND_DEBOUNCE_MS has elapsed', () => {
     const performSync = jest.fn().mockResolvedValue(undefined);
     const params = createDefaultParams({

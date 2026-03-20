@@ -258,6 +258,32 @@ export function useDatabaseInitialization(
       } catch (err) {
         /** FATAL ERROR - database can not be used */
         logger.error('❌ Database initialization failed:', err);
+        if (writeDbRef.current) {
+          try {
+            writeDbRef.current.close();
+            logger.info('Write database closed after initialization failure');
+          } catch (closeErr) {
+            logger.error(
+              '❌ Error closing write database after initialization failure:',
+              closeErr
+            );
+          } finally {
+            writeDbRef.current = null;
+          }
+        }
+        if (readDbRef.current) {
+          try {
+            readDbRef.current.close();
+            logger.info('Read database closed after initialization failure');
+          } catch (closeErr) {
+            logger.error(
+              '❌ Error closing read database after initialization failure:',
+              closeErr
+            );
+          } finally {
+            readDbRef.current = null;
+          }
+        }
         if (isMounted) {
           setInitError(
             err instanceof Error

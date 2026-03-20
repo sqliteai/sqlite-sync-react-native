@@ -33,6 +33,7 @@ const baseParams = {
   databaseId: 'db_test_database_id',
   siteId: 'site-1',
   platform: 'ios',
+  apiKey: 'my-api-key',
   logger,
 };
 
@@ -172,5 +173,13 @@ describe('registerPushToken', () => {
     } finally {
       deps.ExpoApplication = originalExpoApplication;
     }
+  });
+
+  it('throws when neither apiKey nor accessToken is provided', async () => {
+    await expect(
+      registerPushToken({ ...baseParams, apiKey: undefined, accessToken: undefined })
+    ).rejects.toThrow(
+      'Push token registration requires either apiKey or accessToken'
+    );
   });
 });

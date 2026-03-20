@@ -257,4 +257,74 @@ describe('initializeSyncExtension', () => {
       expect.anything()
     );
   });
+
+  it('throws when loadExtension fails', async () => {
+    const db = makeMockDB();
+    db.loadExtension.mockImplementation(() => {
+      throw new Error('load fail');
+    });
+
+    await expect(
+      initializeSyncExtension(db as any, makeConfig(), logger)
+    ).rejects.toThrow('load fail');
+  });
+
+  it('throws when network init fails', async () => {
+    const db = makeMockDB();
+    db.execute.mockImplementation(async (sql: string) => {
+      if (sql.includes('cloudsync_version')) {
+        return { rows: [{ 'cloudsync_version()': '1.0.0' }] };
+      }
+      if (sql.includes('cloudsync_network_init_custom')) {
+        throw new Error('network init failed');
+      }
+      return { rows: [{}] };
+    });
+
+    await expect(
+      initializeSyncExtension(db as any, makeConfig(), logger)
+    ).rejects.toThrow('network init failed');
+  });
+
+  it('throws when setting apiKey fails', async () => {
+    const db = makeMockDB();
+    db.execute.mockImplementation(async (sql: string) => {
+      if (sql.includes('cloudsync_version')) {
+        return { rows: [{ 'cloudsync_version()': '1.0.0' }] };
+      }
+      if (sql.includes('cloudsync_network_set_apikey')) {
+        throw new Error('apikey failed');
+      }
+      return { rows: [{}] };
+    });
+
+    await expect(
+      initializeSyncExtension(
+        db as any,
+        makeConfig({ apiKey: 'my-api-key', accessToken: undefined }),
+        logger
+      )
+    ).rejects.toThrow('apikey failed');
+  });
+
+  it('throws when setting accessToken fails', async () => {
+    const db = makeMockDB();
+    db.execute.mockImplementation(async (sql: string) => {
+      if (sql.includes('cloudsync_version')) {
+        return { rows: [{ 'cloudsync_version()': '1.0.0' }] };
+      }
+      if (sql.includes('cloudsync_network_set_token')) {
+        throw new Error('token failed');
+      }
+      return { rows: [{}] };
+    });
+
+    await expect(
+      initializeSyncExtension(
+        db as any,
+        makeConfig({ apiKey: undefined, accessToken: 'my-token' }),
+        logger
+      )
+    ).rejects.toThrow('token failed');
+  });
 });

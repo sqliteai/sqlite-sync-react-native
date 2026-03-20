@@ -173,6 +173,28 @@ describe('useSyncManager', () => {
     expect(result.current.consecutiveSyncErrors).toBe(1);
   });
 
+  it('resets sync error counters after a successful sync following a failure', async () => {
+    (executeSync as jest.Mock)
+      .mockRejectedValueOnce(new Error('sync fail'))
+      .mockResolvedValueOnce(2);
+
+    const { result } = renderHook(() => useSyncManager(createDefaultParams()));
+
+    await act(async () => {
+      await result.current.performSync();
+    });
+    expect(result.current.consecutiveSyncErrors).toBe(1);
+    expect(result.current.syncError?.message).toBe('sync fail');
+
+    await act(async () => {
+      await result.current.performSync();
+    });
+
+    expect(result.current.consecutiveSyncErrors).toBe(0);
+    expect(result.current.syncError).toBeNull();
+    expect(result.current.lastSyncChanges).toBe(2);
+  });
+
   it('recalculates interval with error backoff in polling mode', async () => {
     (executeSync as jest.Mock).mockRejectedValue(new Error('fail'));
     (calculateAdaptiveSyncInterval as jest.Mock).mockReturnValue(10000);

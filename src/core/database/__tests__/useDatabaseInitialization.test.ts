@@ -122,6 +122,24 @@ describe('useDatabaseInitialization', () => {
     expect(onDatabaseReady).toHaveBeenCalledWith(expect.any(Object));
   });
 
+  it('runs onDatabaseReady before sync initialization', async () => {
+    const events: string[] = [];
+    const onDatabaseReady = jest.fn().mockImplementation(async () => {
+      events.push('onDatabaseReady');
+    });
+    (initializeSyncExtension as jest.Mock).mockImplementation(async () => {
+      events.push('initializeSyncExtension');
+    });
+
+    renderHook(() =>
+      useDatabaseInitialization({ ...defaultParams, onDatabaseReady })
+    );
+
+    await act(async () => {});
+
+    expect(events).toEqual(['onDatabaseReady', 'initializeSyncExtension']);
+  });
+
   it('sets initError when onDatabaseReady fails', async () => {
     const onDatabaseReady = jest
       .fn()
@@ -240,5 +258,49 @@ describe('useDatabaseInitialization', () => {
     expect(result.current.initError?.message).toContain(
       'Failed to create table users'
     );
+  });
+
+  it('cleans up write db if read db creation fails', async () => {
+    const writeDb = { ...mockDb, close: jest.fn() };
+    (createDatabase as jest.Mock)
+      .mockResolvedValueOnce(writeDb)
+      .mockRejectedValueOnce(new Error('read open failed'));
+
+    const { result } = renderHook(() =>
+      useDatabaseInitialization(defaultParams)
+    );
+
+    await act(async () => {});
+
+    expect(result.current.initError?.message).toContain('read open failed');
+    expect(writeDb.close).toHaveBeenCalled();
+  });
+
+  it('reinitializes and closes old databases when auth changes', async () => {
+    const writeDb1 = { ...mockDb, close: jest.fn() };
+    const readDb1 = { ...mockDb, close: jest.fn() };
+    const writeDb2 = { ...mockDb, close: jest.fn() };
+    const readDb2 = { ...mockDb, close: jest.fn() };
+
+    (createDatabase as jest.Mock)
+      .mockResolvedValueOnce(writeDb1)
+      .mockResolvedValueOnce(readDb1)
+      .mockResolvedValueOnce(writeDb2)
+      .mockResolvedValueOnce(readDb2);
+
+    const { rerender } = renderHook(
+      ({ accessToken }: { accessToken?: string }) =>
+        useDatabaseInitialization({ ...defaultParams, accessToken }),
+      { initialProps: { accessToken: 'token-a' } }
+    );
+
+    await act(async () => {});
+
+    rerender({ accessToken: 'token-b' });
+
+    await act(async () => {});
+
+    expect(writeDb1.close).toHaveBeenCalled();
+    expect(readDb1.close).toHaveBeenCalled();
   });
 });

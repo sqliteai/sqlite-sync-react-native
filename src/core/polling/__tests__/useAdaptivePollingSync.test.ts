@@ -203,6 +203,35 @@ describe('useAdaptivePollingSync', () => {
     expect(performSync).toHaveBeenCalledTimes(1);
   });
 
+  it('uses updated interval value for the next scheduled sync', async () => {
+    const intervalRef = { current: 5000 as number | null };
+    const performSync = jest.fn().mockImplementation(async () => {
+      intervalRef.current = 1000;
+    });
+    const params = createDefaultParams({
+      currentIntervalRef: intervalRef,
+      performSyncRef: { current: performSync },
+    });
+
+    renderHook(() => useAdaptivePollingSync(params));
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(performSync).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(999);
+    });
+    expect(performSync).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(performSync).toHaveBeenCalledTimes(2);
+  });
+
   it('cleans up timer on unmount', async () => {
     const performSync = jest.fn().mockResolvedValue(undefined);
     const params = createDefaultParams({

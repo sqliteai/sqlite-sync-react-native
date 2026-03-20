@@ -140,6 +140,20 @@ describe('pushNotificationSyncTask', () => {
     expect(executeBackgroundSync).not.toHaveBeenCalled();
   });
 
+  it('skips background sync when persisted config is invalid', async () => {
+    (getPersistedConfig as jest.Mock).mockResolvedValue(null);
+    (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
+    (getForegroundSyncCallback as jest.Mock).mockReturnValue(null);
+    (AppState as any).currentState = 'background';
+
+    await handler({
+      data: { body: { artifactURI: 'https://sqlite.ai' } },
+      error: null,
+    });
+
+    expect(executeBackgroundSync).not.toHaveBeenCalled();
+  });
+
   it('handles task error by logging and returning', async () => {
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
 

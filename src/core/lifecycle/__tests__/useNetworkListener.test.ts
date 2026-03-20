@@ -190,6 +190,37 @@ describe('useNetworkListener', () => {
     expect(result.current.isNetworkAvailable).toBe(false);
   });
 
+  it('does not retrigger sync for repeated online events without going offline again', () => {
+    const performSync = jest.fn().mockResolvedValue(undefined);
+    const params = createDefaultParams({
+      performSyncRef: { current: performSync },
+      appState: 'active',
+    });
+
+    renderHook(() => useNetworkListener(params));
+
+    act(() => {
+      (NetInfo as any).__simulateChange({
+        isConnected: false,
+        isInternetReachable: false,
+      });
+    });
+    act(() => {
+      (NetInfo as any).__simulateChange({
+        isConnected: true,
+        isInternetReachable: true,
+      });
+    });
+    act(() => {
+      (NetInfo as any).__simulateChange({
+        isConnected: true,
+        isInternetReachable: true,
+      });
+    });
+
+    expect(performSync).toHaveBeenCalledTimes(1);
+  });
+
   it('unsubscribes on cleanup', () => {
     // Capture the unsubscribe mock returned by addEventListener
     let capturedUnsubscribe: jest.Mock | undefined;

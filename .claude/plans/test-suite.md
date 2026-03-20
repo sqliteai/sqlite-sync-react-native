@@ -1,8 +1,8 @@
 # Test Suite
 
 **Status:** Implemented
-**Last updated:** 2026-03-10
-**Total:** 31 test files, 272 tests
+**Last updated:** 2026-03-20
+**Total:** 33 test files, 305 tests
 
 ## How to Run
 
@@ -11,7 +11,7 @@
 yarn test
 
 # Run with coverage report
-yarn test --coverage
+yarn test:coverage
 
 # Open HTML coverage report
 open coverage/lcov-report/index.html
@@ -22,6 +22,7 @@ open coverage/lcov-report/index.html
 - **Runner:** Jest (react-native preset)
 - **Hooks:** `renderHook` from `@testing-library/react-native`
 - **Mocks:** Co-located `__mocks__/` directories for native modules
+- **Coverage thresholds:** statements 95, branches 85, functions 95, lines 95
 
 ## Architecture
 
@@ -50,7 +51,7 @@ Located in `src/__mocks__/`:
 
 Test utilities in `src/testUtils.tsx` provide `createTestWrapper` for provider-wrapped hook tests.
 
-## Test Files (31 files, 272 tests)
+## Test Files (33 files, 305 tests)
 
 ### Layer 1: Pure Functions (39 tests)
 
@@ -104,8 +105,10 @@ _Includes useDatabaseInitialization which spans init + lifecycle._
 | `core/pushNotifications/__tests__/usePushNotificationSync.test.ts` | usePushNotificationSync | 15 | Permission request, skip in polling, token registration, siteId retrieval, denied callback, foreground listener, sync trigger, ignore non-SQLite notification, background registration, fallback, unregister on mode switch, cleanup, handle failures |
 | `core/database/__tests__/useDatabaseInitialization.test.ts` | useDatabaseInitialization | 12 | Creates write/read DBs, initializes sync extension, onDatabaseReady callback, re-init on config change, error handling, empty name/tables validation, close errors on unmount |
 
-### Layer 5: Integration (14 tests)
+### Layer 5: Integration And Public Surface (19 tests)
 
 | Test file | Source | Tests | What's tested |
 |-----------|--------|------:|---------------|
 | `core/__tests__/SQLiteSyncProvider.test.tsx` | SQLiteSyncProvider | 14 | Renders children, provides writeDb/readDb, initError/syncError, onDatabaseReady, default status, syncMode, triggerSync, adaptive config, re-init triggers, mode fallback, cleanup |
+| `core/__tests__/SQLiteSyncProvider.integration.test.tsx` | SQLiteSyncProvider | 7 | Polling defaults without adaptivePolling, push foreground default, push fallback to polling, reinit on accessToken/apiKey/databaseId/table config changes |
+| `core/__tests__/publicExports.test.ts` | public API surface | 2 | Root exports smoke test, `./backgroundSync` subpath export smoke test |

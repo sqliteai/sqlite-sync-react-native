@@ -69,6 +69,23 @@ describe('executeBackgroundSync', () => {
     );
   });
 
+  it('passes accessToken to initializeSyncExtension when provided', async () => {
+    await executeBackgroundSync({
+      ...testConfig,
+      apiKey: undefined,
+      accessToken: 'user-token',
+    });
+
+    expect(initializeSyncExtension).toHaveBeenCalledWith(
+      mockDb,
+      expect.objectContaining({
+        accessToken: 'user-token',
+        apiKey: undefined,
+      }),
+      expect.anything()
+    );
+  });
+
   it('calls executeSync with native retry options', async () => {
     await executeBackgroundSync(testConfig);
 

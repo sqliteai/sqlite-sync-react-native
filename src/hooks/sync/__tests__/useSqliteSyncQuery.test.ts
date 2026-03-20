@@ -318,4 +318,87 @@ describe('useSqliteSyncQuery', () => {
 
     expect(unsub).toHaveBeenCalled();
   });
+
+  it('unsubscribes previous reactive subscription when query changes', async () => {
+    const readDb = createMockDB();
+    const writeDb = createMockDB();
+    const unsubscribeFirst = jest.fn();
+    const unsubscribeSecond = jest.fn();
+
+    (readDb.execute as jest.Mock).mockResolvedValue({ rows: [] });
+    (writeDb.reactiveExecute as jest.Mock)
+      .mockReturnValueOnce(unsubscribeFirst)
+      .mockReturnValueOnce(unsubscribeSecond);
+
+    const wrapper = createTestWrapper({
+      db: { readDb: readDb as any, writeDb: writeDb as any },
+    });
+
+    const { rerender } = renderHook(
+      ({ query }: { query: string }) =>
+        useSqliteSyncQuery({
+          query,
+          arguments: [],
+          fireOn: [{ table: 'users' }],
+        }),
+      { wrapper, initialProps: { query: 'SELECT * FROM users' } }
+    );
+
+    await act(async () => {});
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    rerender({ query: 'SELECT * FROM users WHERE id = 1' });
+
+    await act(async () => {});
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(0);
+    });
+
+    expect(unsubscribeFirst).toHaveBeenCalled();
+    expect(unsubscribeSecond).not.toHaveBeenCalled();
+  });
+
+  it('ignores stale read results after the query changes', async () => {
+    const readDb = createMockDB();
+    const writeDb = createMockDB();
+    let resolveFirst: ((value: any) => void) | undefined;
+
+    (readDb.execute as jest.Mock)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve;
+          })
+      )
+      .mockResolvedValueOnce({ rows: [{ id: 2, name: 'Bob' }] });
+
+    const wrapper = createTestWrapper({
+      db: { readDb: readDb as any, writeDb: writeDb as any },
+    });
+
+    const { result, rerender } = renderHook(
+      ({ args }: { args: any[] }) =>
+        useSqliteSyncQuery({
+          query: 'SELECT * FROM users WHERE id = ?',
+          arguments: args,
+          fireOn: [{ table: 'users' }],
+        }),
+      { wrapper, initialProps: { args: [1] } }
+    );
+
+    rerender({ args: [2] });
+
+    await act(async () => {
+      resolveFirst?.({ rows: [{ id: 1, name: 'Alice' }] });
+    });
+
+    await act(async () => {});
+
+    expect(result.current.data).toEqual([{ id: 2, name: 'Bob' }]);
+  });
 });
