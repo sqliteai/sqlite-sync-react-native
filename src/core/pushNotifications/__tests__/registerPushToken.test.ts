@@ -177,7 +177,11 @@ describe('registerPushToken', () => {
 
   it('throws when neither apiKey nor accessToken is provided', async () => {
     await expect(
-      registerPushToken({ ...baseParams, apiKey: undefined, accessToken: undefined })
+      registerPushToken({
+        ...baseParams,
+        apiKey: undefined,
+        accessToken: undefined,
+      })
     ).rejects.toThrow(
       'Push token registration requires either apiKey or accessToken'
     );

@@ -150,7 +150,9 @@ describe('useAppLifecycle', () => {
 
     expect(setConsecutiveEmptySyncs).toHaveBeenCalledWith(0);
     expect(currentIntervalRef.current).toBe(adaptiveConfig.baseInterval);
-    expect(setCurrentInterval).toHaveBeenCalledWith(adaptiveConfig.baseInterval);
+    expect(setCurrentInterval).toHaveBeenCalledWith(
+      adaptiveConfig.baseInterval
+    );
   });
 
   it('does not reset interval in push mode', () => {

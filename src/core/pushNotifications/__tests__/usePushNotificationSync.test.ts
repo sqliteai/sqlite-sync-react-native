@@ -220,7 +220,9 @@ describe('usePushNotificationSync', () => {
     await act(async () => {});
 
     expect(onPermissionsDenied).toHaveBeenCalled();
-    expect(mockExpoNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(
+      mockExpoNotifications.requestPermissionsAsync
+    ).not.toHaveBeenCalled();
   });
 
   it('adds foreground listener in foreground mode', async () => {
@@ -366,7 +368,9 @@ describe('usePushNotificationSync', () => {
   it('skips token registration when siteId retrieval fails', async () => {
     const writeDbRef = {
       current: {
-        execute: jest.fn().mockRejectedValue(new Error('cloudsync_siteid fail')),
+        execute: jest
+          .fn()
+          .mockRejectedValue(new Error('cloudsync_siteid fail')),
       },
     };
 

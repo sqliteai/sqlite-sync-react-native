@@ -80,10 +80,9 @@ describe('useOnTableUpdate', () => {
     const onUpdate = jest.fn();
     const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
 
-    renderHook(
-      () => useOnTableUpdate({ tables: ['users'], onUpdate }),
-      { wrapper }
-    );
+    renderHook(() => useOnTableUpdate({ tables: ['users'], onUpdate }), {
+      wrapper,
+    });
 
     await act(async () => {
       await hookHandler({ operation: 'INSERT', table: 'users', rowId: 1 });
@@ -107,10 +106,9 @@ describe('useOnTableUpdate', () => {
     const onUpdate = jest.fn();
     const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
 
-    renderHook(
-      () => useOnTableUpdate({ tables: ['users'], onUpdate }),
-      { wrapper }
-    );
+    renderHook(() => useOnTableUpdate({ tables: ['users'], onUpdate }), {
+      wrapper,
+    });
 
     await act(async () => {
       await hookHandler({ operation: 'INSERT', table: 'orders', rowId: 1 });
@@ -129,10 +127,9 @@ describe('useOnTableUpdate', () => {
     const onUpdate = jest.fn();
     const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
 
-    renderHook(
-      () => useOnTableUpdate({ tables: ['users'], onUpdate }),
-      { wrapper }
-    );
+    renderHook(() => useOnTableUpdate({ tables: ['users'], onUpdate }), {
+      wrapper,
+    });
 
     await act(async () => {
       await hookHandler({ operation: 'DELETE', table: 'users', rowId: 1 });
@@ -154,10 +151,9 @@ describe('useOnTableUpdate', () => {
     const onUpdate = jest.fn();
     const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
 
-    renderHook(
-      () => useOnTableUpdate({ tables: ['users'], onUpdate }),
-      { wrapper }
-    );
+    renderHook(() => useOnTableUpdate({ tables: ['users'], onUpdate }), {
+      wrapper,
+    });
 
     await act(async () => {
       await hookHandler({ operation: 'INSERT', table: 'users', rowId: 1 });
@@ -179,10 +175,9 @@ describe('useOnTableUpdate', () => {
     const onUpdate = jest.fn();
     const wrapper = createTestWrapper({ db: { writeDb: mockDb as any } });
 
-    renderHook(
-      () => useOnTableUpdate({ tables: ['users'], onUpdate }),
-      { wrapper }
-    );
+    renderHook(() => useOnTableUpdate({ tables: ['users'], onUpdate }), {
+      wrapper,
+    });
 
     await act(async () => {
       await hookHandler({ operation: 'UPDATE', table: 'users', rowId: 99 });

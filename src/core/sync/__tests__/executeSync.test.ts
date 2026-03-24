@@ -59,7 +59,10 @@ describe('JS retry', () => {
       .mockResolvedValueOnce(noChangesResult())
       .mockResolvedValueOnce(syncResult(5));
 
-    const promise = executeSync(db as any, logger, { maxAttempts: 4, attemptDelay: 1000 });
+    const promise = executeSync(db as any, logger, {
+      maxAttempts: 4,
+      attemptDelay: 1000,
+    });
     await jest.runAllTimersAsync();
     const changes = await promise;
 
@@ -71,7 +74,10 @@ describe('JS retry', () => {
     const db = createMockDB();
     db.execute.mockResolvedValue(noChangesResult());
 
-    const promise = executeSync(db as any, logger, { maxAttempts: 4, attemptDelay: 1000 });
+    const promise = executeSync(db as any, logger, {
+      maxAttempts: 4,
+      attemptDelay: 1000,
+    });
     await jest.runAllTimersAsync();
     const changes = await promise;
 
@@ -83,7 +89,10 @@ describe('JS retry', () => {
     const db = createMockDB();
     db.execute.mockResolvedValue(noChangesResult());
 
-    const promise = executeSync(db as any, logger, { maxAttempts: 2, attemptDelay: 1000 });
+    const promise = executeSync(db as any, logger, {
+      maxAttempts: 2,
+      attemptDelay: 1000,
+    });
     await jest.runAllTimersAsync();
     const changes = await promise;
 
@@ -167,7 +176,10 @@ describe('JS retry', () => {
     const db = createMockDB();
     db.execute.mockResolvedValue(noChangesResult());
 
-    const promise = executeSync(db as any, logger, { maxAttempts: 3, attemptDelay: 2000 });
+    const promise = executeSync(db as any, logger, {
+      maxAttempts: 3,
+      attemptDelay: 2000,
+    });
 
     // First attempt runs immediately
     await jest.advanceTimersByTimeAsync(0);

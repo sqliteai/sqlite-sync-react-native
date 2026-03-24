@@ -42,11 +42,7 @@ import { ExpoNotifications } from '../common/optionalDependencies';
 
 const mockExpoNotifications = ExpoNotifications as any;
 
-function CaptureStatus({
-  onChange,
-}: {
-  onChange: (value: any) => void;
-}) {
+function CaptureStatus({ onChange }: { onChange: (value: any) => void }) {
   const value = useContext(SQLiteSyncStatusContext);
   onChange(value);
   return null;

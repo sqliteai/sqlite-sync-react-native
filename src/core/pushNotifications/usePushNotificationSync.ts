@@ -290,7 +290,9 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
                 'SELECT cloudsync_siteid();'
               );
               const firstRow = siteIdResult.rows?.[0];
-              siteId = firstRow ? String(Object.values(firstRow)[0]) : undefined;
+              siteId = firstRow
+                ? String(Object.values(firstRow)[0])
+                : undefined;
             }
           } catch {
             logger.warn(

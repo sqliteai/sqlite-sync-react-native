@@ -17,7 +17,9 @@ describe('useSyncManager', () => {
   const logger = createLogger(false);
 
   const createDefaultParams = (overrides?: Partial<any>) => ({
-    writeDbRef: { current: { execute: jest.fn(), transaction: jest.fn() } } as any,
+    writeDbRef: {
+      current: { execute: jest.fn(), transaction: jest.fn() },
+    } as any,
     isSyncReady: true,
     logger,
     adaptiveConfig: {
@@ -48,9 +50,7 @@ describe('useSyncManager', () => {
   });
 
   it('returns initial state', () => {
-    const { result } = renderHook(() =>
-      useSyncManager(createDefaultParams())
-    );
+    const { result } = renderHook(() => useSyncManager(createDefaultParams()));
 
     expect(result.current.isSyncing).toBe(false);
     expect(result.current.lastSyncTime).toBeNull();
@@ -118,7 +118,9 @@ describe('useSyncManager', () => {
   });
 
   it('resets consecutiveEmptySyncs on changes', async () => {
-    (executeSync as jest.Mock).mockResolvedValueOnce(0).mockResolvedValueOnce(3);
+    (executeSync as jest.Mock)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(3);
     const { result } = renderHook(() => useSyncManager(createDefaultParams()));
 
     await act(async () => {
@@ -216,7 +218,10 @@ describe('useSyncManager', () => {
   it('prevents concurrent syncs', async () => {
     let resolveSync: () => void;
     (executeSync as jest.Mock).mockImplementation(
-      () => new Promise<number>((resolve) => { resolveSync = () => resolve(0); })
+      () =>
+        new Promise<number>((resolve) => {
+          resolveSync = () => resolve(0);
+        })
     );
 
     const { result } = renderHook(() => useSyncManager(createDefaultParams()));

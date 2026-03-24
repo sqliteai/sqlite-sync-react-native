@@ -11,7 +11,11 @@ const defaultConfig = {
 describe('calculateAdaptiveSyncInterval', () => {
   it('returns baseInterval when no errors, no idle', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 5, consecutiveEmptySyncs: 0, consecutiveSyncErrors: 0 },
+      {
+        lastSyncChanges: 5,
+        consecutiveEmptySyncs: 0,
+        consecutiveSyncErrors: 0,
+      },
       defaultConfig
     );
     expect(result).toBe(5000);
@@ -19,7 +23,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('returns baseInterval when below emptyThreshold', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 4, consecutiveSyncErrors: 0 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 4,
+        consecutiveSyncErrors: 0,
+      },
       defaultConfig
     );
     expect(result).toBe(5000);
@@ -27,7 +35,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('applies idle backoff at exactly emptyThreshold', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 5, consecutiveSyncErrors: 0 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 5,
+        consecutiveSyncErrors: 0,
+      },
       defaultConfig
     );
     expect(result).toBe(7500);
@@ -35,7 +47,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('increases idle backoff with consecutive empty syncs', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 7, consecutiveSyncErrors: 0 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 7,
+        consecutiveSyncErrors: 0,
+      },
       defaultConfig
     );
     expect(result).toBe(5000 * Math.pow(1.5, 3));
@@ -43,7 +59,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('caps idle backoff at maxInterval', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 100, consecutiveSyncErrors: 0 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 100,
+        consecutiveSyncErrors: 0,
+      },
       defaultConfig
     );
     expect(result).toBe(300000);
@@ -51,7 +71,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('applies error backoff exponentially', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 0, consecutiveSyncErrors: 3 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 0,
+        consecutiveSyncErrors: 3,
+      },
       defaultConfig
     );
     expect(result).toBe(40000);
@@ -59,7 +83,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('caps error backoff at maxInterval', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 0, consecutiveSyncErrors: 100 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 0,
+        consecutiveSyncErrors: 100,
+      },
       defaultConfig
     );
     expect(result).toBe(300000);
@@ -67,7 +95,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('gives error priority over idle backoff', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 10, consecutiveSyncErrors: 2 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 10,
+        consecutiveSyncErrors: 2,
+      },
       defaultConfig
     );
     expect(result).toBe(5000 * Math.pow(2.0, 2));
@@ -75,7 +107,11 @@ describe('calculateAdaptiveSyncInterval', () => {
 
   it('handles single error', () => {
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 0, consecutiveSyncErrors: 1 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 0,
+        consecutiveSyncErrors: 1,
+      },
       defaultConfig
     );
     expect(result).toBe(10000);
@@ -90,7 +126,11 @@ describe('calculateAdaptiveSyncInterval', () => {
       errorBackoffMultiplier: 3,
     };
     const result = calculateAdaptiveSyncInterval(
-      { lastSyncChanges: 0, consecutiveEmptySyncs: 3, consecutiveSyncErrors: 0 },
+      {
+        lastSyncChanges: 0,
+        consecutiveEmptySyncs: 3,
+        consecutiveSyncErrors: 0,
+      },
       config
     );
     expect(result).toBe(1000 * Math.pow(2, 2));

@@ -29,10 +29,9 @@ describe('useSqliteSyncQuery', () => {
       db: { readDb: readDb as any, writeDb: createMockDB() as any },
     });
 
-    const { result } = renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useSqliteSyncQuery(defaultConfig), {
+      wrapper,
+    });
 
     expect(result.current.isLoading).toBe(true);
     expect(result.current.data).toEqual([]);
@@ -50,10 +49,9 @@ describe('useSqliteSyncQuery', () => {
       db: { readDb: readDb as any, writeDb: writeDb as any },
     });
 
-    const { result } = renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useSqliteSyncQuery(defaultConfig), {
+      wrapper,
+    });
 
     await act(async () => {});
 
@@ -70,10 +68,9 @@ describe('useSqliteSyncQuery', () => {
       db: { readDb: readDb as any, writeDb: createMockDB() as any },
     });
 
-    const { result } = renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useSqliteSyncQuery(defaultConfig), {
+      wrapper,
+    });
 
     await act(async () => {});
 
@@ -90,10 +87,7 @@ describe('useSqliteSyncQuery', () => {
       db: { readDb: readDb as any, writeDb: writeDb as any },
     });
 
-    renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    renderHook(() => useSqliteSyncQuery(defaultConfig), { wrapper });
 
     await act(async () => {});
 
@@ -130,10 +124,9 @@ describe('useSqliteSyncQuery', () => {
       db: { readDb: readDb as any, writeDb: writeDb as any },
     });
 
-    const { result } = renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useSqliteSyncQuery(defaultConfig), {
+      wrapper,
+    });
 
     await act(async () => {});
 
@@ -161,10 +154,9 @@ describe('useSqliteSyncQuery', () => {
       db: { readDb: readDb as any, writeDb: writeDb as any },
     });
 
-    const { unmount } = renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    const { unmount } = renderHook(() => useSqliteSyncQuery(defaultConfig), {
+      wrapper,
+    });
 
     await act(async () => {});
 
@@ -186,10 +178,9 @@ describe('useSqliteSyncQuery', () => {
   it('no-ops when readDb is null', async () => {
     const wrapper = createTestWrapper();
 
-    const { result } = renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useSqliteSyncQuery(defaultConfig), {
+      wrapper,
+    });
 
     await act(async () => {});
 
@@ -299,10 +290,9 @@ describe('useSqliteSyncQuery', () => {
       db: { readDb: readDb as any, writeDb: writeDb as any },
     });
 
-    const { result } = renderHook(
-      () => useSqliteSyncQuery(defaultConfig),
-      { wrapper }
-    );
+    const { result } = renderHook(() => useSqliteSyncQuery(defaultConfig), {
+      wrapper,
+    });
 
     await act(async () => {});
     await act(async () => {

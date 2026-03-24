@@ -50,7 +50,9 @@ describe('createDatabase', () => {
     (open as jest.Mock).mockImplementationOnce(() => {
       throw new Error('open failed');
     });
-    await expect(createDatabase('app.db', 'write')).rejects.toThrow('open failed');
+    await expect(createDatabase('app.db', 'write')).rejects.toThrow(
+      'open failed'
+    );
   });
 
   it('propagates error if PRAGMA fails', async () => {
@@ -62,6 +64,8 @@ describe('createDatabase', () => {
       transaction: jest.fn(),
       reactiveExecute: jest.fn(),
     });
-    await expect(createDatabase('app.db', 'write')).rejects.toThrow('PRAGMA failed');
+    await expect(createDatabase('app.db', 'write')).rejects.toThrow(
+      'PRAGMA failed'
+    );
   });
 });

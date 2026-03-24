@@ -4,7 +4,9 @@ import type { AdaptivePollingParams } from '../useAdaptivePollingSync';
 
 jest.useFakeTimers();
 
-const createDefaultParams = (overrides?: Partial<AdaptivePollingParams>): AdaptivePollingParams => ({
+const createDefaultParams = (
+  overrides?: Partial<AdaptivePollingParams>
+): AdaptivePollingParams => ({
   isSyncReady: true,
   appState: 'active',
   performSyncRef: { current: jest.fn().mockResolvedValue(undefined) },

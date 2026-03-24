@@ -142,13 +142,7 @@ export function useDatabaseInitialization(
         apiKey,
         accessToken,
       }),
-    [
-      databaseId,
-      databaseName,
-      tablesToBeSynced,
-      apiKey,
-      accessToken,
-    ]
+    [databaseId, databaseName, tablesToBeSynced, apiKey, accessToken]
   );
 
   /** INITIALIZATION EFFECT */

@@ -77,7 +77,9 @@ describe('useSqliteExecute', () => {
     const { result } = renderHook(() => useSqliteExecute(), { wrapper });
 
     await act(async () => {
-      await expect(result.current.execute('BAD SQL')).rejects.toThrow('exec fail');
+      await expect(result.current.execute('BAD SQL')).rejects.toThrow(
+        'exec fail'
+      );
     });
     expect(result.current.error?.message).toBe('exec fail');
   });
@@ -128,7 +130,9 @@ describe('useSqliteExecute', () => {
     await act(async () => {
       await result.current.execute('SELECT 1', [], { readOnly: true });
     });
-    const calls = (mockDb.execute as jest.Mock).mock.calls.map((c: any) => c[0]);
+    const calls = (mockDb.execute as jest.Mock).mock.calls.map(
+      (c: any) => c[0]
+    );
     expect(calls).not.toContain('SELECT cloudsync_network_send_changes();');
   });
 
@@ -143,7 +147,9 @@ describe('useSqliteExecute', () => {
         autoSync: false,
       });
     });
-    const calls = (mockDb.execute as jest.Mock).mock.calls.map((c: any) => c[0]);
+    const calls = (mockDb.execute as jest.Mock).mock.calls.map(
+      (c: any) => c[0]
+    );
     expect(calls).not.toContain('SELECT cloudsync_network_send_changes();');
   });
 

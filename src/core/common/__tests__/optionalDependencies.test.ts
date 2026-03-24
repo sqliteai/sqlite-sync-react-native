@@ -61,7 +61,9 @@ describe('optionalDependencies', () => {
 
   it('ExpoTaskManager is null when not installed', () => {
     jest.isolateModules(() => {
-      jest.doMock('expo-notifications', () => ({ registerTaskAsync: jest.fn() }));
+      jest.doMock('expo-notifications', () => ({
+        registerTaskAsync: jest.fn(),
+      }));
       jest.doMock('expo-task-manager', () => {
         throw new Error('Module not found');
       });
@@ -84,7 +86,9 @@ describe('optionalDependencies', () => {
   it('ExpoConstants uses .default if present', () => {
     jest.isolateModules(() => {
       const mockDefault = { expoConfig: { name: 'test' } };
-      jest.doMock('expo-notifications', () => ({ registerTaskAsync: jest.fn() }));
+      jest.doMock('expo-notifications', () => ({
+        registerTaskAsync: jest.fn(),
+      }));
       jest.doMock('expo-task-manager', () => ({ defineTask: jest.fn() }));
       jest.doMock('expo-secure-store', () => ({ getItemAsync: jest.fn() }));
       jest.doMock('expo-constants', () => ({
@@ -100,7 +104,9 @@ describe('optionalDependencies', () => {
   it('ExpoConstants uses module directly if no default', () => {
     jest.isolateModules(() => {
       const mockModule = { expoConfig: { name: 'test' } };
-      jest.doMock('expo-notifications', () => ({ registerTaskAsync: jest.fn() }));
+      jest.doMock('expo-notifications', () => ({
+        registerTaskAsync: jest.fn(),
+      }));
       jest.doMock('expo-task-manager', () => ({ defineTask: jest.fn() }));
       jest.doMock('expo-secure-store', () => ({ getItemAsync: jest.fn() }));
       jest.doMock('expo-constants', () => mockModule);

@@ -18,7 +18,9 @@ const extractChangesFromResult = (result: QueryResult | undefined): number => {
   if (typeof raw === 'string') {
     try {
       const parsed = JSON.parse(raw);
-      return typeof parsed?.receive?.rows === 'number' ? parsed.receive.rows : 0;
+      return typeof parsed?.receive?.rows === 'number'
+        ? parsed.receive.rows
+        : 0;
     } catch {
       return 0;
     }
