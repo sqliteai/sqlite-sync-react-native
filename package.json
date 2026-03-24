@@ -58,7 +58,8 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "release": "release-it --only-version",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage --runInBand"
   },
   "keywords": [
     "react-native",
@@ -90,8 +91,10 @@
     "@react-native/babel-preset": "0.81.1",
     "@react-native/eslint-config": "^0.83.0",
     "@release-it/conventional-changelog": "^10.0.1",
+    "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^29.5.14",
     "@types/react": "^19.1.12",
+    "@types/react-test-renderer": "^19",
     "del-cli": "^6.0.0",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
@@ -101,6 +104,7 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-builder-bob": "^0.40.16",
+    "react-test-renderer": "19.1.0",
     "release-it": "^19.0.4",
     "typescript": "^5.9.2"
   },
@@ -179,6 +183,20 @@
   },
   "jest": {
     "preset": "react-native",
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/**/__tests__/**",
+      "!src/**/__mocks__/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 85,
+        "functions": 95,
+        "lines": 95,
+        "statements": 95
+      }
+    },
     "modulePathIgnorePatterns": [
       "<rootDir>/examples/sync-demo-expo/node_modules",
       "<rootDir>/examples/sync-demo-bare/node_modules",

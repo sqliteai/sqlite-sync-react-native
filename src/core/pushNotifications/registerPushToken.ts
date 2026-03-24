@@ -3,9 +3,9 @@ import {
   ExpoApplication,
 } from '../common/optionalDependencies';
 import type { Logger } from '../common/logger';
+import { CLOUDSYNC_BASE_URL } from '../constants';
 
 const TOKEN_REGISTERED_KEY = 'sqlite_sync_push_token_registered';
-const CLOUDSYNC_BASE_URL = 'https://cloudsync-staging.fly.dev/v2';
 
 async function getDeviceId(): Promise<string> {
   if (!ExpoApplication) {
@@ -24,10 +24,9 @@ async function getDeviceId(): Promise<string> {
 
 interface RegisterPushTokenParams {
   expoToken: string;
-  databaseName: string;
-  siteId?: string;
+  databaseId: string;
+  siteId: string;
   platform: string;
-  connectionString: string;
   apiKey?: string;
   accessToken?: string;
   logger: Logger;
@@ -42,10 +41,9 @@ export async function registerPushToken(
 ): Promise<void> {
   const {
     expoToken,
-    databaseName,
+    databaseId,
     siteId,
     platform,
-    connectionString,
     apiKey,
     accessToken,
     logger,
@@ -74,7 +72,11 @@ export async function registerPushToken(
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   } else if (apiKey) {
-    headers.Authorization = `Bearer ${connectionString}?apikey=${apiKey}`;
+    headers.Authorization = `Bearer ${apiKey}`;
+  } else {
+    throw new Error(
+      'Push token registration requires either apiKey or accessToken'
+    );
   }
 
   /** PREPARE REQUEST BODY */
@@ -83,13 +85,14 @@ export async function registerPushToken(
   const body = {
     expoToken,
     deviceId,
-    database: databaseName,
-    siteId: siteId ?? '',
+    siteId,
     platform,
   };
 
   /** SEND REGISTRATION REQUEST */
-  const url = `${CLOUDSYNC_BASE_URL}/cloudsync/notifications/tokens`;
+  const url = `${CLOUDSYNC_BASE_URL}/v2/cloudsync/databases/${encodeURIComponent(
+    databaseId
+  )}/notifications/tokens`;
   logger.info(
     '📱 Registering push token with backend...',
     url,
@@ -97,7 +100,7 @@ export async function registerPushToken(
   );
 
   const response = await fetch(url, {
-    method: 'POST',
+    method: 'PUT',
     headers,
     body: JSON.stringify(body),
   });

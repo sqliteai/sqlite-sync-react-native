@@ -2,12 +2,14 @@ import { Platform } from 'react-native';
 import { getDylibPath, type DB } from '@op-engineering/op-sqlite';
 import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../common/logger';
+import { CLOUDSYNC_BASE_URL } from '../constants';
 
 /**
  * Configuration for sync initialization
  */
 export interface SyncInitConfig {
-  connectionString: string;
+  databaseId: string;
+  databaseName: string;
   tablesToBeSynced: TableConfig[];
   apiKey?: string;
   accessToken?: string;
@@ -25,10 +27,14 @@ export async function initializeSyncExtension(
   config: SyncInitConfig,
   logger: Logger
 ): Promise<void> {
-  const { connectionString, tablesToBeSynced, apiKey, accessToken } = config;
+  const databaseId = config.databaseId.trim();
+  const databaseName = config.databaseName.trim();
+  const apiKey = config.apiKey?.trim();
+  const accessToken = config.accessToken?.trim();
+  const { tablesToBeSynced } = config;
 
   /** VALIDATE CONFIG */
-  if (!connectionString || (!apiKey && !accessToken)) {
+  if (!databaseId || !databaseName || (!apiKey && !accessToken)) {
     throw new Error('Sync configuration incomplete');
   }
 
@@ -54,21 +60,16 @@ export async function initializeSyncExtension(
 
   /** INITIALIZE TABLES */
   for (const table of tablesToBeSynced) {
-    const initResult = await db.execute('SELECT cloudsync_init(?);', [
-      table.name,
-    ]);
-    const firstRow = initResult.rows?.[0];
-    const result = firstRow ? Object.values(firstRow)[0] : undefined;
+    await db.execute('SELECT cloudsync_init(?);', [table.name]);
 
-    logger.info(
-      `✅ CloudSync initialized for table: ${table.name}${
-        result ? ` (site_id: ${result})` : ''
-      }`
-    );
+    logger.info(`✅ CloudSync initialized for table: ${table.name}`);
   }
 
   /** INITIALIZE NETWORK */
-  await db.execute('SELECT cloudsync_network_init(?);', [connectionString]);
+  await db.execute('SELECT cloudsync_network_init_custom(?, ?);', [
+    CLOUDSYNC_BASE_URL,
+    databaseId,
+  ]);
   logger.info('✅ Network initialized');
 
   /** SET AUTHENTICATION */

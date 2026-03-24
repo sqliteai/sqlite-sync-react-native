@@ -10,9 +10,9 @@ import { initializeSyncExtension } from '../sync/initializeSyncExtension';
  */
 export interface DatabaseInitializationParams {
   /**
-   * SQLite Cloud connection string
+   * CloudSync database ID used by runtime sync APIs
    */
-  connectionString: string;
+  databaseId: string;
 
   /**
    * Local database file name
@@ -95,7 +95,7 @@ export interface DatabaseInitializationResult {
  * @example
  * ```typescript
  * const { writeDb, readDb, isSyncReady, initError } = useDatabaseInitialization({
- *   connectionString: 'sqlitecloud://...',
+ *   databaseId: 'db_xxxxxxxxxxxxxxxxxxxxxxxx',
  *   databaseName: 'app.db',
  *   tablesToBeSynced: [{ name: 'users', createTableSql: '...' }],
  *   apiKey: 'your-api-key',
@@ -107,7 +107,7 @@ export function useDatabaseInitialization(
   params: DatabaseInitializationParams
 ): DatabaseInitializationResult {
   const {
-    connectionString,
+    databaseId,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -136,13 +136,19 @@ export function useDatabaseInitialization(
   const serializedConfig = useMemo(
     () =>
       JSON.stringify({
-        connectionString,
+        databaseId,
         databaseName,
         tables: tablesToBeSynced,
         apiKey,
         accessToken,
       }),
-    [connectionString, databaseName, tablesToBeSynced, apiKey, accessToken]
+    [
+      databaseId,
+      databaseName,
+      tablesToBeSynced,
+      apiKey,
+      accessToken,
+    ]
   );
 
   /** INITIALIZATION EFFECT */
@@ -220,7 +226,13 @@ export function useDatabaseInitialization(
 
           await initializeSyncExtension(
             localWriteDb,
-            { connectionString, tablesToBeSynced, apiKey, accessToken },
+            {
+              databaseId,
+              databaseName,
+              tablesToBeSynced,
+              apiKey,
+              accessToken,
+            },
             logger
           );
 
@@ -246,6 +258,32 @@ export function useDatabaseInitialization(
       } catch (err) {
         /** FATAL ERROR - database can not be used */
         logger.error('❌ Database initialization failed:', err);
+        if (writeDbRef.current) {
+          try {
+            writeDbRef.current.close();
+            logger.info('Write database closed after initialization failure');
+          } catch (closeErr) {
+            logger.error(
+              '❌ Error closing write database after initialization failure:',
+              closeErr
+            );
+          } finally {
+            writeDbRef.current = null;
+          }
+        }
+        if (readDbRef.current) {
+          try {
+            readDbRef.current.close();
+            logger.info('Read database closed after initialization failure');
+          } catch (closeErr) {
+            logger.error(
+              '❌ Error closing read database after initialization failure:',
+              closeErr
+            );
+          } finally {
+            readDbRef.current = null;
+          }
+        }
         if (isMounted) {
           setInitError(
             err instanceof Error

@@ -23,12 +23,13 @@ import {
   type BackgroundSyncResult,
 } from '@sqliteai/sqlite-sync-react-native';
 import * as Notifications from 'expo-notifications';
-import {
-  SQLITE_CLOUD_CONNECTION_STRING,
-  SQLITE_CLOUD_API_KEY,
-  DATABASE_NAME,
-  TABLE_NAME,
-} from '@env';
+import Constants from 'expo-constants';
+
+const SQLITE_CLOUD_DATABASE_ID =
+  Constants.expoConfig?.extra?.sqliteCloudDatabaseId;
+const SQLITE_CLOUD_API_KEY = Constants.expoConfig?.extra?.sqliteCloudApiKey;
+const DATABASE_NAME = Constants.expoConfig?.extra?.databaseName;
+const TABLE_NAME = Constants.expoConfig?.extra?.tableName;
 
 /**
  * Register background sync handler at module level (outside components).
@@ -392,7 +393,7 @@ export default function App() {
   }, []);
 
   if (
-    !SQLITE_CLOUD_CONNECTION_STRING ||
+    !SQLITE_CLOUD_DATABASE_ID ||
     !SQLITE_CLOUD_API_KEY ||
     !DATABASE_NAME ||
     !TABLE_NAME
@@ -412,7 +413,7 @@ export default function App() {
 
   return (
     <SQLiteSyncProvider
-      connectionString={SQLITE_CLOUD_CONNECTION_STRING}
+      databaseId={SQLITE_CLOUD_DATABASE_ID}
       databaseName={DATABASE_NAME}
       tablesToBeSynced={[
         {

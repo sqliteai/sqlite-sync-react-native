@@ -6,7 +6,7 @@ import { ExpoSecureStore } from '../common/optionalDependencies';
  * Configuration for background sync
  */
 export interface BackgroundSyncConfig {
-  connectionString: string;
+  databaseId: string;
   databaseName: string;
   tablesToBeSynced: TableConfig[];
   apiKey?: string;
@@ -16,6 +16,23 @@ export interface BackgroundSyncConfig {
 
 /** STORAGE KEY */
 const CONFIG_STORAGE_KEY = 'sqlite_sync_background_config';
+
+function isValidBackgroundSyncConfig(
+  value: unknown
+): value is BackgroundSyncConfig {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const config = value as Record<string, unknown>;
+  return (
+    typeof config.databaseId === 'string' &&
+    config.databaseId.length > 0 &&
+    typeof config.databaseName === 'string' &&
+    config.databaseName.length > 0 &&
+    Array.isArray(config.tablesToBeSynced)
+  );
+}
 
 /**
  * Get persisted config from SecureStore
@@ -30,7 +47,8 @@ export async function getPersistedConfig(): Promise<BackgroundSyncConfig | null>
     if (!configJson) {
       return null;
     }
-    return JSON.parse(configJson) as BackgroundSyncConfig;
+    const parsed = JSON.parse(configJson);
+    return isValidBackgroundSyncConfig(parsed) ? parsed : null;
   } catch {
     return null;
   }

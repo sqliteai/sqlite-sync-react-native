@@ -29,7 +29,8 @@ export async function executeBackgroundSync(
     await initializeSyncExtension(
       db,
       {
-        connectionString: config.connectionString,
+        databaseId: config.databaseId,
+        databaseName: config.databaseName,
         tablesToBeSynced: config.tablesToBeSynced,
         apiKey: config.apiKey,
         accessToken: config.accessToken,

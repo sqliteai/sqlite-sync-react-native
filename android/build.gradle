@@ -43,5 +43,5 @@ repositories {
 dependencies {
   implementation 'com.facebook.react:react-native:+'
   // SQLite Cloud Sync from Maven Central
-  implementation "ai.sqlite:sync.dev:${cloudsyncVersion}"
+  implementation "ai.sqlite:sync:${cloudsyncVersion}"
 }

@@ -41,8 +41,7 @@ Before running the example, you need to set up a SQLite Cloud database:
 
 5. **Get your credentials**
    - Navigate to your database's **Configuration** tab
-   - Copy your **Connection String** (format: `sqlitecloud://your-host.sqlite.cloud:8860/your-database`)
-   - Copy your **API Key**
+   - Copy your **Database ID** and **API Key**
 
 ### 2. Set Up React Native Environment
 
@@ -60,7 +59,7 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
 2. **Fill in your credentials** in the `.env` file:
 
    ```env
-   SQLITE_CLOUD_CONNECTION_STRING=sqlitecloud://your-host.sqlite.cloud:8860/your-database
+   SQLITE_CLOUD_DATABASE_ID=db_xxxxxxxxxxxxxxxxxxxxxxxx
    SQLITE_CLOUD_API_KEY=your-api-key-here
    DATABASE_NAME=sync-demo.db
    TABLE_NAME=test_table

@@ -2,12 +2,29 @@ import type { DB, QueryResult } from '@op-engineering/op-sqlite';
 import type { Logger } from '../common/logger';
 
 /**
- * Extracts the number of changes from a CloudSync query result
+ * Extracts the number of received rows from a CloudSync query result.
+ *
+ * The result row contains a JSON string:
+ * {"send":{...},"receive":{"rows":N,"tables":["table1"]}}
+ *
+ * We only use receive.rows since polling is for downloading remote changes.
  */
 const extractChangesFromResult = (result: QueryResult | undefined): number => {
   const firstRow = result?.rows?.[0];
-  const value = firstRow ? Object.values(firstRow)[0] : 0;
-  return typeof value === 'number' ? value : 0;
+  if (!firstRow) return 0;
+
+  const raw = Object.values(firstRow)[0];
+
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return typeof parsed?.receive?.rows === 'number' ? parsed.receive.rows : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  return 0;
 };
 
 /**
@@ -63,12 +80,12 @@ export async function executeSync(
     );
 
     const result = await db.execute('SELECT cloudsync_network_sync(?, ?);', [
-      maxAttempts,
       attemptDelay,
+      maxAttempts,
     ]);
 
     changes = extractChangesFromResult(result);
-    logger.info(`🔄 Sync result: ${changes} changes`);
+    logger.info(`🔄 Sync result: ${changes} changes downloaded`);
   } else {
     /** JS RETRY MODE */
     // Retry/delay in JS thread - better for foreground (doesn't block write connection)
@@ -87,7 +104,9 @@ export async function executeSync(
       }
 
       changes = extractChangesFromResult(result);
-      logger.info(`🔄 Sync attempt ${attempt + 1} result: ${changes} changes`);
+      logger.info(
+        `🔄 Sync attempt ${attempt + 1} result: ${changes} changes downloaded`
+      );
 
       if (changes > 0) {
         break;
@@ -95,16 +114,16 @@ export async function executeSync(
 
       // Wait before next attempt (except on last attempt)
       if (attempt < maxAttempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, attemptDelay));
+        await new Promise<void>((resolve) => setTimeout(resolve, attemptDelay));
       }
     }
   }
 
   /** LOG RESULT */
   if (changes > 0) {
-    logger.info(`✅ Sync completed: ${changes} changes synced`);
+    logger.info(`✅ Sync completed: ${changes} changes downloaded`);
   } else {
-    logger.info('✅ Sync completed: no changes');
+    logger.info('✅ Sync completed: no changes downloaded');
   }
 
   return changes;

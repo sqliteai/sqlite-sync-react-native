@@ -69,9 +69,9 @@ export interface PushNotificationSyncParams {
 
   // Background sync configuration (needed for background/terminated modes)
   /**
-   * SQLite Cloud connection string
+   * Database ID used by CloudSync v2 runtime APIs
    */
-  connectionString: string;
+  databaseId: string;
 
   /**
    * Local database file name
@@ -120,7 +120,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
     logger,
     onPermissionsDenied,
     renderPushPermissionPrompt,
-    connectionString,
+    databaseId,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -131,7 +131,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
   /** SERIALIZED CONFIG */
   // Detect actual changes (avoids re-runs from unstable references like tablesToBeSynced)
   const serializedBackgroundConfig = JSON.stringify({
-    connectionString,
+    databaseId,
     databaseName,
     tablesToBeSynced,
     apiKey,
@@ -212,6 +212,14 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
 
     hasRequestedPermissionsRef.current = true;
 
+    if (!databaseId.trim()) {
+      logger.warn(
+        '⚠️ Push mode requires databaseId for notification token registration. Falling back to polling mode.'
+      );
+      onPermissionsDeniedRef.current?.();
+      return;
+    }
+
     const requestPermissions = async () => {
       try {
         /** CHECK EXISTING PERMISSIONS */
@@ -277,34 +285,43 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
           // Get site ID for token registration
           let siteId: string | undefined;
           try {
-            const firstTable = tablesToBeSynced[0];
-            if (firstTable && writeDbRef.current) {
-              const initResult = await writeDbRef.current.execute(
-                'SELECT cloudsync_init(?);',
-                [firstTable.name]
+            if (writeDbRef.current) {
+              const siteIdResult = await writeDbRef.current.execute(
+                'SELECT cloudsync_siteid();'
               );
-              const firstRow = initResult.rows?.[0];
-              siteId = firstRow
-                ? String(Object.values(firstRow)[0])
-                : undefined;
+              const firstRow = siteIdResult.rows?.[0];
+              siteId = firstRow ? String(Object.values(firstRow)[0]) : undefined;
             }
           } catch {
-            logger.warn('⚠️ Could not retrieve siteId');
+            logger.warn(
+              '⚠️ Could not retrieve siteId - skipping token registration (will retry on next app open)'
+            );
+            return;
+          }
+
+          if (!siteId) {
+            logger.warn(
+              '⚠️ No siteId available - skipping token registration (will retry on next app open)'
+            );
+            return;
           }
 
           try {
             await registerPushToken({
               expoToken: token.data,
-              databaseName,
+              databaseId,
               siteId,
               platform: Platform.OS,
-              connectionString,
               apiKey,
               accessToken,
               logger,
             });
           } catch (registerError) {
-            logger.warn('⚠️ Failed to register push token:', registerError);
+            logger.warn(
+              '⚠️ Failed to register push token - falling back to polling mode:',
+              registerError
+            );
+            onPermissionsDeniedRef.current?.();
           }
         }
       } catch (error) {
@@ -315,7 +332,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
 
     requestPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount, guarded by hasRequestedPermissionsRef
-  }, [isSyncReady, syncMode]);
+  }, [databaseId, isSyncReady, syncMode]);
 
   /** NOTIFICATION LISTENERS EFFECT */
   useEffect(() => {
@@ -363,7 +380,7 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
         );
 
         registerBackgroundSync({
-          connectionString,
+          databaseId,
           databaseName,
           tablesToBeSynced,
           apiKey,
