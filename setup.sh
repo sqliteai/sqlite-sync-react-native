@@ -23,7 +23,7 @@ echo "[sqlite-sync] Downloading CloudSync.xcframework v${VERSION}..."
 mkdir -p "$IOS_DIR"
 
 # Download and extract
-DOWNLOAD_URL="https://github.com/sqliteai/sqlite-sync-dev/releases/download/${VERSION}/cloudsync-apple-xcframework-${VERSION}.zip"
+DOWNLOAD_URL="https://github.com/sqliteai/sqlite-sync/releases/download/${VERSION}/cloudsync-apple-xcframework-${VERSION}.zip"
 TEMP_ZIP="$IOS_DIR/cloudsync.zip"
 
 curl -L -o "$TEMP_ZIP" "$DOWNLOAD_URL"
