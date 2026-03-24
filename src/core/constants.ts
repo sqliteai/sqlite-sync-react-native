@@ -13,4 +13,4 @@ export const BACKGROUND_SYNC_TASK_NAME = 'SQLITE_SYNC_BACKGROUND_TASK';
 /**
  * CloudSync staging server base URL
  */
-export const CLOUDSYNC_BASE_URL = 'https://cloudsync-staging-testing.fly.dev';
+export const CLOUDSYNC_BASE_URL = 'https://cloudsync.sqlite.ai';

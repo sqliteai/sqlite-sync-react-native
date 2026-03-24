@@ -63,7 +63,7 @@ describe('registerPushToken', () => {
     await registerPushToken(baseParams);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://cloudsync-staging-testing.fly.dev/v2/cloudsync/databases/db_test_database_id/notifications/tokens',
+      'https://cloudsync.sqlite.ai/v2/cloudsync/databases/db_test_database_id/notifications/tokens',
       expect.objectContaining({
         method: 'PUT',
       })
