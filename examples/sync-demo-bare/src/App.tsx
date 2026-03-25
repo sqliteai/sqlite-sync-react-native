@@ -18,12 +18,10 @@ import {
   useSyncStatus,
   useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
-import {
-  SQLITE_CLOUD_DATABASE_ID,
-  SQLITE_CLOUD_API_KEY,
-  DATABASE_NAME,
-  TABLE_NAME,
-} from '@env';
+import { SQLITE_CLOUD_DATABASE_ID, DATABASE_NAME, TABLE_NAME } from '@env';
+
+let HARDCODED_ACCESS_TOKEN: string;
+HARDCODED_ACCESS_TOKEN = 'replace-with-access-token';
 
 /**
  * Demo app showcasing the reactive hooks and dual connection architecture:
@@ -278,17 +276,26 @@ function TestApp() {
 }
 
 export default function App() {
-  if (
-    !SQLITE_CLOUD_DATABASE_ID ||
-    !SQLITE_CLOUD_API_KEY ||
-    !DATABASE_NAME ||
-    !TABLE_NAME
-  ) {
+  if (!SQLITE_CLOUD_DATABASE_ID || !DATABASE_NAME || !TABLE_NAME) {
     return (
       <View style={styles.container}>
         <Text style={styles.error}>
           Missing environment variables. Please create a .env file with your
           SQLite Cloud credentials.
+        </Text>
+        <Text style={styles.errorDetails}>
+          See README.md for setup instructions.
+        </Text>
+      </View>
+    );
+  }
+
+  if (HARDCODED_ACCESS_TOKEN === 'replace-with-access-token') {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>
+          Replace the hardcoded access token in src/App.tsx before running the
+          example.
         </Text>
         <Text style={styles.errorDetails}>
           See README.md for setup instructions.
@@ -315,7 +322,7 @@ export default function App() {
       ]}
       syncMode="polling"
       adaptivePolling={{ baseInterval: 3000 }}
-      apiKey={SQLITE_CLOUD_API_KEY}
+      accessToken={HARDCODED_ACCESS_TOKEN}
       debug={true}
     >
       <TestApp />
