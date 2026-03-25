@@ -28,6 +28,7 @@ import Constants from 'expo-constants';
 const SQLITE_CLOUD_DATABASE_ID =
   Constants.expoConfig?.extra?.sqliteCloudDatabaseId;
 const SQLITE_CLOUD_API_KEY = Constants.expoConfig?.extra?.sqliteCloudApiKey;
+const ACCESS_TOKEN = Constants.expoConfig?.extra?.accessToken;
 const DATABASE_NAME = Constants.expoConfig?.extra?.databaseName;
 const TABLE_NAME = Constants.expoConfig?.extra?.tableName;
 
@@ -394,9 +395,9 @@ export default function App() {
 
   if (
     !SQLITE_CLOUD_DATABASE_ID ||
-    !SQLITE_CLOUD_API_KEY ||
     !DATABASE_NAME ||
-    !TABLE_NAME
+    !TABLE_NAME ||
+    (!ACCESS_TOKEN && !SQLITE_CLOUD_API_KEY)
   ) {
     return (
       <View style={styles.container}>
@@ -410,6 +411,11 @@ export default function App() {
       </View>
     );
   }
+
+  // Auth: provide either ACCESS_TOKEN (for RLS) or SQLITE_CLOUD_API_KEY (without RLS)
+  const authProps = ACCESS_TOKEN
+    ? { accessToken: ACCESS_TOKEN }
+    : { apiKey: SQLITE_CLOUD_API_KEY };
 
   return (
     <SQLiteSyncProvider
@@ -432,7 +438,7 @@ export default function App() {
       renderPushPermissionPrompt={({ allow, deny }) => (
         <PermissionDialog visible onAllow={allow} onDeny={deny} />
       )}
-      apiKey={SQLITE_CLOUD_API_KEY}
+      {...authProps}
       debug={true}
     >
       <TestApp deviceToken={deviceToken} />

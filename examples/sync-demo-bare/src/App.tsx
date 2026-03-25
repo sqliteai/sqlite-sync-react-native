@@ -18,10 +18,13 @@ import {
   useSyncStatus,
   useSqliteTransaction,
 } from '@sqliteai/sqlite-sync-react-native';
-import { SQLITE_CLOUD_DATABASE_ID, DATABASE_NAME, TABLE_NAME } from '@env';
-
-let HARDCODED_ACCESS_TOKEN: string;
-HARDCODED_ACCESS_TOKEN = 'replace-with-access-token';
+import {
+  SQLITE_CLOUD_DATABASE_ID,
+  DATABASE_NAME,
+  TABLE_NAME,
+  ACCESS_TOKEN,
+  SQLITE_CLOUD_API_KEY,
+} from '@env';
 
 /**
  * Demo app showcasing the reactive hooks and dual connection architecture:
@@ -276,7 +279,12 @@ function TestApp() {
 }
 
 export default function App() {
-  if (!SQLITE_CLOUD_DATABASE_ID || !DATABASE_NAME || !TABLE_NAME) {
+  if (
+    !SQLITE_CLOUD_DATABASE_ID ||
+    !DATABASE_NAME ||
+    !TABLE_NAME ||
+    (!ACCESS_TOKEN && !SQLITE_CLOUD_API_KEY)
+  ) {
     return (
       <View style={styles.container}>
         <Text style={styles.error}>
@@ -290,19 +298,10 @@ export default function App() {
     );
   }
 
-  if (HARDCODED_ACCESS_TOKEN === 'replace-with-access-token') {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.error}>
-          Replace the hardcoded access token in src/App.tsx before running the
-          example.
-        </Text>
-        <Text style={styles.errorDetails}>
-          See README.md for setup instructions.
-        </Text>
-      </View>
-    );
-  }
+  // Auth: provide either ACCESS_TOKEN (for RLS) or SQLITE_CLOUD_API_KEY (without RLS)
+  const authProps = ACCESS_TOKEN
+    ? { accessToken: ACCESS_TOKEN }
+    : { apiKey: SQLITE_CLOUD_API_KEY };
 
   return (
     <SQLiteSyncProvider
@@ -322,7 +321,7 @@ export default function App() {
       ]}
       syncMode="polling"
       adaptivePolling={{ baseInterval: 3000 }}
-      accessToken={HARDCODED_ACCESS_TOKEN}
+      {...authProps}
       debug={true}
     >
       <TestApp />

@@ -12,6 +12,7 @@ export default {
     extra: {
       sqliteCloudDatabaseId: process.env.SQLITE_CLOUD_DATABASE_ID,
       sqliteCloudApiKey: process.env.SQLITE_CLOUD_API_KEY,
+      accessToken: process.env.ACCESS_TOKEN,
       databaseName: process.env.DATABASE_NAME,
       tableName: process.env.TABLE_NAME,
       eas: {
