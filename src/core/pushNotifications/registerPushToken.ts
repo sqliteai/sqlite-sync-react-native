@@ -1,11 +1,6 @@
-import {
-  ExpoSecureStore,
-  ExpoApplication,
-} from '../common/optionalDependencies';
+import { ExpoApplication } from '../common/optionalDependencies';
 import type { Logger } from '../common/logger';
 import { CLOUDSYNC_BASE_URL } from '../constants';
-
-const TOKEN_REGISTERED_KEY = 'sqlite_sync_push_token_registered';
 
 async function getDeviceId(): Promise<string> {
   if (!ExpoApplication) {
@@ -34,7 +29,7 @@ interface RegisterPushTokenParams {
 
 /**
  * Register an Expo push token with the SQLite Cloud backend.
- * Only sends the token once per installation (persisted via SecureStore).
+ * Sends the token on every call to ensure the backend always has a valid token.
  */
 export async function registerPushToken(
   params: RegisterPushTokenParams
@@ -48,21 +43,6 @@ export async function registerPushToken(
     accessToken,
     logger,
   } = params;
-
-  /** CHECK IF ALREADY REGISTERED */
-  if (ExpoSecureStore) {
-    try {
-      const registered = await ExpoSecureStore.getItemAsync(
-        TOKEN_REGISTERED_KEY
-      );
-      if (registered === expoToken) {
-        logger.info('📱 Push token already registered, skipping');
-        return;
-      }
-    } catch {
-      // Continue with registration
-    }
-  }
 
   /** PREPARE REQUEST HEADERS */
   const headers: Record<string, string> = {
@@ -93,11 +73,6 @@ export async function registerPushToken(
   const url = `${CLOUDSYNC_BASE_URL}/v2/cloudsync/databases/${encodeURIComponent(
     databaseId
   )}/notifications/tokens`;
-  logger.info(
-    '📱 Registering push token with backend...',
-    url,
-    JSON.stringify(body)
-  );
 
   const response = await fetch(url, {
     method: 'PUT',
@@ -113,13 +88,4 @@ export async function registerPushToken(
   }
 
   logger.info('📱 Push token registered successfully');
-
-  /** PERSIST REGISTRATION STATUS */
-  if (ExpoSecureStore) {
-    try {
-      await ExpoSecureStore.setItemAsync(TOKEN_REGISTERED_KEY, expoToken);
-    } catch {
-      // Non-critical
-    }
-  }
 }

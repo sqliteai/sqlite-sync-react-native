@@ -1,15 +1,8 @@
 import { registerPushToken } from '../registerPushToken';
 import { createLogger } from '../../common/logger';
-import {
-  ExpoSecureStore,
-  ExpoApplication,
-} from '../../common/optionalDependencies';
+import { ExpoApplication } from '../../common/optionalDependencies';
 
 jest.mock('../../common/optionalDependencies', () => ({
-  ExpoSecureStore: {
-    getItemAsync: jest.fn().mockResolvedValue(null),
-    setItemAsync: jest.fn().mockResolvedValue(undefined),
-  },
   ExpoApplication: {
     getIosIdForVendorAsync: jest.fn().mockResolvedValue('mock-ios-vendor-id'),
     getAndroidId: jest.fn().mockReturnValue('mock-android-id'),
@@ -47,16 +40,6 @@ describe('registerPushToken', () => {
 
     const { Platform } = require('react-native');
     Platform.OS = 'ios';
-  });
-
-  it('skips registration if token is already registered', async () => {
-    (ExpoSecureStore!.getItemAsync as jest.Mock).mockResolvedValueOnce(
-      'ExponentPushToken[abc123]'
-    );
-
-    await registerPushToken(baseParams);
-
-    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('sends request to the correct URL', async () => {
@@ -135,30 +118,11 @@ describe('registerPushToken', () => {
     );
   });
 
-  it('persists token after successful registration', async () => {
+  it('registers token on every call', async () => {
+    await registerPushToken(baseParams);
     await registerPushToken(baseParams);
 
-    expect(ExpoSecureStore!.setItemAsync).toHaveBeenCalledWith(
-      'sqlite_sync_push_token_registered',
-      'ExponentPushToken[abc123]'
-    );
-  });
-
-  it('handles SecureStore read errors gracefully', async () => {
-    (ExpoSecureStore!.getItemAsync as jest.Mock).mockRejectedValueOnce(
-      new Error('SecureStore read failed')
-    );
-
-    await expect(registerPushToken(baseParams)).resolves.toBeUndefined();
-    expect(mockFetch).toHaveBeenCalled();
-  });
-
-  it('handles SecureStore write errors gracefully', async () => {
-    (ExpoSecureStore!.setItemAsync as jest.Mock).mockRejectedValueOnce(
-      new Error('SecureStore write failed')
-    );
-
-    await expect(registerPushToken(baseParams)).resolves.toBeUndefined();
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('throws when ExpoApplication is null', async () => {
