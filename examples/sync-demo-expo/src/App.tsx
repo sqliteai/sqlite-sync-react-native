@@ -722,8 +722,6 @@ const styles = StyleSheet.create({
   tokenBanner: {
     backgroundColor: '#E8F5E9',
     padding: 12,
-    marginHorizontal: 16,
-    marginTop: 0,
     marginBottom: 8,
     borderRadius: 8,
     borderWidth: 1,
