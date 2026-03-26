@@ -4,15 +4,17 @@
   "private": true,
   "scripts": {
     "android": "npx react-native run-android",
+    "android:clean": "find \"${TMPDIR:-/tmp}\" -maxdepth 1 \\( -name 'metro-*' -o -name 'haste-map-*' \\) -exec rm -rf {} + && cd android && ./gradlew clean && cd .. && npx react-native run-android --no-packager",
     "android:device": "npx react-native run-android --device",
     "ios": "cd ios && pod install && cd .. && npx react-native run-ios",
+    "ios:clean": "find \"${TMPDIR:-/tmp}\" -maxdepth 1 \\( -name 'metro-*' -o -name 'haste-map-*' \\) -exec rm -rf {} + && bundle check || bundle install && cd ios && bundle exec pod install && cd .. && npx react-native run-ios --no-packager",
     "ios:device": "cd ios && pod install && cd .. && npx react-native run-ios --device",
     "lint": "eslint .",
     "start": "npx react-native start",
     "test": "jest",
     "clean": "rm -rf node_modules ios/Pods ios/build android/build android/app/build",
     "clean:ios": "rm -rf ios/Pods ios/build",
-    "clean:android": "rm -rf android/build android/app/build"
+    "clean:android": "rm -rf android/build android/app/build android/.gradle"
   },
   "dependencies": {
     "@op-engineering/op-sqlite": "^15.1.14",

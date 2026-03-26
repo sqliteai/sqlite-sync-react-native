@@ -65,7 +65,8 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
    ```env
    # SQLite Cloud credentials
    SQLITE_CLOUD_DATABASE_ID=db_xxxxxxxxxxxxxxxxxxxxxxxx
-   SQLITE_CLOUD_API_KEY=your-api-key-here
+   ACCESS_TOKEN=your-jwt-here
+   # or SQLITE_CLOUD_API_KEY=your-api-key-here
    DATABASE_NAME=sync-demo.db
    TABLE_NAME=test_table
 
@@ -75,7 +76,7 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
    ANDROID_PACKAGE=com.yourcompany.sqlitesyncexample
    ```
 
-   **Note**: The `TABLE_NAME` must match the table you created in SQLite Cloud and enabled for OffSync.
+   **Note**: The `TABLE_NAME` must match the table you created in SQLite Cloud and enabled for OffSync. Provide either `ACCESS_TOKEN` for user-level auth/RLS or `SQLITE_CLOUD_API_KEY` if you are not using RLS.
 
 ### 4. Set Up Push Notifications
 

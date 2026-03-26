@@ -4,9 +4,6 @@ module.exports = {
       android: {
         sourceDir: './android',
       },
-      ios: {
-        podspecPath: './sqlite-sync-react-native.podspec',
-      },
     },
   },
 };

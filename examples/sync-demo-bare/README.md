@@ -66,7 +66,14 @@ Follow the [React Native environment setup guide](https://reactnative.dev/docs/s
    ```
 
    **Note**: The `TABLE_NAME` must match the table name you created in SQLite Cloud and enabled for OffSync.
-3. **Hardcode your access token** in [`src/App.tsx`](/Users/damlayildiz/SqliteCloud/sqlite-sync-react-native/examples/sync-demo-bare/src/App.tsx) by replacing the `HARDCODED_ACCESS_TOKEN` placeholder.
+3. **Set your auth credential** in [`examples/sync-demo-bare/.env`](/Users/damlayildiz/SqliteCloud/sqlite-sync-react-native/examples/sync-demo-bare/.env):
+
+   ```env
+   ACCESS_TOKEN=your_jwt_here
+   # or use SQLITE_CLOUD_API_KEY=your_api_key_here
+   ```
+
+   The bare example reads env values from `.env` via `react-native-dotenv`, so after changing `.env` you should reset Metro cache before rerunning the app.
 
 ### 4. Install Dependencies
 
@@ -80,8 +87,12 @@ yarn install
 From the repository root:
 
 ```bash
-yarn bare:ios      # Build library + run iOS
-yarn bare:android  # Build library + run Android
+yarn bare:metro:reset # Terminal 1: start Metro with cache reset
+yarn bare:ios         # Terminal 2: clean + build + run iOS
+
+# Android
+yarn bare:metro:reset # Terminal 1: same Metro command
+yarn bare:android     # Terminal 2: clean + build + run Android
 ```
 
 ## How It Works
