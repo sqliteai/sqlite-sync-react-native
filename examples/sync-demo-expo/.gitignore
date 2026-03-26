@@ -18,4 +18,4 @@ android/
 
 # Account-specific files (create your own from .example templates)
 google-services.json
-eas.json
+

@@ -54,6 +54,7 @@
     "bare:ios:device": "yarn install && yarn prepare && yarn bare:example ios:device",
     "bare:android": "yarn install && yarn prepare && yarn bare:example android",
     "bare:android:device": "yarn install && yarn prepare && yarn bare:example android:device",
+    "postinstall": "bob build",
     "prepare": "./setup.sh && bob build",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
