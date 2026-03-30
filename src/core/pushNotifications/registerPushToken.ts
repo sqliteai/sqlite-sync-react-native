@@ -2,6 +2,20 @@ import { ExpoApplication } from '../common/optionalDependencies';
 import type { Logger } from '../common/logger';
 import { CLOUDSYNC_BASE_URL } from '../constants';
 
+/**
+ * Masks a secret for debug logging while keeping a small prefix/suffix visible.
+ */
+const maskSecret = (value: string): string => {
+  if (value.length <= 8) {
+    return '*'.repeat(value.length);
+  }
+
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+};
+
+/**
+ * Resolves the platform-specific device identifier required by push token registration.
+ */
 async function getDeviceId(): Promise<string> {
   if (!ExpoApplication) {
     throw new Error(
@@ -68,6 +82,20 @@ export async function registerPushToken(
     siteId,
     platform,
   };
+
+  logger.info(
+    `📱 Registering device token for databaseId=${databaseId}, siteId=${siteId}, deviceId=${deviceId}`
+  );
+
+  if (accessToken) {
+    logger.info(
+      `🔐 Using access token for push registration: ${maskSecret(accessToken)}`
+    );
+  } else if (apiKey) {
+    logger.info(
+      `🔐 Using API key for push registration: ${maskSecret(apiKey)}`
+    );
+  }
 
   /** SEND REGISTRATION REQUEST */
   const url = `${CLOUDSYNC_BASE_URL}/v2/cloudsync/databases/${encodeURIComponent(

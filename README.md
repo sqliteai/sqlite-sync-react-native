@@ -64,8 +64,6 @@ Notes:
 | `polling` | Most apps, easiest setup, predictable behavior | No Expo push packages required  | Checks periodically instead of instantly |
 | `push`    | Apps that need near real-time sync triggers    | Expo push setup and permissions | More setup, may fall back to polling     |
 
-> **⚠️ Push Mode Status**: Push notifications are currently in WIP (work in progress) on iOS. Android support is stable. We recommend using polling mode for iOS apps.
-
 ## Installation
 
 ### 1. Install Required Dependencies

@@ -1,5 +1,6 @@
 import type { DB, QueryResult } from '@op-engineering/op-sqlite';
 import type { Logger } from '../common/logger';
+import { decodeSQLiteText, extractFirstRowValue } from './cloudsyncResultUtils';
 
 /**
  * Extracts the number of received rows from a CloudSync query result.
@@ -10,12 +11,9 @@ import type { Logger } from '../common/logger';
  * We only use receive.rows since polling is for downloading remote changes.
  */
 const extractChangesFromResult = (result: QueryResult | undefined): number => {
-  const firstRow = result?.rows?.[0];
-  if (!firstRow) return 0;
+  const raw = decodeSQLiteText(extractFirstRowValue(result));
 
-  const raw = Object.values(firstRow)[0];
-
-  if (typeof raw === 'string') {
+  if (raw) {
     try {
       const parsed = JSON.parse(raw);
       return typeof parsed?.receive?.rows === 'number'

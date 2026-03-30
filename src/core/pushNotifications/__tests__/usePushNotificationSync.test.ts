@@ -153,6 +153,31 @@ describe('usePushNotificationSync', () => {
     );
   });
 
+  it('uses hex siteId string when registering push token', async () => {
+    const writeDbRef = {
+      current: {
+        execute: jest.fn().mockResolvedValue({
+          rows: [{ siteId: '019d3e64a3e87369bbc9e9874f122df1' }],
+        }),
+      },
+    };
+
+    renderHook(() =>
+      usePushNotificationSync(createDefaultParams({ writeDbRef }))
+    );
+
+    await act(async () => {});
+
+    expect(writeDbRef.current.execute).toHaveBeenCalledWith(
+      'SELECT lower(hex(cloudsync_siteid())) AS siteId;'
+    );
+    expect(registerPushToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        siteId: '019d3e64a3e87369bbc9e9874f122df1',
+      })
+    );
+  });
+
   it('calls onPermissionsDenied when permissions denied', async () => {
     mockExpoNotifications.getPermissionsAsync.mockResolvedValue({
       status: 'denied',

@@ -21,6 +21,10 @@ import {
   registerBackgroundSync,
   unregisterBackgroundSync,
 } from '../background/backgroundSyncRegistry';
+import {
+  decodeSQLiteText,
+  extractFirstRowValue,
+} from '../sync/cloudsyncResultUtils';
 import { setForegroundSyncCallback } from './pushNotificationSyncCallbacks';
 import { Platform } from 'react-native';
 import { isForegroundSqliteCloudNotification } from './isSqliteCloudNotification';
@@ -287,12 +291,12 @@ export function usePushNotificationSync(params: PushNotificationSyncParams): {
           try {
             if (writeDbRef.current) {
               const siteIdResult = await writeDbRef.current.execute(
-                'SELECT cloudsync_siteid();'
+                'SELECT lower(hex(cloudsync_siteid())) AS siteId;'
               );
-              const firstRow = siteIdResult.rows?.[0];
-              siteId = firstRow
-                ? String(Object.values(firstRow)[0])
-                : undefined;
+              siteId = decodeSQLiteText(extractFirstRowValue(siteIdResult));
+              logger.info(
+                `📱 Preparing push token registration for databaseId=${databaseId}, siteId=${siteId}`
+              );
             }
           } catch {
             logger.warn(
