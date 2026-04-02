@@ -1,8 +1,7 @@
-import { AppState } from 'react-native';
 import { getPersistedConfig } from '../background/backgroundSyncConfig';
 import { ExpoTaskManager } from '../common/optionalDependencies';
 import { createLogger } from '../common/logger';
-import { BACKGROUND_SYNC_TASK_NAME } from '../constants';
+import { PUSH_NOTIFICATION_SYNC_TASK_NAME } from '../constants';
 import { executeBackgroundSync } from '../background/executeBackgroundSync';
 import { getForegroundSyncCallback } from './pushNotificationSyncCallbacks';
 import { isSqliteCloudNotification } from './isSqliteCloudNotification';
@@ -13,7 +12,7 @@ import { isSqliteCloudNotification } from './isSqliteCloudNotification';
  */
 if (ExpoTaskManager) {
   ExpoTaskManager.defineTask(
-    BACKGROUND_SYNC_TASK_NAME,
+    PUSH_NOTIFICATION_SYNC_TASK_NAME,
     async ({ data, error }: { data: any; error: any }) => {
       const config = await getPersistedConfig();
       const logger = createLogger(config?.debug ?? false);
@@ -37,16 +36,18 @@ if (ExpoTaskManager) {
 
       logger.info('📲 SQLite Cloud notification detected');
 
-      /** FOREGROUND MODE */
-      // If app is active and we have a callback, use existing DB connection
+      /** FOREGROUND / BACKGROUND-ALIVE MODE */
+      // If the provider is mounted we have a callback — use the existing connection.
+      // foregroundCallback being non-null means the component tree is alive,
+      // which is true for both active and backgrounded-but-not-terminated states.
       const foregroundCallback = getForegroundSyncCallback();
-      if (AppState.currentState === 'active' && foregroundCallback) {
-        logger.info('📲 App is in foreground, using existing sync');
+      if (foregroundCallback) {
+        logger.info('📲 Provider is mounted, using existing sync');
         try {
           await foregroundCallback();
-          logger.info('✅ Foreground sync completed');
+          logger.info('✅ Sync completed');
         } catch (syncError) {
-          logger.error('❌ Foreground sync failed:', syncError);
+          logger.error('❌ Sync failed:', syncError);
         }
         return;
       }

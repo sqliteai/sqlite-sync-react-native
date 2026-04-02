@@ -61,7 +61,7 @@ Test utilities in `src/testUtils.tsx` provide `createTestWrapper` for provider-w
 | `core/pushNotifications/__tests__/isSqliteCloudNotification.test.ts` | isSqliteCloudNotification | 13 | Foreground valid/invalid URI, iOS background body, Android JSON string body, Android dataString fallback, invalid JSON, wrong URI, empty data |
 | `core/common/__tests__/logger.test.ts` | logger | 9 | debug=true logs info/warn, debug=false suppresses, error always logs, [SQLiteSync] prefix, ISO timestamp, default debug=false |
 | `core/pushNotifications/__tests__/pushNotificationSyncCallbacks.test.ts` | pushNotificationSyncCallbacks | 5 | Register/get background callback, null default, set/get/clear foreground callback |
-| `core/__tests__/constants.test.ts` | constants | 2 | FOREGROUND_DEBOUNCE_MS value, BACKGROUND_SYNC_TASK_NAME non-empty |
+| `core/__tests__/constants.test.ts` | constants | 2 | FOREGROUND_DEBOUNCE_MS value, PUSH_NOTIFICATION_SYNC_TASK_NAME non-empty |
 
 ### Layer 2: Core Logic (97 tests)
 

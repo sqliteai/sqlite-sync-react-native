@@ -10,6 +10,7 @@ import {
   FlatList,
   Modal,
   Clipboard,
+  AppState,
 } from 'react-native';
 import {
   SQLiteSyncProvider,
@@ -34,7 +35,8 @@ const TABLE_NAME = Constants.expoConfig?.extra?.tableName;
 
 /**
  * Register background sync handler at module level (outside components).
- * This is called when new data is synced while app is in background/terminated.
+ * This is called when new data is synced while the app is TERMINATED.
+ * For the backgrounded-but-alive case, useOnTableUpdate handles notifications instead.
  */
 registerBackgroundSyncCallback(
   async ({ changes, db }: BackgroundSyncResult) => {
@@ -142,10 +144,31 @@ function TestApp({ deviceToken }: { deviceToken: string | null }) {
   }, [allRows, searchText]);
 
   // Hook 2: useOnTableUpdate - Row-level update notifications
-  // Fires for individual row changes with automatic row data fetching
+  // Fires for individual row changes with automatic row data fetching.
+  // Also handles the backgrounded-but-alive notification case: when the app is
+  // in the background, the sync runs on the existing connection and this hook
+  // fires normally — we schedule a local notification here instead of updating UI.
   useOnTableUpdate<{ id: string; value: string; created_at: string }>({
     tables: [TABLE_NAME],
-    onUpdate: (data) => {
+    onUpdate: async (data) => {
+      /** BACKGROUND-ALIVE: schedule notification instead of updating UI */
+      if (
+        AppState.currentState !== 'active' &&
+        data.operation === 'INSERT' &&
+        data.row
+      ) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'New item synced',
+            body: data.row.value || 'New data is available',
+            data: { rowId: data.row.id },
+          },
+          trigger: null,
+        });
+        return;
+      }
+
+      /** FOREGROUND: update in-app UI */
       const operationName =
         data.operation === 'INSERT'
           ? 'added'

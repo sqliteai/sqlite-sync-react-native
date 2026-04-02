@@ -22,7 +22,7 @@ import {
   isBackgroundSyncAvailable,
 } from '../../common/optionalDependencies';
 import { persistConfig, clearPersistedConfig } from '../backgroundSyncConfig';
-import { BACKGROUND_SYNC_TASK_NAME } from '../../constants';
+import { PUSH_NOTIFICATION_SYNC_TASK_NAME } from '../../constants';
 
 const mockConfig: BackgroundSyncConfig = {
   databaseId: 'db_test_database_id',
@@ -47,7 +47,7 @@ describe('registerBackgroundSync', () => {
     await registerBackgroundSync(mockConfig);
 
     expect(ExpoNotifications.registerTaskAsync).toHaveBeenCalledWith(
-      BACKGROUND_SYNC_TASK_NAME
+      PUSH_NOTIFICATION_SYNC_TASK_NAME
     );
   });
 
@@ -71,7 +71,7 @@ describe('unregisterBackgroundSync', () => {
     await unregisterBackgroundSync();
 
     expect(ExpoNotifications.unregisterTaskAsync).toHaveBeenCalledWith(
-      BACKGROUND_SYNC_TASK_NAME
+      PUSH_NOTIFICATION_SYNC_TASK_NAME
     );
   });
 

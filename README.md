@@ -338,11 +338,11 @@ npx expo install expo-notifications expo-constants expo-application expo-secure-
 
 ### `notificationListening` Modes
 
-| App State  | `notificationListening="foreground"`                     | `notificationListening="always"`                                                                                       |
-| ---------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Foreground | Notification triggers sync on the existing DB connection | Same behavior                                                                                                          |
-| Background | Notification ignored                                     | Background task opens a DB connection, syncs, then calls `registerBackgroundSyncCallback` if registered                |
-| Terminated | Notification ignored                                     | Background task wakes the app, opens a DB connection, syncs, then calls `registerBackgroundSyncCallback` if registered |
+| App State             | `notificationListening="foreground"`                     | `notificationListening="always"`                                                                                                                                    |
+| --------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Foreground            | Notification triggers sync on the existing DB connection | Same behavior                                                                                                                                                       |
+| Background (alive)    | Notification ignored                                     | Sync runs on the existing DB connection — no second connection opened. `useOnTableUpdate` hooks fire normally; `registerBackgroundSyncCallback` is **not** called   |
+| Terminated            | Notification ignored                                     | Background task wakes the app, opens a DB connection, syncs, then calls `registerBackgroundSyncCallback` if registered                                              |
 
 > Note: If push mode cannot be used because required Expo packages are missing, notification permissions are denied, or push token retrieval fails, the provider logs a warning and falls back to polling mode.
 
@@ -421,12 +421,15 @@ Main provider component that enables sync functionality.
 
 #### Background Sync Callback
 
-When using push mode with `notificationListening="always"`, you can register a callback that runs after a background sync completes.
+When using push mode with `notificationListening="always"`, notifications are handled differently depending on whether the app was terminated or just backgrounded.
+
+**Terminated app** — use `registerBackgroundSyncCallback` at module level (outside any component). This runs after the background sync completes with a list of changed rows and a DB handle for querying:
 
 ```typescript
 import { registerBackgroundSyncCallback } from '@sqliteai/sqlite-sync-react-native';
 import * as Notifications from 'expo-notifications';
 
+// Must be called at module level — this runs even when the app was terminated
 registerBackgroundSyncCallback(async ({ changes, db }) => {
   const newItems = changes.filter(
     (c) => c.table === 'tasks' && c.operation === 'INSERT'
@@ -447,6 +450,33 @@ registerBackgroundSyncCallback(async ({ changes, db }) => {
     },
     trigger: null,
   });
+});
+```
+
+**Backgrounded but alive** — the sync runs on the existing DB connection. Your `useOnTableUpdate` hooks fire normally. Use an `AppState` check inside the hook to send a local notification instead of updating UI:
+
+```typescript
+import { AppState } from 'react-native';
+import { useOnTableUpdate } from '@sqliteai/sqlite-sync-react-native';
+import * as Notifications from 'expo-notifications';
+
+useOnTableUpdate({
+  tables: ['tasks'],
+  onUpdate: async (data) => {
+    if (AppState.currentState !== 'active' && data.operation === 'INSERT' && data.row) {
+      // App is backgrounded — notify the user instead of updating UI
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'New task synced',
+          body: data.row.title || 'New data available',
+        },
+        trigger: null,
+      });
+      return;
+    }
+
+    // App is in foreground — update UI normally
+  },
 });
 ```
 

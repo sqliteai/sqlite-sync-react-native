@@ -3,7 +3,7 @@ import {
   isBackgroundSyncAvailable,
 } from '../common/optionalDependencies';
 import { createLogger } from '../common/logger';
-import { BACKGROUND_SYNC_TASK_NAME } from '../constants';
+import { PUSH_NOTIFICATION_SYNC_TASK_NAME } from '../constants';
 import {
   clearPersistedConfig,
   persistConfig,
@@ -32,7 +32,7 @@ export async function registerBackgroundSync(
   await persistConfig(config);
 
   /** REGISTER TASK */
-  await ExpoNotifications.registerTaskAsync(BACKGROUND_SYNC_TASK_NAME);
+  await ExpoNotifications.registerTaskAsync(PUSH_NOTIFICATION_SYNC_TASK_NAME);
   logger.info('📲 Background sync task registered');
 }
 
@@ -45,7 +45,9 @@ export async function unregisterBackgroundSync(): Promise<void> {
   }
 
   try {
-    await ExpoNotifications.unregisterTaskAsync(BACKGROUND_SYNC_TASK_NAME);
+    await ExpoNotifications.unregisterTaskAsync(
+      PUSH_NOTIFICATION_SYNC_TASK_NAME
+    );
     await clearPersistedConfig();
   } catch {
     // Task might not be registered
