@@ -5,6 +5,8 @@ import { open, type DB } from '@op-engineering/op-sqlite';
  *
  * @param name - Database file name
  * @param mode - 'write' for read-write connection, 'read' for query-only connection
+ * @param onOpen - Optional callback invoked synchronously after open(), before any awaited PRAGMAs.
+ *                 Use this to register ownership of the raw connection before any async gap.
  * @returns Configured database instance
  *
  * @example
@@ -15,10 +17,17 @@ import { open, type DB } from '@op-engineering/op-sqlite';
  */
 export async function createDatabase(
   name: string,
-  mode: 'write' | 'read'
+  mode: 'write' | 'read',
+  onOpen?: (db: DB) => void
 ): Promise<DB> {
   /** OPEN DATABASE */
   const db = open({ name });
+  onOpen?.(db);
+
+  /** CONFIGURE BUSY TIMEOUT */
+  // Cross-process fallback: if another process holds a lock (e.g. Android background task),
+  // retry for up to 10s before giving up
+  await db.execute('PRAGMA busy_timeout = 10000');
 
   /** CONFIGURE WAL MODE */
   // WAL mode enables concurrent reads and writes

@@ -55,6 +55,25 @@ describe('createDatabase', () => {
     );
   });
 
+  it('sets busy_timeout before journal_mode', async () => {
+    const db = await createDatabase('app.db', 'write');
+    const calls = (db.execute as jest.Mock).mock.calls.map((c: any[]) => c[0]);
+    const busyIndex = calls.indexOf('PRAGMA busy_timeout = 10000');
+    const walIndex = calls.indexOf('PRAGMA journal_mode = WAL');
+    expect(busyIndex).toBeGreaterThanOrEqual(0);
+    expect(busyIndex).toBeLessThan(walIndex);
+  });
+
+  it('calls onOpen synchronously with the raw DB before any PRAGMA', async () => {
+    let pragmaCallCountAtOpen = -1;
+
+    await createDatabase('app.db', 'write', (db) => {
+      pragmaCallCountAtOpen = (db.execute as jest.Mock).mock.calls.length;
+    });
+
+    expect(pragmaCallCountAtOpen).toBe(0);
+  });
+
   it('propagates error if PRAGMA fails', async () => {
     (open as jest.Mock).mockReturnValueOnce({
       execute: jest.fn().mockRejectedValue(new Error('PRAGMA failed')),

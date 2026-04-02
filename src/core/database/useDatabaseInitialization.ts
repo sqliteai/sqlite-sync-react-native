@@ -4,6 +4,7 @@ import type { TableConfig } from '../../types/TableConfig';
 import type { Logger } from '../common/logger';
 import { createDatabase } from './createDatabase';
 import { initializeSyncExtension } from '../sync/initializeSyncExtension';
+import { consumeActiveBackgroundDb } from '../background/activeBackgroundDb';
 
 /**
  * Parameters for useDatabaseInitialization hook
@@ -151,6 +152,25 @@ export function useDatabaseInitialization(
 
     const initialize = async () => {
       try {
+        /** CLEANUP ORPHANED BACKGROUND CONNECTION */
+        const orphanedDb = consumeActiveBackgroundDb();
+        if (orphanedDb) {
+          logger.warn(
+            '⚠️ Found orphaned background sync connection — closing to release write lock'
+          );
+          try {
+            orphanedDb.updateHook(null);
+            orphanedDb.close();
+            logger.info('✅ Orphaned connection closed');
+          } catch (closeErr) {
+            // Best effort — proceed regardless
+            logger.warn(
+              '⚠️ Could not close orphaned connection (may already be closed):',
+              closeErr
+            );
+          }
+        }
+
         /** PHASE 1: DATABASE INITIALIZATION (must succeed) */
         logger.info('📦 Starting database initialization...');
 

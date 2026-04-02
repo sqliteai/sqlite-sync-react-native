@@ -3,11 +3,13 @@ import { createDatabase } from '../../database/createDatabase';
 import { initializeSyncExtension } from '../../sync/initializeSyncExtension';
 import { executeSync } from '../../sync/executeSync';
 import { getBackgroundSyncCallback } from '../../pushNotifications/pushNotificationSyncCallbacks';
+import * as activeBackgroundDb from '../activeBackgroundDb';
 
 jest.mock('../../database/createDatabase');
 jest.mock('../../sync/initializeSyncExtension');
 jest.mock('../../sync/executeSync');
 jest.mock('../../pushNotifications/pushNotificationSyncCallbacks');
+jest.mock('../activeBackgroundDb');
 
 const mockDb = {
   execute: jest.fn().mockResolvedValue({ rows: [] }),
@@ -41,6 +43,12 @@ describe('executeBackgroundSync', () => {
     (initializeSyncExtension as jest.Mock).mockResolvedValue(undefined);
     (executeSync as jest.Mock).mockResolvedValue(0);
     (getBackgroundSyncCallback as jest.Mock).mockReturnValue(null);
+    (activeBackgroundDb.setActiveBackgroundDb as jest.Mock).mockImplementation(
+      () => {}
+    );
+    (
+      activeBackgroundDb.clearActiveBackgroundDb as jest.Mock
+    ).mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -50,7 +58,11 @@ describe('executeBackgroundSync', () => {
   it('opens DB with config.databaseName', async () => {
     await executeBackgroundSync(testConfig);
 
-    expect(createDatabase).toHaveBeenCalledWith('test.db', 'write');
+    expect(createDatabase).toHaveBeenCalledWith(
+      'test.db',
+      'write',
+      expect.any(Function)
+    );
   });
 
   it('calls initializeSyncExtension', async () => {
@@ -212,5 +224,48 @@ describe('executeBackgroundSync', () => {
     });
 
     await expect(executeBackgroundSync(testConfig)).resolves.toBeUndefined();
+  });
+
+  it('passes an onOpen callback to createDatabase that calls setActiveBackgroundDb', async () => {
+    let capturedOnOpen: ((db: any) => void) | undefined;
+    (createDatabase as jest.Mock).mockImplementation(
+      async (_name: string, _mode: string, onOpen?: (db: any) => void) => {
+        capturedOnOpen = onOpen;
+        return mockDb;
+      }
+    );
+
+    await executeBackgroundSync(testConfig);
+
+    expect(capturedOnOpen).toBeDefined();
+    capturedOnOpen!(mockDb);
+    expect(activeBackgroundDb.setActiveBackgroundDb).toHaveBeenCalledWith(
+      mockDb
+    );
+  });
+
+  it('calls clearActiveBackgroundDb in finally on success', async () => {
+    await executeBackgroundSync(testConfig);
+
+    expect(activeBackgroundDb.clearActiveBackgroundDb).toHaveBeenCalled();
+  });
+
+  it('calls clearActiveBackgroundDb in finally when sync fails', async () => {
+    (executeSync as jest.Mock).mockRejectedValue(new Error('sync error'));
+
+    await expect(executeBackgroundSync(testConfig)).rejects.toThrow(
+      'sync error'
+    );
+
+    expect(activeBackgroundDb.clearActiveBackgroundDb).toHaveBeenCalled();
+  });
+
+  it('handles close error gracefully when foreground already closed the connection', async () => {
+    mockDb.close.mockImplementation(() => {
+      throw new Error('database already closed');
+    });
+
+    await expect(executeBackgroundSync(testConfig)).resolves.toBeUndefined();
+    expect(activeBackgroundDb.clearActiveBackgroundDb).toHaveBeenCalled();
   });
 });

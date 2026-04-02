@@ -192,9 +192,14 @@ export function useSyncManager(params: SyncManagerParams): SyncManagerResult {
       isSyncingRef.current = true;
 
       /** EXECUTE SYNC */
-      // Wrap in transaction for reactive query compatibility
+      // Wrap in transaction for reactive query compatibility.
+      // In push mode: no retries — the server sends a follow-up notification
+      // when data is ready (apply → check protocol). Retrying locally causes
+      // overlap with the check notification and delays foreground startup.
       const changes = await executeSync(writeDbRef.current, logger, {
         useTransaction: true,
+        maxAttempts: syncMode === 'push' ? 1 : 4,
+        attemptDelay: syncMode === 'push' ? 0 : 1000,
       });
 
       /** UPDATE STATE */

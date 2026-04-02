@@ -6,6 +6,10 @@ import { executeSync } from '../sync/executeSync';
 import { createDatabase } from '../database/createDatabase';
 import { createLogger } from '../common/logger';
 import { getBackgroundSyncCallback } from '../pushNotifications/pushNotificationSyncCallbacks';
+import {
+  setActiveBackgroundDb,
+  clearActiveBackgroundDb,
+} from './activeBackgroundDb';
 
 /**
  * Run a complete background sync cycle
@@ -22,7 +26,11 @@ export async function executeBackgroundSync(
     logger.info('📲 Starting background sync...');
 
     /** OPEN DATABASE */
-    db = await createDatabase(config.databaseName, 'write');
+    // Pass setActiveBackgroundDb as onOpen so the reference is registered synchronously
+    // after open() but before any awaited PRAGMAs — closing the kill-window gap
+    db = await createDatabase(config.databaseName, 'write', (rawDb) => {
+      setActiveBackgroundDb(rawDb);
+    });
     logger.info('✅ Database connection opened');
 
     /** INITIALIZE SYNC EXTENSION */
@@ -52,10 +60,11 @@ export async function executeBackgroundSync(
     }
 
     /** EXECUTE SYNC */
+    // No retries: in push mode the server sends a follow-up notification
+    // (apply → check) when the artifact is ready. Client-side retries cause
+    // concurrent background syncs and extend JS thread blocking on Android.
     await executeSync(db, logger, {
-      useNativeRetry: true,
-      maxAttempts: 3,
-      attemptDelay: 500,
+      maxAttempts: 1,
     });
 
     logger.info('✅ Background sync completed successfully');
@@ -79,13 +88,18 @@ export async function executeBackgroundSync(
     throw error;
   } finally {
     /** CLEANUP */
+    clearActiveBackgroundDb();
     if (db) {
       try {
         db.updateHook(null);
         db.close();
         logger.info('✅ Database connection closed');
       } catch (closeError) {
-        logger.error('❌ Error closing database:', closeError);
+        // Foreground may have already closed this connection — that is expected
+        logger.warn(
+          '⚠️ Error closing database (may already be closed by foreground):',
+          closeError
+        );
       }
     }
   }

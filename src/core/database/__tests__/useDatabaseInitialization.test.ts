@@ -1,11 +1,13 @@
 jest.mock('../createDatabase');
 jest.mock('../../sync/initializeSyncExtension');
+jest.mock('../../background/activeBackgroundDb');
 
 import { renderHook, act } from '@testing-library/react-native';
 import { useDatabaseInitialization } from '../useDatabaseInitialization';
 import { createDatabase } from '../createDatabase';
 import { initializeSyncExtension } from '../../sync/initializeSyncExtension';
 import { createLogger } from '../../common/logger';
+import * as activeBackgroundDb from '../../background/activeBackgroundDb';
 
 const logger = createLogger(false);
 
@@ -26,6 +28,9 @@ describe('useDatabaseInitialization', () => {
     jest.clearAllMocks();
     (createDatabase as jest.Mock).mockResolvedValue({ ...mockDb });
     (initializeSyncExtension as jest.Mock).mockResolvedValue(undefined);
+    (activeBackgroundDb.consumeActiveBackgroundDb as jest.Mock).mockReturnValue(
+      null
+    );
   });
 
   afterEach(() => {
@@ -274,6 +279,64 @@ describe('useDatabaseInitialization', () => {
 
     expect(result.current.initError?.message).toContain('read open failed');
     expect(writeDb.close).toHaveBeenCalled();
+  });
+
+  it('closes orphaned background connection before opening its own', async () => {
+    const orphanedDb = { ...mockDb, close: jest.fn(), updateHook: jest.fn() };
+    (
+      activeBackgroundDb.consumeActiveBackgroundDb as jest.Mock
+    ).mockReturnValueOnce(orphanedDb);
+
+    const { result } = renderHook(() =>
+      useDatabaseInitialization(defaultParams)
+    );
+
+    await act(async () => {});
+
+    expect(orphanedDb.updateHook).toHaveBeenCalledWith(null);
+    expect(orphanedDb.close).toHaveBeenCalled();
+    // Normal initialization still proceeds
+    expect(result.current.writeDb).not.toBeNull();
+    expect(result.current.isSyncReady).toBe(true);
+  });
+
+  it('proceeds normally when no orphaned background connection exists', async () => {
+    (
+      activeBackgroundDb.consumeActiveBackgroundDb as jest.Mock
+    ).mockReturnValueOnce(null);
+
+    const { result } = renderHook(() =>
+      useDatabaseInitialization(defaultParams)
+    );
+
+    await act(async () => {});
+
+    expect(result.current.writeDb).not.toBeNull();
+    expect(result.current.isSyncReady).toBe(true);
+    expect(result.current.initError).toBeNull();
+  });
+
+  it('proceeds if orphaned connection close throws', async () => {
+    const orphanedDb = {
+      ...mockDb,
+      close: jest.fn().mockImplementation(() => {
+        throw new Error('already closed');
+      }),
+      updateHook: jest.fn(),
+    };
+    (
+      activeBackgroundDb.consumeActiveBackgroundDb as jest.Mock
+    ).mockReturnValueOnce(orphanedDb);
+
+    const { result } = renderHook(() =>
+      useDatabaseInitialization(defaultParams)
+    );
+
+    await act(async () => {});
+
+    // Should not crash — best effort close
+    expect(result.current.writeDb).not.toBeNull();
+    expect(result.current.initError).toBeNull();
   });
 
   it('reinitializes and closes old databases when auth changes', async () => {
