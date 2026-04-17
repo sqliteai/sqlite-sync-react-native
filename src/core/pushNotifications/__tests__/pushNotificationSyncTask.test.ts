@@ -101,7 +101,9 @@ describe('pushNotificationSyncTask', () => {
     const foregroundCallback = jest.fn().mockResolvedValue(undefined);
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
-    (getForegroundSyncCallback as jest.Mock).mockReturnValue(foregroundCallback);
+    (getForegroundSyncCallback as jest.Mock).mockReturnValue(
+      foregroundCallback
+    );
     (AppState as any).currentState = 'active';
 
     await handler({
@@ -117,7 +119,9 @@ describe('pushNotificationSyncTask', () => {
     const foregroundCallback = jest.fn().mockResolvedValue(undefined);
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
-    (getForegroundSyncCallback as jest.Mock).mockReturnValue(foregroundCallback);
+    (getForegroundSyncCallback as jest.Mock).mockReturnValue(
+      foregroundCallback
+    );
     (AppState as any).currentState = 'background';
 
     await handler({
@@ -133,7 +137,9 @@ describe('pushNotificationSyncTask', () => {
     const foregroundCallback = jest.fn().mockResolvedValue(undefined);
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
-    (getForegroundSyncCallback as jest.Mock).mockReturnValue(foregroundCallback);
+    (getForegroundSyncCallback as jest.Mock).mockReturnValue(
+      foregroundCallback
+    );
     (AppState as any).currentState = 'inactive';
 
     await handler({
@@ -146,7 +152,12 @@ describe('pushNotificationSyncTask', () => {
   });
 
   it('falls through to executeBackgroundSync when callback is null and app is backgrounded', async () => {
-    const fakeConfig = { debug: false, databaseId: 'db_id', databaseName: 'test.db', tablesToBeSynced: [] };
+    const fakeConfig = {
+      debug: false,
+      databaseId: 'db_id',
+      databaseName: 'test.db',
+      tablesToBeSynced: [],
+    };
     (getPersistedConfig as jest.Mock).mockResolvedValue(fakeConfig);
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
     (getForegroundSyncCallback as jest.Mock).mockReturnValue(null);
@@ -166,7 +177,9 @@ describe('pushNotificationSyncTask', () => {
       .mockRejectedValue(new Error('sync failed'));
     (getPersistedConfig as jest.Mock).mockResolvedValue({ debug: false });
     (isSqliteCloudNotification as jest.Mock).mockReturnValue(true);
-    (getForegroundSyncCallback as jest.Mock).mockReturnValue(foregroundCallback);
+    (getForegroundSyncCallback as jest.Mock).mockReturnValue(
+      foregroundCallback
+    );
 
     await expect(handler({ data: {}, error: null })).resolves.toBeUndefined();
   });

@@ -53,24 +53,14 @@ function TestApp() {
     syncError,
     currentSyncInterval,
   } = useSyncStatus();
-  const [nextSyncIn, setNextSyncIn] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!lastSyncTime || !currentSyncInterval) {
-      setNextSyncIn(null);
-      return;
-    }
+    if (!lastSyncTime || !currentSyncInterval) return;
 
-    const update = () => {
-      const remaining = Math.max(
-        0,
-        Math.ceil((lastSyncTime + currentSyncInterval - Date.now()) / 1000),
-      );
-      setNextSyncIn(remaining);
-    };
-
-    update();
-    const id = setInterval(update, 1000);
+    const id = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
     return () => clearInterval(id);
   }, [lastSyncTime, currentSyncInterval]);
   const [searchText, setSearchText] = useState('');
@@ -97,6 +87,15 @@ function TestApp() {
     const searchLower = searchText.toLowerCase();
     return allRows.filter(row => row.value.toLowerCase().includes(searchLower));
   }, [allRows, searchText]);
+
+  const nextSyncIn = useMemo(() => {
+    if (!lastSyncTime || !currentSyncInterval) return null;
+
+    return Math.max(
+      0,
+      Math.ceil((lastSyncTime + currentSyncInterval - now) / 1000),
+    );
+  }, [currentSyncInterval, lastSyncTime, now]);
 
   // Hook 2: useOnTableUpdate - Row-level update notifications
   // Fires for individual row changes with automatic row data fetching
